@@ -1,8 +1,0 @@
-<--START
-TRACE ON
-
-	CALLSCRIPTIFEXIST("fbmtrandet.scr")
-
-	EXITSCRIPT
-END-->
-

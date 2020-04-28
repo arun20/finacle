@@ -1,8 +1,0 @@
-<--START
-TRACE ON
-
-	CALLSCRIPTIFEXIST("mptrlovrdet.scr")
-
-	EXITSCRIPT
-END-->
-

@@ -1,8 +1,0 @@
-<--START
-TRACE ON
-#sv_r = urhk_b2k_printrepos("BANCS")
-BANCS.OUTPUT.chrgCalculatedAmount = 10
-BANCS.OUTPUT.chrgActualAmount = 10
-BANCS.OUTPUT.successOrFailure = "S"
-TRACE OFF
-END-->
