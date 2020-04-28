@@ -1,0 +1,36 @@
+#===============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# category: Script Name Based
+# script: finrptpasswd.scr
+# event: NA
+# description: Script to generate password for PDF Reports
+#===============================================================
+
+# This script can be used to set user and owner password for
+# PDF reports generated using FINRPT infrastructure
+# Input		: 	BANCS.INPUT.templateName
+#         		BANCS.INPUT.reportFormat
+#         		BANCS.INPUT.<critField1>
+#         		BANCS.INPUT.<critField2>
+#               ...
+# Output	:	BANCS.OUTPUT.userPassword
+#           	BANCS.OUTPUT.ownerPassword
+
+<--start
+
+TRACE ON
+	# Script body goes here
+	BANCS.OUTPUT.userPassword = ""
+	IF(FIELDEXISTS(CUST.DATA.password))THEN
+	#{
+		IF((BANCS.INPUT.templateName == "eStatement_SBA.jasper") OR (BANCS.INPUT.templateName == "eStatement_TDA.jasper"))THEN
+		#{
+			PRINT(CUST.DATA.password)
+			BANCS.OUTPUT.userPassword = CUST.DATA.password
+		#}
+		ENDIF
+	#}
+	ENDIF
+	print(BANCS.INPUT.templateName)
+	#BANCS.OUTPUT.ownerPassword = "12"
+end-->

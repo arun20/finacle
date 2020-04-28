@@ -1,0 +1,25 @@
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+TRACE ON
+	sub_createRepClassB("MTFT","DATA")
+	sub_getFieldValuesfromSRVStructB("1","MTFT","DATA","pcOtherDtl.pcEffFuncCode","funcCode")
+	PRINT(MTFT.DATA.funcCode)
+	IF(MTFT.DATA.funcCode == "D")THEN
+	#{
+		CALLSCRIPTIFEXIST("mptdisbdet.scr")
+	#}
+	ENDIF
+	IF(MTFT.DATA.funcCode == "R")THEN
+	#{
+		CALLSCRIPTIFEXIST("mptrlovrdet.scr")
+	#}
+	ENDIF
+	IF(MTFT.DATA.funcCode == "O")THEN
+	#{
+		CALLSCRIPTIFEXIST("mptoffsetdet.scr")
+	#}
+	ENDIF
+	CALLSCRIPTIFEXIST("MTFT_SLAcctChrgDtls.scr")
+	EXITSCRIPT
+END-->

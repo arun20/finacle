@@ -1,0 +1,171 @@
+###############################################################################################
+#    Name					: ormtrandet_verify.scr
+#    Start Date				: 16-06-2018
+#    Description				: Verify  Script for additional 6 Fields added in Transaction Tab
+#    Input					:
+#    Output					:
+#    Author					: Surya Sneha Pulavarthy
+#    Called Script				: SRV_VerifyInwRemittance_post_process_data.scr
+#    Calling Script				: 
+#    Reference				:
+#    Modification History:
+#    <Serial No.>	 <Date>			<Author Name>			<Description>
+#     001		16-06-2018		Surya Sneha Pulavarthy		Initial Draft
+################################################################################################
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+
+###################################################################################################
+#	Start-	Initialize variables 
+###################################################################################################
+HIRM.CUSTOM.successOrFailure	=	"S"
+HIRM.CUSTOM.tmpErrMessage		=	""
+HIRM.CUSTOM.noOfRecords		=	"0"
+HIRM.CUSTOM.slAcctId			=	""
+HIRM.CUSTOM.slAcctName		=	""
+HIRM.CUSTOM.slAcctBal		=	""
+HIRM.CUSTOM.slCrncy  		= 	""
+HIRM.CUSTOM.slAcctStatus		=	""
+HIRM.CUSTOM.slPurpOfTxn 		= 	""
+
+
+CALLSCRIPTIFEXIST("ormtrandet_fetch_mrh.scr")
+
+PRINT(HIRM.CUSTOM.noOfRecords)
+###################################################################################################
+#	STORE THE MULTIREC FIELDS IN CUSTOM REP
+###################################################################################################
+sv_m= 0
+sv_c = 1
+WHILE(sv_m < CINT(HIRM.CUSTOM.noOfRecords))
+#{	
+	print(sv_m)
+	sv_b = FORMAT$(sv_m,"%d")
+	print(sv_b)
+	HIRM.CUSTOM.slAcctId			= ("HIRM").("CUSTOM").("slAcctId_"+sv_b)
+	HIRM.CUSTOM.slAcctName		= ("HIRM").("CUSTOM").("slAcctName_"+sv_b)
+	HIRM.CUSTOM.slAcctBal		= ("HIRM").("CUSTOM").("slAcctBal_"+sv_b)
+	HIRM.CUSTOM.slCrncy  		= ("HIRM").("CUSTOM").("slCrncy_"+sv_b)
+	HIRM.CUSTOM.slAcctStatus		= ("HIRM").("CUSTOM").("slAcctStatus_"+sv_b)
+	HIRM.CUSTOM.slPurpOfTxn 		= ("HIRM").("CUSTOM").("slPurpOfTxn_"+sv_b)
+	HIRM.CUSTOM.slTranRemarks		= ("HIRM").("CUSTOM").("slTranRemarks_"+sv_b)
+	HIRM.CUSTOM.hslSrlNum 		= ("HIRM").("CUSTOM").("hslSrlNum_"+sv_b) 
+	HIRM.CUSTOM.hslTranId		= ("HIRM").("CUSTOM").("hslTranId_"+sv_b)
+	HIRM.CUSTOM.hslTranDate		= ("HIRM").("CUSTOM").("hslTranDate_"+sv_b)
+	HIRM.CUSTOM.hslTranDate		= ("HIRM").("CUSTOM").("hslTranDate_"+sv_b)
+	HIRM.CUSTOM.shlDelFlg		= ("HIRM").("CUSTOM").("shlDelFlg_"+sv_b)
+	PRINT(HIRM.CUSTOM.slAcctId)
+	PRINT(HIRM.CUSTOM.slAcctName)
+	PRINT(HIRM.CUSTOM.slAcctBal)
+	PRINT(HIRM.CUSTOM.slCrncy)
+	PRINT(HIRM.CUSTOM.slAcctStatus)
+	PRINT(HIRM.CUSTOM.slPurpOfTxn)
+	PRINT(HIRM.CUSTOM.hslTranId)
+	
+	sub_getFieldValuesfromSRVStructB("1","HIRM","CUSTOM","remCritDtls.remitId","billId")
+	PRINT(HIRM.CUSTOM.billId)
+
+	IF(TRIM(HIRM.CUSTOM.hslTranId) == "")THEN
+	#{
+			sv_z = "Custom Fields : UPdation  Failed in C_DTD_P_EXT(ormtrandet_verify.scr)."
+
+	#}
+	ENDIF
+	#-------------------------------------------
+	#Converting amount to standard format
+	#-------------------------------------------
+	print(HIRM.CUSTOM.slAcctBal)
+	BANCS.INPARAM.userFormatAmt = HIRM.CUSTOM.slAcctBal
+	sv_u = urhk_convertAmountToStdFormat("")
+	IF(sv_u == 0) THEN
+	#{
+		HIRM.CUSTOM.slAcctBal = BANCS.OUTPARAM.stdFormatAmt
+	#}
+	ENDIF
+	print(HIRM.CUSTOM.slAcctBal)
+	
+
+	HIRM.CUSTOM.sysDate = func_getSysDateTimeWithFormatB("DD-MM-YYYY hh24:mi:ss") 
+
+	
+	#Check whether same tranid transrl num eixsts if so modify
+	#-----------------------------------------------------------------------------------------------------------------------		
+	#COUNT_RECORDS:
+	#-----------------------------------------------------------------------------------------------------------------------
+	sv_s = ""
+	sv_s = sv_s + " count|SELECT COUNT(1)"
+	sv_s = sv_s + " FROM CUSTOM.C_DTD_P_EXT "
+	sv_s = sv_s + " WHERE  TRIM(TRAN_ID) = TRIM('" + HIRM.CUSTOM.hslTranId + "')"
+	sv_s = sv_s + " AND TRAN_DATE = TO_DATE('" + HIRM.CUSTOM.hslTranDate + "','DD-MM-YYYY HH24:MI:SS')"
+	sv_s = sv_s + " AND TRIM(PART_TRAN_SRL_NUM) = TRIM('"+ HIRM.CUSTOM.hslSrlNum+ "') "
+	sv_s = sv_s + " AND BANK_ID = '"+ BANCS.STDIN.contextBankId+ "' "
+	print(sv_s)
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	print(sv_d)
+	HIRM.CUSTOM.count = BANCS.OUTPARAM.count
+	print(HIRM.CUSTOM.count)
+	IF (sv_d != 0) THEN
+	#{
+		GOTO NEXTREC
+	#}
+	ELSE
+	#{	
+		HIRM.CUSTOM.count= BANCS.OUTPARAM.count
+		print(HIRM.CUSTOM.count)
+	#}
+	ENDIF
+	IF(CINT(HIRM.CUSTOM.count) == CINT("0"))THEN
+	#{
+		GOTO NEXTREC
+	#}
+	ELSE
+	#{
+		GOTO VERIFY
+	#}
+	ENDIF
+	
+	
+	#Update entity cre flg 
+	VERIFY:
+	
+	IF(HIRM.CUSTOM.shlDelFlg != "Y")THEN
+	#{
+
+		sv_s = "UPDATE CUSTOM.C_DTD_P_EXT SET "
+		sv_s = sv_s +" ENTITY_CRE_FLG='Y',LCHG_TIME=TO_DATE('"+HIRM.CUSTOM.sysDate+"','DD-MM-YYYY HH24:MI:SS'),LCHG_USER_ID='"+BANCS.STDIN.userId+"'"
+		sv_s = sv_s + "WHERE "
+		sv_s = sv_s + "TRIM(TRAN_ID)=TRIM('"+HIRM.CUSTOM.hslTranId+"') AND TRAN_DATE = TO_DATE('"+HIRM.CUSTOM.hslTranDate+"','DD-MM-YYYY HH24:MI:SS') AND TRIM(PART_TRAN_SRL_NUM) = TRIM('"+HIRM.CUSTOM.hslSrlNum+"') AND BANK_ID ='"+BANCS.STDIN.contextBankId+"'"
+		print(sv_s)
+		sv_a = urhk_dbSQLWithBind(sv_s)
+		print(sv_a)
+		if(sv_a == 0) then
+		#{
+			PRINT("SUCCESS")
+		#}
+		ELSE
+		#{
+			sv_z = "Custom Fields : Updation  Failed in C_DTD_P_EXT(ormtrandet_verify.scr)."
+			sv_u = urhk_SRV_SetErr(sv_z)
+			sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+			BANCS.OUTPUT.successOrFailure = "F"
+			GOTO ENDOFSCRIPT
+
+		#}
+		ENDIF
+		sv_c = sv_c +1
+		print(sv_c)
+		GOTO NEXTREC
+	#}
+	ENDIF
+	
+
+	NEXTREC:
+	sv_m = sv_m + 1
+	#print(sv_m)
+#}
+DO
+
+ENDOFSCRIPT:
+EXITSCRIPT
+END-->

@@ -1,0 +1,447 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: AOCodeUpdationBatch.scr
+# Type: NA|default
+# Description: NA
+# Author: Alfaraz Batcha K. H.
+# Date: 04/06/2018
+# Modification Log:
+#============================================================
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT LibDateB001
+<--START
+	TRACE ON
+	LIBNAME CUSTOMSO
+	#------------------------------------------------------------------------------------
+	# REPOSITORY AND CLASS CREATION
+	#------------------------------------------------------------------------------------
+	sub_createRepClassB("LHBN","DATA")
+	
+	LHBN.DATA.status = ""
+	LHBN.DATA.errorMsg = ""
+	LHBN.DATA.errorFlg = "N"	
+	LHBN.DATA.officerCode = ""
+	LHBN.DATA.branchNumber = ""
+	LHBN.DATA.officerId = ""
+	LHBN.DATA.officerName = ""
+	LHBN.DATA.offShortName = ""
+	LHBN.DATA.ccyCode = ""
+	LHBN.DATA.apprLmtGrp = ""
+	LHBN.DATA.apprLmt = ""
+	LHBN.DATA.costCentre = ""
+	LHBN.DATA.deptCode = ""	
+	LHBN.DATA.ddmmyy = MID$(BANCS.STDIN.BODDate,0,2) + MID$(BANCS.STDIN.BODDate,3,2) + MID$(BANCS.STDIN.BODDate,8,2)
+	LHBN.DATA.ddmmyyyy = MID$(BANCS.STDIN.BODDate,0,2) + "/" + MID$(BANCS.STDIN.BODDate,3,2) + "/" + MID$(BANCS.STDIN.BODDate,6,4)
+	PRINT(LHBN.DATA.ddmmyy)
+	PRINT(LHBN.DATA.ddmmyyyy)
+	#------------------------------------------------------------------------------------
+	# CREATING LST FILE FOR REPORT GENERATION
+	#------------------------------------------------------------------------------------	
+	LHBN.DATA.tstamp = ""
+	LHBN.DATA.tstamp = func_getSysDateTimeWithFormatB("DDMMYYHH24MISS")
+	PRINT(LHBN.DATA.tstamp)
+	
+	LHBN.DATA.rptLst = "REPORT_TF_AO_" + LHBN.DATA.tstamp + ".lst"
+	PRINT(LHBN.DATA.rptLst)
+	sv_q  = urtn_fileOpen(LHBN.DATA.rptLst + "|w")
+	PRINT(sv_q)
+	IF (sv_q < 0) THEN
+	#{
+		PRINT("lst file cannot be open")
+	#}
+	ENDIF
+	
+	LHBN.DATA.rpt_dataFileIndex = sv_q
+	PRINT(LHBN.DATA.rpt_dataFileIndex)
+	
+	#------------------------------------------------------------------------------------
+	# Fetching AOCC_FILE_PATH,REPORT_PATH value from CPARAM
+	#------------------------------------------------------------------------------------
+	LHBN.DATA.modId = "CASA"
+	LHBN.DATA.parId = "AOCC_FILE_PATH"
+	LHBN.DATA.bankId = BANCS.STDIN.contextBankId
+	sv_u = func_getCPARAMValueB(LHBN.DATA.parId,LHBN.DATA.modId,LHBN.DATA.bankId,BYREF LHBN.DATA.aoccFilePath)
+	PRINT(sv_u)
+	IF(sv_u == 0) THEN
+	#{
+		PRINT(LHBN.DATA.aoccFilePath)
+	#}
+	ELSE
+	#{
+		LHBN.DATA.errorMsg = "AOCC_FILE_PATH is not set in CPARAM. "
+		LHBN.DATA.errorFlg = "Y"
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+	
+	LHBN.DATA.modId = "CASA"
+	LHBN.DATA.parId = "REPORT_PATH"
+	LHBN.DATA.bankId = BANCS.STDIN.contextBankId
+	sv_u = func_getCPARAMValueB(LHBN.DATA.parId,LHBN.DATA.modId,LHBN.DATA.bankId,BYREF LHBN.DATA.reportPath)
+	PRINT(sv_u)
+	IF(sv_u == 0) THEN
+	#{
+		PRINT(LHBN.DATA.reportPath)
+	#}
+	ELSE
+	#{
+		LHBN.DATA.errorMsg = "REPORT_PATH is not set in CPARAM. "
+		LHBN.DATA.errorFlg = "Y"
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+	
+	#--------------------------------------------------------------------------------------------------------
+	# Opening the Upload file
+	#--------------------------------------------------------------------------------------------------------
+	LHBN.DATA.inpFile = "TF_AO_" + LHBN.DATA.ddmmyy + ".TXT"
+	PRINT(LHBN.DATA.inpFile)
+	PRINT(LHBN.DATA.aoccFilePath)
+	LHBN.DATA.fileOpenStatus = urtn_fileOpen(LHBN.DATA.aoccFilePath+"/"+LHBN.DATA.inpFile+"|r")
+	PRINT(LHBN.DATA.fileOpenStatus)
+	IF (CINT(LHBN.DATA.fileOpenStatus) < 0) THEN
+	#{
+		LHBN.DATA.errorMsg = "File not found for " + LHBN.DATA.ddmmyyyy
+		LHBN.DATA.errorFlg = "Y"
+		GOTO ENDOFSCRIPT
+	#}
+	ELSE
+	#{
+		#--------------------------------------------------------------------------------------------------------
+		# Reading the Upload file For Validations
+		#--------------------------------------------------------------------------------------------------------
+		LHBN.DATA.counter = "0"
+		LHBN.DATA.readStatus = urtn_fileRead(LHBN.DATA.fileOpenStatus + "|BANCS.OUTPARAM.buffer")
+		PRINT(LHBN.DATA.readStatus)
+		IF (LHBN.DATA.readStatus == "0") THEN
+		#{
+			WHILE(LHBN.DATA.readStatus == "0")
+			#{
+				LHBN.DATA.record = BANCS.OUTPARAM.buffer
+				PRINT(LHBN.DATA.record)
+				LHBN.DATA.length = STRLEN(LHBN.DATA.record)
+				PRINT(LHBN.DATA.length)
+				IF (MID$(LHBN.DATA.record,0,1) == "H") THEN
+				#{
+					IF(LHBN.DATA.length!="9") THEN
+					#{
+						LHBN.DATA.errorMsg = "Header length in incorrect"
+						LHBN.DATA.errorFlg = "Y"
+						GOTO ENDOFSCRIPT
+					#}
+					ENDIF
+					
+					sv_a = func_getCountOfCharB( LHBN.DATA.record , " " , BYREF LHBN.DATA.count)
+					PRINT(sv_a)				
+					LHBN.DATA.count = TRIM(LHBN.DATA.count)
+					PRINT(LHBN.DATA.count)
+					
+					IF(LHBN.DATA.count=="") THEN
+					#{
+						LHBN.DATA.count = "0"
+					#}
+					ELSE
+					#{
+						IF(LHBN.DATA.count!="0") THEN
+						#{
+							LHBN.DATA.errorMsg = "No trailing spaces allowed in Header"
+							LHBN.DATA.errorFlg = "Y"
+							GOTO ENDOFSCRIPT
+						#}
+						ENDIF
+					#}
+					ENDIF
+					
+					LHBN.DATA.headerDate = MID$(LHBN.DATA.record,1,2) + "-" + MID$(LHBN.DATA.record,3,2) + "-" + MID$(LHBN.DATA.record,5,4)
+					PRINT(LHBN.DATA.headerDate)
+					
+					sv_d = urhk_B2k_valDate(LHBN.DATA.headerDate)
+					IF(sv_d!=0) THEN
+					#{
+						LHBN.DATA.errorMsg = "Date is invalid in Header"
+						LHBN.DATA.errorFlg = "Y"
+						GOTO ENDOFSCRIPT
+					#}
+					ENDIF
+					
+					IF(LHBN.DATA.headerDate!= MID$(BANCS.STDIN.BODDate,0,10)) THEN
+					#{
+						LHBN.DATA.errorMsg = "Header Date is not same as BOD Date"
+						LHBN.DATA.errorFlg = "Y"
+						GOTO ENDOFSCRIPT
+					#}
+					ENDIF
+				#}
+				ENDIF
+				
+				IF (MID$(LHBN.DATA.record,0,1) == "D") THEN
+				#{									
+					LHBN.DATA.counter = CINT(LHBN.DATA.counter) + 1
+					PRINT(LHBN.DATA.counter)
+				#}
+				ENDIF
+				
+				IF (MID$(LHBN.DATA.record,0,1) == "F") THEN
+				#{
+					IF(LHBN.DATA.length!="9") THEN
+					#{
+						LHBN.DATA.errorMsg = "Trailer length is incorrect"
+						LHBN.DATA.errorFlg = "Y"
+						GOTO ENDOFSCRIPT
+					#}
+					ENDIF	
+					
+					LHBN.DATA.trailCount = CINT(MID$(LHBN.DATA.record,1,8))
+					IF(LHBN.DATA.trailCount!=LHBN.DATA.counter) THEN
+					#{
+						LHBN.DATA.errorMsg = "Number of records mentioned in trailer is not matching with rows in Detail"
+						LHBN.DATA.errorFlg = "Y"
+						GOTO ENDOFSCRIPT
+					#}
+					ENDIF
+				#}
+				ENDIF				
+				
+				LHBN.DATA.record = ""
+				LHBN.DATA.buffer = ""
+				LHBN.DATA.readStatus = urtn_fileRead(LHBN.DATA.fileOpenStatus + "|BANCS.OUTPARAM.buffer")		
+			#}
+			DO
+			
+			sv_t = urtn_fileClose(LHBN.DATA.fileOpenStatus)
+			PRINT(sv_t)
+		#}
+		ENDIF
+	#}
+	ENDIF
+	
+	#--------------------------------------------------------------------------------------------------------
+	# Deleting records from Custom table
+	#--------------------------------------------------------------------------------------------------------
+	LHBN.DATA.tableName = "CUSTOM.CUST_AOCODE_MNT_TBL"
+	LHBN.DATA.keyFields = ""
+	LHBN.DATA.keyValues = ""
+	BANCS.INPARAM.whereClauseOperator = ""
+	BANCS.INPARAM.whereFieldsColumnDataType = ""
+	BANCS.INPARAM.whereFieldsColumnFormat = ""
+	BANCS.INPARAM.additionalQueryString = ""
+	sv_d = func_deleteFromCustTableB(LHBN.DATA.tableName, LHBN.DATA.keyFields, LHBN.DATA.keyValues)
+	PRINT(sv_d)	
+	IF(sv_d!=0) THEN
+	#{
+		LHBN.DATA.whereFields =""
+		LHBN.DATA.whereValues = ""
+		sv_a=func_checkRecordCntB(LHBN.DATA.tableName,LHBN.DATA.whereFields,LHBN.DATA.whereValues,BYREF sv_b)
+		PRINT(sv_b)
+		IF(sv_b!=0) THEN
+		#{
+			LHBN.DATA.errorMsg = "Deletion of existing records failed(DB Error)"
+			LHBN.DATA.errorFlg = "Y"
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+	#}
+	ENDIF
+	
+	LHBN.DATA.fileOpenStatus = urtn_fileOpen(LHBN.DATA.aoccFilePath+"/"+LHBN.DATA.inpFile+"|r")
+	PRINT(LHBN.DATA.fileOpenStatus)
+	IF (CINT(LHBN.DATA.fileOpenStatus) < 0) THEN
+	#{
+		LHBN.DATA.errorMsg = "File not found for " + LHBN.DATA.ddmmyyyy
+		LHBN.DATA.errorFlg = "Y"
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+	
+	#--------------------------------------------------------------------------------------------------------
+	# Reading the Upload file
+	#--------------------------------------------------------------------------------------------------------
+	LHBN.DATA.readStatus = urtn_fileRead(LHBN.DATA.fileOpenStatus + "|BANCS.OUTPARAM.buffer")
+	PRINT(LHBN.DATA.readStatus)
+	IF (LHBN.DATA.readStatus != "0") THEN
+	#{
+		LHBN.DATA.errorMsg = "Unable to read the Upload file"
+		LHBN.DATA.errorFlg = "Y"
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+		
+	WHILE(LHBN.DATA.readStatus == "0")
+	#{
+		LHBN.DATA.status = ""
+		LHBN.DATA.errorMsg = ""
+		LHBN.DATA.errorFlg = "N"
+		LHBN.DATA.record = BANCS.OUTPARAM.buffer
+		LHBN.DATA.length = STRLEN(LHBN.DATA.record)
+		PRINT(LHBN.DATA.length)			
+		IF (MID$(LHBN.DATA.record,0,1) == "D") THEN
+		#{											
+			IF(LHBN.DATA.length!="103") THEN
+			#{
+				LHBN.DATA.errorMsg = "Detail length is incorrect"
+				LHBN.DATA.errorFlg = "Y"
+				GOTO SKIP
+			#}
+			ENDIF
+		
+			LHBN.DATA.officerCode = TRIM(MID$(LHBN.DATA.record,1,3))
+			LHBN.DATA.branchNumber = TRIM(MID$(LHBN.DATA.record,4,3))
+			LHBN.DATA.officerId = TRIM(MID$(LHBN.DATA.record,7,10))
+			LHBN.DATA.officerName = TRIM(MID$(LHBN.DATA.record,17,40))
+			LHBN.DATA.offShortName = TRIM(MID$(LHBN.DATA.record,57,20))
+			LHBN.DATA.ccyCode = TRIM(MID$(LHBN.DATA.record,77,4))
+			LHBN.DATA.apprLmtGrp = TRIM(MID$(LHBN.DATA.record,81,1))
+			LHBN.DATA.apprLmt = TRIM(MID$(LHBN.DATA.record,82,13)) + "." + TRIM(MID$(LHBN.DATA.record,95,2))
+			LHBN.DATA.costCentre = TRIM(MID$(LHBN.DATA.record,97,3))
+			LHBN.DATA.deptCode = TRIM(MID$(LHBN.DATA.record,100,3))
+			
+			PRINT(LHBN.DATA.officerCode)
+			PRINT(LHBN.DATA.branchNumber)
+			PRINT(LHBN.DATA.officerId)
+			PRINT(LHBN.DATA.officerName)
+			PRINT(LHBN.DATA.offShortName)
+			PRINT(LHBN.DATA.ccyCode)
+			PRINT(LHBN.DATA.apprLmtGrp)
+			PRINT(LHBN.DATA.apprLmt)
+			PRINT(LHBN.DATA.costCentre)
+			PRINT(LHBN.DATA.deptCode)
+		
+			IF(LHBN.DATA.ccyCode=="") THEN
+			#{
+				LHBN.DATA.ccyCode = "THB"
+			#}
+			ENDIF		
+			
+			sv_a = "result|SELECT CASE WHEN REGEXP_LIKE(?SVAR,?SVAR) THEN '0' ELSE '1' END FROM DUAL "
+			PRINT(sv_a)
+			BANCS.INPARAM.BINDVARS = LHBN.DATA.apprLmt + "|" + "(^[0-9]{1,13}\.[0-9]{1,2}$)" 
+			PRINT(BANCS.INPARAM.BINDVARS)
+			sv_d = urhk_dbSelectWithBind(sv_a)
+			PRINT(sv_d)
+			IF (sv_d==0) THEN
+			#{
+				sv_c = BANCS.OUTPARAM.result
+				IF(sv_c!=0) THEN
+				#{
+					LHBN.DATA.errorMsg = "Approval limit should be numeric"
+					LHBN.DATA.errorFlg = "Y"
+					GOTO SKIP		
+				#}
+				ENDIF
+			#}
+			ENDIF			
+			
+			#--------------------------------------------------------------------------------------------------------
+			# INSERTION OF RECORDS INTO CUSTOM TABLE
+			#--------------------------------------------------------------------------------------------------------
+			LHBN.DATA.tableName= "CUSTOM.CUST_AOCODE_MNT_TBL"
+			LHBN.DATA.keyFields = "FILENAME,FILEDATE,SSOOFF,SSOBRN,SSOIDN,SSONAM,SSOSNA,SSOCUR,SSOALG,SSOALM,SSCNTR,SSDEPT,DEL_FLG,"
+			LHBN.DATA.keyFields = LHBN.DATA.keyFields + "LCHG_USER_ID,LCHG_TIME,RCRE_USER_ID,RCRE_TIME,BANK_ID"
+			LHBN.DATA.keyValues = LHBN.DATA.inpFile + "|" + MID$(BANCS.STDIN.BODDate,0,10) + "|" + LHBN.DATA.officerCode
+			LHBN.DATA.keyValues = LHBN.DATA.keyValues + "|" + LHBN.DATA.branchNumber + "|" + LHBN.DATA.officerId + "|" + LHBN.DATA.officerName 
+			LHBN.DATA.keyValues = LHBN.DATA.keyValues + "|" + LHBN.DATA.offShortName + "|" + LHBN.DATA.ccyCode + "|" + LHBN.DATA.apprLmtGrp
+			LHBN.DATA.keyValues = LHBN.DATA.keyValues + "|" + LHBN.DATA.apprLmt + "|" + LHBN.DATA.costCentre + "|" + LHBN.DATA.deptCode
+			LHBN.DATA.keyValues = LHBN.DATA.keyValues + "|N|" + BANCS.STDIN.userId + "|" + LHBN.DATA.tstamp + "|" + BANCS.STDIN.userId
+			LHBN.DATA.keyValues = LHBN.DATA.keyValues + "|" + LHBN.DATA.tstamp + "|" + BANCS.STDIN.contextBankId
+			PRINT(LHBN.DATA.keyValues)			
+			BANCS.INPARAM.keyFieldsColumnDataType = "STRING|DATE|STRING|STRING|STRING|STRING|STRING|STRING|STRING|NUMBER|STRING|STRING|STRING|STRING|DATE|STRING|DATE|STRING"
+			BANCS.INPARAM.keyFieldsColumnFormat = "|DD-MM-YYYY|||||||||||||DDMMYYHH24MISS||DDMMYYHH24MISS|"
+			sv_d=func_insertIntoCustTableB(LHBN.DATA.tableName,LHBN.DATA.keyFields,LHBN.DATA.keyValues)
+			PRINT(sv_d)
+			IF(sv_d!=0) THEN
+			#{
+				LHBN.DATA.errorMsg = "Insertion of record failed/Duplicate record Exists"
+				LHBN.DATA.errorFlg = "Y"
+			#}
+			ENDIF	
+			
+			SKIP:	
+			PRINT(LHBN.DATA.errorMsg)			
+			IF(LHBN.DATA.errorMsg == "") THEN
+			#{
+				LHBN.DATA.status = "SUCCESS"
+			#}
+			ELSE
+			#{
+				LHBN.DATA.status = "FAILURE"
+			#}
+			ENDIF
+			PRINT(LHBN.DATA.status)
+			
+			#------------------------------------------------------------------------------------
+			#       Writing data in the lst file
+			#------------------------------------------------------------------------------------
+			sv_l = LHBN.DATA.officerCode
+			sv_l = sv_l + "|" + LHBN.DATA.costCentre
+			sv_l = sv_l + "|" + LHBN.DATA.status
+			sv_l = sv_l + "|" + MID$(LHBN.DATA.errorMsg,0,80)
+			PRINT(sv_l)		
+			sv_t = urtn_fileWrite(LHBN.DATA.rpt_dataFileIndex +"|"+ sv_l)
+			PRINT(sv_t)
+		#}
+		ENDIF				
+		
+		LHBN.DATA.record = ""
+		LHBN.DATA.buffer = ""
+		LHBN.DATA.readStatus = urtn_fileRead(LHBN.DATA.fileOpenStatus + "|BANCS.OUTPARAM.buffer")		
+	#}
+	DO
+	GOTO RPT
+		
+	ENDOFSCRIPT:
+		PRINT(LHBN.DATA.errorMsg)		
+		#------------------------------------------------------------------------------------
+		#       Writing data in the lst file
+		#------------------------------------------------------------------------------------
+		sv_l = "|||"+ MID$(LHBN.DATA.errorMsg,0,80)
+		PRINT(sv_l)		
+		sv_t = urtn_fileWrite(LHBN.DATA.rpt_dataFileIndex + "|" + sv_l)
+		PRINT(sv_t)
+		
+	RPT:		
+		#------------------------------------------------------------------------------------
+		#       Closing the lst file
+		#------------------------------------------------------------------------------------
+		sv_t = urtn_fileClose(LHBN.DATA.fileOpenStatus)
+		sv_c = urtn_fileClose(LHBN.DATA.rpt_dataFileIndex)
+		
+		#------------------------------------------------------------------------------------
+		# Pushing the report to the front end
+		#------------------------------------------------------------------------------------				
+		LHBN.DATA.reportto      = "MANAGER"
+		LHBN.DATA.reportFormat  = "TXT"
+		LHBN.DATA.rptHeading = "Success Failure Report for AO Code Upload"
+		LHBN.DATA.RptName = "REPORT_TF_AO_" + LHBN.DATA.tstamp
+		LHBN.DATA.lstFileName = LHBN.DATA.rptLst
+		LHBN.DATA.jasperName = "AOCodeUpdationReport.jasper"
+		sub_genReportAndPushToHPRB(LHBN.DATA.jasperName,LHBN.DATA.lstFileName ,LHBN.DATA.RptName,LHBN.DATA.rptHeading,LHBN.DATA.reportFormat)
+
+		#-----------------------------------------------------------
+        # removing blank lines from the report
+        #-----------------------------------------------------------
+		#sv_a = "sed '/^$/d' " +  LHBN.DATA.RptName + ".TXT" + " > " + LHBN.DATA.RptName + "_temp" + ".TXT"
+		#sv_a = "sed 's/^L//' " +  LHBN.DATA.RptName + ".TXT" + " > " + LHBN.DATA.RptName + "_temp" + ".TXT"
+		#PRINT(sv_a)
+		#lv_e= SYSTEM(sv_a)
+		#PRINT(lv_e)
+
+        #-----------------------------------------------------------
+        # copying report from CDCI path to CPARAM path
+        #-----------------------------------------------------------
+        #lv_q = "mv " + LHBN.DATA.RptName + "_temp" + ".TXT "  + LHBN.DATA.RptName + ".TXT"
+        #lv_e= SYSTEM(lv_q)
+        #PRINT(lv_e)
+		lv_q = "cp " + LHBN.DATA.RptName + ".TXT "  + LHBN.DATA.reportPath
+		lv_e= SYSTEM(lv_q)
+		PRINT(lv_e)
+		
+		#------------------------------------------------------------------------------------
+		# REPOSITORY AND CLASS DELETION
+		#------------------------------------------------------------------------------------
+		sub_deleteRepClassB("LHBN", "DATA")
+		
+		TRACE OFF
+END-->

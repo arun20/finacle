@@ -1,0 +1,605 @@
+#########################################################################################################################
+# Name of the file      : cust_slAcctPostTran.scr
+# Start Date            : 19-Jun-2018
+# Description           : This script will validate number or credit and debit legs with SL account details.
+# Design Id             : HTM
+# Menu Option           : HTM,HXFER
+# Input parameters      : NA
+# Output parameters     : NA
+# Author                : Amandeep Kaur
+# Called Script         : InqTransferStatus.scr, transferFund.scr
+# Calling Script        : SRV_AddAndPostXferTran_pre_process_data.scr, SRV_ModifyAndPostXferTran_pre_process_data.scr,
+#						: SRV_PostTran_pre_process_data.scr
+# Bank                  : LH Bank
+# Modification History:
+# <Serial No.>         <Date>         <Author Name>              <Description>
+#      0.1            19-Jun-2018     Amandeep Kaur               Initial Draft
+##############################################################################################################################
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT LibAuditB001
+IMPORT LibslTranSeq
+
+<--START
+	TRACE ON
+	libname CUSTOMSO
+
+	#----------------------------------------------
+	#Create repository and class
+	#----------------------------------------------
+	sub_createRepClassB("HTM", "DATA")
+
+	#--------------------------------------------
+	#Initialize variables
+	#--------------------------------------------
+	HTM.DATA.userId			= BANCS.STDIN.userId
+	HTM.DATA.BODDate		= MID$(BANCS.STDIN.BODDate,0,10)
+	HTM.DATA.slTranExist	= "N"
+	#---------------------------------------------
+	
+	#---------------------------------------------
+	IF (FIELDEXISTS(ONS.CUSTOM.custDataIn) == 0) THEN
+	#{
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+
+	ONS.CUSTOM.custDataIn = TRIM(ONS.CUSTOM.custDataIn)
+
+	IF (ONS.CUSTOM.custDataIn == "") THEN
+	#{
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+	PRINT(ONS.CUSTOM.custDataIn)
+	sv_a = ONS.CUSTOM.custDataIn
+	sv_u = urhk_ParseONSCustData(sv_a)
+	PRINT(sv_u)
+	
+	sv_v = urhk_SRV_GetVal("tranHdr.tranTypeSubType.tranType")
+	IF(sv_v == 0) THEN
+	#{
+		HTM.DATA.tranType = BANCS.OUTPARAM.srvValue
+		PRINT(HTM.DATA.tranType)
+	#}
+	ENDIF
+			
+	sv_v = urhk_SRV_GetVal("tranHdr.tranTypeSubType.tranSubType")
+	IF(sv_v == 0) THEN
+	#{
+		HTM.DATA.tranSubType = BANCS.OUTPARAM.srvValue
+		PRINT(HTM.DATA.tranSubType)
+	#}
+	ENDIF
+	
+	sv_u = urhk_SRV_GetVal("tranHdr.tranIdentifier.tranId")
+	IF(sv_u == 0) THEN
+	#{
+		HTM.DATA.tranId = BANCS.OUTPARAM.srvValue
+		PRINT(HTM.DATA.tranId)
+	#}
+	ENDIF
+	
+	sv_u = urhk_SRV_GetVal("tranHdr.tranIdentifier.tranDate")
+	IF(sv_u == 0) THEN
+	#{
+		HTM.DATA.tranDate = BANCS.OUTPARAM.srvValue
+		PRINT(HTM.DATA.tranDate)
+	#}
+	ENDIF
+	HTM.DATA.pageName = "tmdet"
+	HTM.DATA.debitTran = 0
+	HTM.DATA.creditTran = 0
+	sv_v = 0
+	sv_w = 0
+	HTM.DATA.inqTranStat = "N"
+
+	IF(sv_u == 0)THEN
+	#{
+
+		#-------------------------------------------------------------------------------------------------
+		#  FIELD DESCRIPTION
+		#-------------------------------------------------------------------------------------------------
+		#     FIELD_2 - No.of multirecs
+		#     FIELD_4 - custom field, Purpose Code
+		#-------------------------------------------------------------------------------------------------
+
+		IF(FIELDEXISTS(("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_2"))) THEN
+		#{
+			HTM.DATA.noOfRecords = ("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_2")
+			PRINT(HTM.DATA.noOfRecords)
+		#}
+		ELSE
+		#{
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+		
+PRINT(BANCS.STDIN.serviceName)		
+IF (BANCS.STDIN.serviceName == "SRV_PostTran") THEN
+#{
+		sv_j = ""
+		sv_j = sv_j + " acid, ptransrlnum , trnDt , pTranType,delFlg,tranAmt,crncyCode , slAcctId,slAcctName,slAcctStatus,slAcctBal |"
+		sv_j = sv_j + " SELECT d.acid , d.part_tran_srl_num , d.tran_date , d.part_tran_type, d.del_flg , d.tran_amt , d.ref_crncy_code , "
+		sv_j = sv_j + " c.free_text_1 ,c.free_text_2 ,c.free_text_3 , c.free_text_4 "
+		sv_j = sv_j + " from tbaadm.dtd d , tbaadm.c_dtd_p_ext c "
+		sv_j = sv_j + " where d.tran_id = c.tran_id and  trim(d.tran_id) = TRIM(?SVAR) "
+		sv_j = sv_j + " and d.part_Tran_srl_num = c.part_Tran_srl_num "
+		sv_j = sv_j + " and d.part_tran_type = c.part_tran_type "
+		sv_j = sv_j + " and d.pstd_flg = 'Y' and d.del_flg = 'N' "
+		sv_j = sv_j + " and d.TRAN_DATE = c.TRAN_DATE "
+		sv_j = sv_j + " AND d.BANK_ID = c.bank_id " 
+		sv_j = sv_j + " AND d.BANK_ID = ?SVAR " 
+		sv_j = sv_j + " AND d.tran_date = to_date(?SVAR,'DD-MM-YYYY') " 
+		sv_j = sv_j + " ORDER BY TRIM(d.part_Tran_srl_num)"
+		
+		print(sv_j)
+		BANCS.INPARAM.BINDVARS = HTM.DATA.tranId + "|" +  BANCS.STDIN.contextBankId + "|" + MID$(HTM.DATA.tranDate,0,10)
+		print(BANCS.INPARAM.BINDVARS)
+		sv_d = urhk_dbCursorOpenWithBind(sv_j)
+
+		IF(sv_d != "0")THEN
+		#{
+			HTM.DATA.error = "Database errorr | Unable to select records"
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+		
+		HTM.DATA.MainCursor = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+		HTM.DATA.curCount = urhk_dbCursorFetch(HTM.DATA.MainCursor)
+		print(HTM.DATA.curCount)
+		if (HTM.DATA.curCount != 0) then
+		#{
+			print("Error in db query")
+			HTM.DATA.error ="No Data Found"
+			GOTO END_OF_CURSOR
+		#}
+		ENDIF
+		sv_n = 0
+		WHILE(HTM.DATA.curCount == 0)
+		#{
+			
+			sv_g = FORMAT$(sv_n,"%d")
+			print(sv_g)
+			# Code addition for SL account insert in custom table Starts
+			IF ((HTM.DATA.tranType == "T") AND ((HTM.DATA.tranSubType == "BI") or (HTM.DATA.tranSubType == "CI"))) THEN
+			#{
+					
+				("HTM").("DATA").("slAcctId_"+sv_g) = BANCS.OUTPARAM.slAcctId
+				PRINT(("HTM").("DATA").("slAcctId_"+sv_g))
+						
+				IF (("HTM").("DATA").("slAcctId_"+sv_g) != "" ) THEN
+				#{
+					("HTM").("DATA").("slAcctName_"+sv_g) = BANCS.OUTPARAM.slAcctName
+					PRINT(("HTM").("DATA").("slAcctName_"+sv_g))
+							
+					("HTM").("DATA").("slAcctBal_"+sv_g) = BANCS.OUTPARAM.slAcctBal
+					PRINT(("HTM").("DATA").("slAcctBal_"+sv_g))
+							
+					("HTM").("DATA").("slAcctStatus_"+sv_g) = BANCS.OUTPARAM.slAcctStatus
+					PRINT(("HTM").("DATA").("slAcctStatus_"+sv_g))
+				#}
+				ELSE
+				#{
+					("HTM").("DATA").("slAcctId_"+sv_g) = "NULL"
+				#}
+				ENDIF
+			#}
+			ENDIF
+			
+			("BANCS").("OUTPUT").("acid_"+sv_g) = BANCS.OUTPARAM.acid
+			PRINT(("BANCS").("OUTPUT").("acid_"+sv_g))
+			
+			("BANCS").("OUTPUT").("foracid_"+sv_g) = "ABCD"
+			PRINT(("BANCS").("OUTPUT").("foracid_"+sv_g))
+			
+			("BANCS").("OUTPUT").("tranId_"+sv_g) = HTM.DATA.tranId
+			PRINT(("BANCS").("OUTPUT").("tranId_"+sv_g))
+			
+			("BANCS").("OUTPUT").("partTranSrlNum_"+sv_g) = BANCS.OUTPARAM.ptransrlnum
+			PRINT(("BANCS").("OUTPUT").("partTranSrlNum_"+sv_g))
+			
+			("BANCS").("OUTPUT").("tranDate_"+sv_g) = MID$(HTM.DATA.tranDate,0,10)
+			PRINT(("BANCS").("OUTPUT").("tranDate_"+sv_g))
+			
+			("HTM").("DATA").("partTranType_"+sv_g)  = BANCS.OUTPARAM.pTranType
+			PRINT(("HTM").("DATA").("partTranType_"+sv_g))
+			
+			("HTM").("DATA").("tranAmt_"+sv_g) = BANCS.OUTPARAM.tranAmt + "|" + BANCS.OUTPARAM.crncyCode
+			PRINT(("HTM").("DATA").("tranAmt_"+sv_g))
+			
+					
+			IF ((("HTM").("DATA").("slAcctId_"+sv_g) != "NULL")  AND (HTM.DATA.inqTranStat == "N")) THEN
+				#{
+					#Calling inqTransferFund API
+
+					#Generating sequence number tranSeq for inqTranFund API
+
+					sv_t = func_getslTranSeq(BYREF sv_a)
+					PRINT(sv_t)
+					IF (sv_t != 1) THEN
+					#{
+						BANCS.INPUT.txnSeq = sv_a
+						PRINT(BANCS.INPUT.txnSeq)
+					#}
+					ENDIF
+
+					sv_t = func_getslTranSeq(BYREF sv_a)
+					PRINT(sv_t)
+					IF (sv_t != 1) THEN
+					#{
+						BANCS.INPUT.chkTxnSeq = sv_a
+						PRINT(BANCS.INPUT.chkTxnSeq)
+					#}
+					ENDIF
+
+					PRINT(HTM.DATA.BODDate)
+					HTM.DATA.BOD = MID$(HTM.DATA.BODDate,6,4)+ "-" + MID$(HTM.DATA.BODDate,3,2) + "-" + MID$(HTM.DATA.BODDate,0,2)
+					PRINT(HTM.DATA.BOD)
+					##################Initializing Variables###################
+					BANCS.INPUT.tellerId = HTM.DATA.userId
+					BANCS.INPUT.chkTxnDate = HTM.DATA.BOD
+
+					CALLSCRIPTIFEXIST("InqTransferStatus.scr")
+					
+					HTM.DATA.inqTxnStatus = BANCS.OUTPUT.txnStatus
+					HTM.DATA.inqTranStat = "Y"
+					HTM.DATA.slTranExist = "Y"
+					IF (HTM.DATA.inqTxnStatus == "Y") THEN
+					#{
+						PRINT(BANCS.OUTPUT.ErrorDesc)
+						sv_u = urhk_SRV_SetErr(BANCS.OUTPUT.ErrorDesc)
+						sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+						BANCS.OUTPUT.successOrFailure = "F"
+						GOTO ENDOFSCRIPT
+
+					#}
+					ENDIF
+				#}
+				ENDIF
+				
+				IF ((("HTM").("DATA").("slAcctId_"+sv_g) != "NULL") AND (("HTM").("DATA").("partTranType_"+sv_g) == "D")) THEN
+				#{
+					HTM.DATA.debitTran = CINT(HTM.DATA.debitTran) + 1
+					sv_v = HTM.DATA.debitTran
+					print(HTM.DATA.debitTran)
+					print(sv_v)
+					("HTM").("DATA").("slAcctIdDr_"+sv_v) = ("HTM").("DATA").("slAcctId_"+sv_g)
+					PRINT(("HTM").("DATA").("slAcctIdDr_"+sv_v))
+					("HTM").("DATA").("tranAmtDr_"+sv_v) = ("HTM").("DATA").("tranAmt_"+sv_g)
+					PRINT(("HTM").("DATA").("tranAmtDr_"+sv_v))
+
+				#}
+				ENDIF
+				
+				IF ((("HTM").("DATA").("slAcctId_"+sv_g) != "NULL") AND (("HTM").("DATA").("partTranType_"+sv_g) == "C")) THEN
+				#{
+					HTM.DATA.creditTran =  CINT(HTM.DATA.creditTran) + 1
+					print(HTM.DATA.creditTran)
+					sv_w = HTM.DATA.creditTran
+					print(sv_w)
+					("HTM").("DATA").("slAcctIdCr_"+sv_w) = ("HTM").("DATA").("slAcctId_"+sv_g)
+					PRINT(("HTM").("DATA").("slAcctIdCr_"+sv_w))
+					("HTM").("DATA").("tranAmtCr_"+sv_w) = ("HTM").("DATA").("tranAmt_"+sv_g)
+
+				#}
+				ENDIF
+			
+			sv_n = sv_n + 1
+			
+			print(sv_n)
+			
+			NEXT:	
+			HTM.DATA.curCount = urhk_dbCursorFetch(HTM.DATA.MainCursor)
+		#}
+		DO
+			
+#}					
+ELSE
+#{	
+		sv_c = HTM.DATA.noOfRecords
+		IF (HTM.DATA.noOfRecords > 0) THEN
+		#{
+			sv_d = 0
+			sv_n = 0
+			#--------------------------------------------------------------------------------------------------
+			#  Getting multirec inputs
+			#--------------------------------------------------------------------------------------------------
+			WHILE (sv_n < HTM.DATA.noOfRecords)
+			#{
+				sv_z = sv_n
+				sv_g = FORMAT$(sv_z,"%d")
+
+				##################################
+				sv_d = sv_d + 7
+				sv_f = FORMAT$(sv_d,"%d")
+				PRINT(sv_f)
+				IF (("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f) == "NULL") THEN
+				#{
+					("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f) = ""
+				#}
+				ENDIF
+				
+
+				#--------------------------------------------------------
+				# Fetching the product fields from SRV
+				#--------------------------------------------------------
+					sv_u = urhk_SRV_GetVal("tranDtl.partTranDetailLL.<rec_"+sv_g+">.partTranType.code")
+					IF(sv_u == 0) THEN
+					#{
+						("HTM").("DATA").("partTranType_"+sv_g) = BANCS.OUTPARAM.srvValue
+						PRINT(("HTM").("DATA").("partTranType_"+sv_g))
+					#}
+					ENDIF
+
+					sv_u = urhk_SRV_GetVal("tranDtl.partTranDetailLL.<rec_"+sv_g+">.delFlg")
+					IF(sv_u == 0) THEN
+					#{
+						("HTM").("DATA").("delFlg_"+sv_g) = BANCS.OUTPARAM.srvValue
+						PRINT(("HTM").("DATA").("delFlg_"+sv_g))
+					#}
+					ENDIF
+
+
+					sv_u = urhk_SRV_GetVal("tranDtl.partTranDetailLL.<rec_"+sv_g+">.tranAmt")
+					IF(sv_u == 0) THEN
+					#{
+						("HTM").("DATA").("tranAmt_"+sv_g) = BANCS.OUTPARAM.srvValue
+						PRINT(("HTM").("DATA").("tranAmt_"+sv_g))
+					#}
+					ENDIF
+				
+				("HTM").("DATA").("slAcctId_"+sv_g) = ("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f)
+				PRINT(("HTM").("DATA").("slAcctId_"+sv_g))
+				HTM.DATA.slAcntID = ("HTM").("DATA").("slAcctId_"+sv_g)
+				print(STRLEN(HTM.DATA.slAcntID))
+				IF (((("HTM").("DATA").("slAcctId_"+sv_g) != "NULL") AND (STRLEN(HTM.DATA.slAcntID) != CINT("0")) ) AND (("HTM").("DATA").("delFlg_"+sv_g) != "Y") AND (HTM.DATA.inqTranStat == "N")) THEN
+				#{
+					#Calling inqTransferFund API
+
+					#Generating sequence number tranSeq for inqTranFund API
+
+					sv_t = func_getslTranSeq(BYREF sv_a)
+					PRINT(sv_t)
+					IF (sv_t != 1) THEN
+					#{
+						BANCS.INPUT.txnSeq = sv_a
+						PRINT(BANCS.INPUT.txnSeq)
+					#}
+					ENDIF
+
+					sv_t = func_getslTranSeq(BYREF sv_a)
+					PRINT(sv_t)
+					IF (sv_t != 1) THEN
+					#{
+						BANCS.INPUT.chkTxnSeq = sv_a
+						PRINT(BANCS.INPUT.chkTxnSeq)
+					#}
+					ENDIF
+
+					PRINT(HTM.DATA.BODDate)
+					HTM.DATA.BOD = MID$(HTM.DATA.BODDate,6,4)+ "-" + MID$(HTM.DATA.BODDate,3,2) + "-" + MID$(HTM.DATA.BODDate,0,2)
+					PRINT(HTM.DATA.BOD)
+					##################Initializing Variables###################
+					BANCS.INPUT.tellerId = HTM.DATA.userId
+					BANCS.INPUT.chkTxnDate = HTM.DATA.BOD
+
+					CALLSCRIPTIFEXIST("InqTransferStatus.scr")
+					
+					HTM.DATA.inqTxnStatus = BANCS.OUTPUT.txnStatus
+					HTM.DATA.inqTranStat = "Y"
+					HTM.DATA.slTranExist = "Y"
+					IF (HTM.DATA.inqTxnStatus == "Y") THEN
+					#{
+						PRINT(BANCS.OUTPUT.ErrorDesc)
+						sv_u = urhk_SRV_SetErr(BANCS.OUTPUT.ErrorDesc)
+						sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+                                                BANCS.OUTPUT.successOrFailure = "F"
+						GOTO ENDOFSCRIPT
+
+					#}
+					ENDIF
+				#}
+				ENDIF
+
+		
+				
+				IF (((("HTM").("DATA").("slAcctId_"+sv_g) != "NULL") AND (STRLEN(HTM.DATA.slAcntID) != CINT("0")) )  AND (("HTM").("DATA").("delFlg_"+sv_g) != "Y") AND (("HTM").("DATA").("partTranType_"+sv_g) == "D")) THEN
+				#{
+					HTM.DATA.debitTran = CINT(HTM.DATA.debitTran) + 1
+					sv_v = HTM.DATA.debitTran
+					print(HTM.DATA.debitTran)
+					print(sv_v)
+					("HTM").("DATA").("slAcctIdDr_"+sv_v) = ("HTM").("DATA").("slAcctId_"+sv_g)
+					PRINT(("HTM").("DATA").("slAcctIdDr_"+sv_v))
+					("HTM").("DATA").("tranAmtDr_"+sv_v) = ("HTM").("DATA").("tranAmt_"+sv_g)
+					PRINT(("HTM").("DATA").("tranAmtDr_"+sv_v))
+
+				#}
+				ENDIF
+				
+				IF (((("HTM").("DATA").("slAcctId_"+sv_g) != "NULL") AND (STRLEN(HTM.DATA.slAcntID) != CINT("0")) )  AND (("HTM").("DATA").("delFlg_"+sv_g) != "Y") AND (("HTM").("DATA").("partTranType_"+sv_g) == "C")) THEN
+				#{
+					HTM.DATA.creditTran =  CINT(HTM.DATA.creditTran) + 1
+					print(HTM.DATA.creditTran)
+					sv_w = HTM.DATA.creditTran
+					print(sv_w)
+					("HTM").("DATA").("slAcctIdCr_"+sv_w) = ("HTM").("DATA").("slAcctId_"+sv_g)
+					PRINT(("HTM").("DATA").("slAcctIdCr_"+sv_w))
+					("HTM").("DATA").("tranAmtCr_"+sv_w) = ("HTM").("DATA").("tranAmt_"+sv_g)
+
+				#}
+				ENDIF
+
+				sv_n = sv_n + 1
+				PRINT(sv_n)
+				PRINT(HTM.DATA.noOfRecords)
+
+				IF(sv_n == HTM.DATA.noOfRecords) THEN
+				#{
+					GOTO SKIP
+				#}
+				ENDIF
+			#}
+			DO
+		#}
+		ENDIF
+#}
+ENDIF
+#Aman
+
+	SKIP:
+	IF (HTM.DATA.slTranExist == "Y") THEN
+	#{
+		#call for transfer fund API if inqTranFund status is "N"
+
+		PRINT(HTM.DATA.inqTxnStatus)
+
+		IF (HTM.DATA.inqTxnStatus == "N") THEN
+		#{
+
+			#Call API for Debit tran with Direction as "C" as Credit is happening to GL aaccount in silverLake
+
+			sv_i = 0
+			sv_j = 1
+			print(sv_w)
+			sv_w = CINT(HTM.DATA.debitTran)
+			print(sv_w)
+
+			IF (sv_w > 0) THEN
+			#{
+				#--------------------------------------------------------------------------------------------------
+				#  Getting multirec inputs
+				#--------------------------------------------------------------------------------------------------
+				WHILE (sv_i < sv_w)
+				#{
+					("BANCS").("INPUT").("accNum"+FORMAT$(sv_j,"%d")) = ("HTM").("DATA").("slAcctIdDr_"+FORMAT$(sv_j,"%d"))
+					("BANCS").("INPUT").("txnAmount"+FORMAT$(sv_j,"%d")) = ("HTM").("DATA").("tranAmtDr_"+FORMAT$(sv_j,"%d"))
+					PRINT(("BANCS").("INPUT").("accNum"+FORMAT$(sv_j,"%d")))
+					PRINT(("BANCS").("INPUT").("txnAmount"+FORMAT$(sv_j,"%d")))
+					sv_j =sv_j +1
+					sv_i = sv_i +1
+				#}
+				DO
+
+				PRINT(BANCS.STDIN.userId)
+				BANCS.INPUT.direction = "C"
+				BANCS.INPUT.tellerId = BANCS.STDIN.userId
+				BANCS.INPUT.reversalFlag = ""
+				BANCS.INPUT.reversalTxnSeq = "0"
+				CALLSCRIPTIFEXIST("transferFund.scr")
+				PRINT(INTF.DATA.orgCode)
+
+
+				IF(INTF.DATA.orgCode == "000")THEN
+				#{
+					PRINT(INTF.DATA.orgCode)
+				#}
+				ELSE
+				#{
+					PRINT(INTF.DATA.ErrorDesc)
+					sv_u = urhk_SRV_SetErr(INTF.DATA.orgCode+"-"+INTF.DATA.ErrorDesc)
+					sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+					BANCS.OUTPUT.successOrFailure = "F"
+					GOTO ENDOFSCRIPT
+				#}
+				ENDIF
+
+			#}
+			ENDIF
+
+			#Call API for Credit AFTER debit is successful , as "D" debit is happening to GL account in silverLake
+			sv_i = 0
+			sv_j = 1
+			print(sv_w)
+			sv_w = CINT(HTM.DATA.creditTran)
+			print(sv_w)
+
+			IF (sv_w > 0) THEN
+			#{
+				#--------------------------------------------------------------------------------------------------
+				#  Getting multirec inputs
+				#--------------------------------------------------------------------------------------------------
+				WHILE (sv_i < sv_w)
+				#{
+					("BANCS").("INPUT").("accNum"+FORMAT$(sv_j,"%d")) = ("HTM").("DATA").("slAcctIdCr_"+FORMAT$(sv_j,"%d"))
+					("BANCS").("INPUT").("txnAmount"+FORMAT$(sv_j,"%d")) = ("HTM").("DATA").("tranAmtCr_"+FORMAT$(sv_j,"%d"))
+					PRINT(("BANCS").("INPUT").("accNum"+FORMAT$(sv_j,"%d")))
+					PRINT(("BANCS").("INPUT").("txnAmount"+FORMAT$(sv_j,"%d")))
+					sv_j =sv_j +1
+					sv_i = sv_i +1
+				#}
+				DO
+
+				BANCS.INPUT.txnSeq = BANCS.INPUT.chkTxnSeq
+				PRINT(BANCS.INPUT.txnSeq)
+				PRINT(BANCS.STDIN.userId)
+				BANCS.INPUT.direction = "D"
+				BANCS.INPUT.tellerId = BANCS.STDIN.userId
+				BANCS.INPUT.reversalFlag = ""
+				BANCS.INPUT.reversalTxnSeq = "0"
+
+				CALLSCRIPTIFEXIST("transferFund.scr")
+
+				
+				IF(INTF.DATA.orgCode == "000")THEN
+				#{
+					PRINT(INTF.DATA.orgCode)
+				#}
+				ELSE
+				#{
+						#In case Credits are posted and debit failes TransferFund API is called with reversal Flag as Y
+					sv_u = urhk_SRV_SetErr(INTF.DATA.orgCode+"-"+BANCS.OUTPUT.ErrorDesc)
+					sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+					BANCS.OUTPUT.successOrFailure = "F"
+					IF (CINT(HTM.DATA.debitTran) > 0) THEN
+					#{
+						BANCS.INPUT.direction = "D"
+						BANCS.INPUT.tellerId = BANCS.STDIN.userId
+						BANCS.INPUT.reversalFlag = "Y"
+						BANCS.INPUT.reversalTxnSeq = BANCS.INPUT.chkTxnSeq
+
+						CALLSCRIPTIFEXIST("transferFund.scr")
+						PRINT(INTF.DATA.orgCode)
+
+						IF(INTF.DATA.orgCode == "000")THEN
+						#{
+							PRINT(INTF.DATA.orgCode)
+						#}
+						ELSE
+						#{
+							PRINT(BANCS.OUTPUT.ErrorDesc)
+							sv_u = urhk_SRV_SetErr(INTF.DATA.orgCode+"-"+BANCS.OUTPUT.ErrorDesc)
+							sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+							BANCS.OUTPUT.successOrFailure = "F"
+							GOTO ENDOFSCRIPT
+						#}
+						ENDIF
+					#}
+					ENDIF
+
+					GOTO ENDOFSCRIPT
+				#}
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ENDIF
+
+	#}
+	ENDIF
+	ENDOFSCRIPT:
+	IF (BANCS.STDIN.serviceName == "SRV_PostTran") THEN
+	#{
+		sv_r = urhk_dbCursorClose(HTM.DATA.MainCursor)
+	#}
+	ENDIF
+	###################################################################################################
+	#	START-	DELETE CLASS AND REPOSITORY
+	###################################################################################################
+	sub_deleteRepClassB("HTM", "DATA")
+	EXITSCRIPT
+END-->
+

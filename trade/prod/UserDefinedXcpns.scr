@@ -1,0 +1,102 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: script name based
+# Script: UserDefinedXcpns.sscr
+# Type: UserDefinedXcpns|NA
+# Description: Not Available
+#============================================================
+
+<--START
+	# ===================================================================================== #
+	# This script provides additional validations and Exception raising for FAB/ONS
+	# transactions.
+	# Input fields available:
+	# BANCS.INPUT.DeliveryChannelId
+	# BANCS.INPUT.InstrumentType 			BANCS.INPUT.EventType
+	# BANCS.INPUT.AddtlDetails              BANCS.INPUT.InstrumentDate
+	# BANCS.INPUT.AcctNum                   BANCS.INPUT.InstrumentAlpha
+	# BANCS.INPUT.SchemeCode                BANCS.INPUT.InstrumentNum
+	# BANCS.INPUT.SchemeType                BANCS.INPUT.ReportCode
+	# BANCS.INPUT.TranAmt                   BANCS.INPUT.TranCurrency
+	# BANCS.INPUT.RefAmt                    BANCS.INPUT.RefCurrency
+	# BANCS.INPUT.Rate                      BANCS.INPUT.RateCode
+	# BANCS.INPUT.ValMode                   BANCS.INPUT.TranDate
+	# BANCS.INPUT.DrCrInd                   BANCS.INPUT.ValueDate
+	# BANCS.INPUT.TranType                  BANCS.INPUT.CustomerId
+	# BANCS.INPUT.ExceptionIgnoreFlg        BANCS.INPUT.AcctSolId
+	# BANCS.INPUT.TranCreationMode			BANCS.INPUT.RestrictModifyInd
+	# BANCS.INPUT.PST_Flag                  BANCS.INPUT.srvcallmode
+	#
+	# Output fields are
+	# ===========================
+	# The output field successOrFailure is default populated to Success ('S') in the
+	# code and ErrorDesc is blank by default.
+	# These fields have to be modified only in case the values have to change
+	# (i.e. in case of returning Error.)
+	#
+	# BANCS.OUTPUT.successOrFailure
+	# BANCS.OUTPUT.ErrorDesc
+	# (In case of FAILURE).
+	#
+	# ===================================================================================== #
+	TRACE ON
+
+	print(BANCS.INPUT.ValMode)
+	print(BANCS.INPUT.DrCrInd)
+	print(BANCS.INPUT.ExceptionIgnoreFlg)
+	print(BANCS.INPUT.EventType)
+	print(BANCS.INPUT.CustomerId)
+	print(BANCS.INPUT.DeliveryChannelId)
+	print(BANCS.INPUT.TranSubType)
+	print(BANCS.INPUT.TranType)
+	print(BANCS.INPUT.TranSubType)
+
+	print(BANCS.INPUT.EntryUserId)
+	print(BANCS.INPUT.PstdUserId)
+	print(BANCS.INPUT.VfdUserId)
+	print(BANCS.INPUT.TranDate)
+	print(BANCS.INPUT.TranId)
+	print(BANCS.INPUT.PartTranSrlNum)
+	print(BANCS.INPUT.srvcallmode)
+
+	IF (BANCS.INPUT.DrCrInd == "D") THEN
+	#{
+		print(BANCS.INPUT.TranAmt)
+		sv_a = CDOUBLE(BANCS.INPUT.TranAmt)
+		IF (sv_a == 1) THEN
+		#{
+			BANCS.INPARAM.ValMode = BANCS.INPUT.ValMode
+			BANCS.INPARAM.DrCrInd = BANCS.INPUT.DrCrInd
+			BANCS.INPARAM.ExceptionIgnoreFlg = BANCS.INPUT.ExceptionIgnoreFlg
+			IF (BANCS.INPUT.srvcallmode == "E") THEN
+			#{
+				sv_d = urhk_FTS_RaiseException("BL2")
+				print("urhk_FTS_RaiseException returned : ")
+				print(sv_d)
+				IF (sv_d == 1) THEN
+				#{
+					print(sv_d)
+					BANCS.OUTPUT.successOrFailure = "F"
+					BANCS.OUTPUT.ErrorDesc = BANCS.OUTPARAM.ErrorDesc
+					exitscript
+				#}
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ENDIF
+
+	#-------------------------------------------------------------#
+	# User Story No/Requirement Id - 7970360/Liabilities_020
+	# Author - Noopur
+	# Date - 29-May-18
+	# Description - Account Balance Monitoring
+	#-------------------------------------------------------------#
+	CALLSCRIPTIFEXIST("cust_acctBalMonitor.scr")
+
+	TRACE OFF
+	exitscript
+END-->

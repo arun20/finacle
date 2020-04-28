@@ -1,0 +1,36 @@
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+TRACE ON
+	################################################
+	# CREATING REPOSITORY AND CLASS
+	################################################
+	sub_createRepClassB("MTFT","DATA")
+	sub_getFieldValuesfromSRVStructB("1","MTFT","DATA","pcOtherDtl.pcEffFuncCode","funcCode")
+	PRINT(MTFT.DATA.funcCode)
+	IF(MTFT.DATA.funcCode == "D")THEN
+	#{
+		CALLSCRIPTIFEXIST("mptdisbdet.scr")
+		CALL("MTFT_updAvailLimit.scr")
+		CALLSCRIPTIFEXIST("MTFT_inqTransferStatus.scr")
+		CALLSCRIPTIFEXIST("MTFT_SLAcctChrgDtls.scr")
+	#}	
+	ENDIF
+	IF(MTFT.DATA.funcCode == "R")THEN
+	#{
+		CALLSCRIPTIFEXIST("mptrlovrdet.scr")
+		CALL("MTFT_updAvailLimit.scr")
+		CALLSCRIPTIFEXIST("MTFT_inqTransferStatus.scr")
+		CALLSCRIPTIFEXIST("MTFT_SLAcctChrgDtls.scr")
+	#}
+	ENDIF
+	IF(MTFT.DATA.funcCode == "O")THEN
+	#{
+		CALLSCRIPTIFEXIST("mptoffsetdet.scr")
+		CALL("MTFT_updAvailLimit.scr")
+		CALLSCRIPTIFEXIST("MTFT_inqTransferStatus.scr")
+		CALLSCRIPTIFEXIST("MTFT_SLAcctChrgDtls.scr")
+	#}
+	ENDIF
+EXITSCRIPT
+END-->

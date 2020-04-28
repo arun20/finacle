@@ -1,0 +1,1558 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Domain: Finacle Core
+# Library Name: CIFAPIBatch.scl
+# Description: CIFAPIBatch.scl
+#============================================================
+###################################################################
+#					SUB FOR SUCCESS RECORDS
+####################################################################
+SUB genSuccessLst()
+#{
+	#SRL NUM|ACCOUNT NUMBER|SUNDRY CR BAL|SUNDRY DR BAL|PENDING ON LOAN|TRAN_ID|REMARKS
+	
+	CUST.DATA.successCount = CINT(CUST.DATA.successCount) + 1
+	
+	PRINT(CUST.DATA.successCount)
+	PRINT(CUST.DATA.cifId)
+	PRINT(CUST.DATA.SuccessMsg)
+	
+	fv_successRecord     =   "S" +CUST.DATA.successCount + "|S"  + CUST.DATA.cifId   + "|S" + CUST.DATA.SuccessMsg
+	
+	PRINT(fv_successRecord)
+	sv_r = func_addDataToFileB(CUST.BATCH.successLst,fv_successRecord)
+	PRINT(CUST.BATCH.successLst)
+	
+	
+#}
+ENDSUB
+
+
+###################################################################
+#					SUB FOR FAILURE RECORDS
+####################################################################
+SUB genFailureLst()
+#{
+	
+	CUST.DATA.failureCount = CINT(CUST.DATA.failureCount) + 1
+	
+	PRINT(CUST.DATA.failureCount)
+	PRINT(CUST.DATA.cifId)
+	PRINT(CUST.DATA.errorMsg)
+	
+	fv_failureRecord     =   "S" +CUST.DATA.failureCount + "|S"  + CUST.DATA.cifId  +  "|S"  + CUST.DATA.errorMsg
+	PRINT(fv_failureRecord)
+	
+	sv_r = func_addDataToFileB(CUST.BATCH.failureLst,fv_failureRecord)
+	PRINT(CUST.BATCH.failureLst)
+	
+#}
+ENDSUB
+
+###################################################################
+#	FUNCTION TO DERIVE MINOR_FLG FOR ADDCUST
+####################################################################
+FUNCTION deriveMinorFlg(fv_dob)
+#{
+	PRINT(fv_dob)
+	
+	INTF.DATA.birthDateInp = fv_dob
+	
+	IF((TRIM (INTF.DATA.birthDateInp) == "") AND ((STRLEN(INTF.DATA.birthDateInp) != 8)))THEN
+	#{
+		INTF.DATA.birthDateInp = "01-01-1900" +  "T00:00:00.000"
+		PRINT(INTF.DATA.birthDateInp)
+		#}
+	ELSE
+		#{
+		lv_h = "BirthDtMinor|SELECT TO_CHAR(TO_DATE(?SVAR,'DDMMYYYY'),'DD-MM-YYYY') FROM DUAL"
+		PRINT(lv_h)
+		
+		BANCS.INPARAM.BINDVARS = INTF.DATA.birthDateInp
+		
+		sv_d=urhk_dbSelectWithBind(lv_h)
+		sub_copyOutparamFieldB("BirthDtMinor","INTF","DATA","BirthDtMinor","")
+		INTF.DATA.birthDate = BANCS.OUTPARAM.BirthDtMinor
+		PRINT(INTF.DATA.birthDate)
+	#}
+	ENDIF
+	
+	PRINT(INTF.DATA.birthDate)
+	fv_dob = INTF.DATA.birthDate
+	
+	PRINT(BANCS.STDIN.BODDate)
+	
+	INTF.DATA.bodDate1 = mid$(BANCS.STDIN.BODDate,6,4) + "-" +  mid$(BANCS.STDIN.BODDate,3,2) + "-" + mid$(BANCS.STDIN.BODDate,0,2)
+	PRINT(INTF.DATA.bodDate1)
+	
+	INTF.DATA.DOB1 = mid$((fv_dob),6,4) + "-" +  mid$((fv_dob),3,2) + "-" + mid$((fv_dob),0,2)
+	PRINT(INTF.DATA.DOB1)
+	
+	sv_a = ""
+	sv_a = sv_a + "dobDiff|select floor(months_between(date '"+INTF.DATA.bodDate1+"', date '"+INTF.DATA.DOB1+"') /12) from dual"
+	PRINT(sv_a)
+	
+	sv_s=urhk_dbSelectWithBind(sv_a)
+	PRINT(sv_s)
+	PRINT(BANCS.OUTPARAM.dobDiff)
+	
+	IF(sv_s == 0)THEN
+	#{
+		INTF.DATA.dobDiff = BANCS.OUTPARAM.dobDiff
+		PRINT(INTF.DATA.dobDiff)
+		
+		IF(CINT(INTF.DATA.dobDiff) < 18)THEN
+		#{
+			#CUST.BATCH.IsMinor = "Y"
+			INTF.DATA.isMinor = "Y"
+			#}
+		ELSE
+			#{
+			#CUST.BATCH.IsMinor = "N"
+			INTF.DATA.isMinor = "N"
+			
+		#}
+		ENDIF
+		
+		#}
+	ELSE
+		#{
+		#CUST.BATCH.IsMinor  = "N"
+		#CUST.BATCH.IsSenior = "N"
+		INTF.DATA.isMinor = "N"
+	#}
+	ENDIF
+	PRINT(INTF.DATA.isMinor)
+	
+	sv_v = INTF.DATA.isMinor
+	PRINT(sv_v)
+	
+	RETURN sv_v
+#}
+ENDFUNCTION
+
+###################################################################
+#		CUST MOD API WIL BE SENT IN A DIFF PATCH
+####################################################################
+
+FUNCTION modifyUplCIF(fv_repos,fv_class)
+#{
+	PRINT("UNDER CONSTRUCTION")
+	RETURN 0
+	
+#}
+ENDFUNCTION
+
+######################################################################################################
+# FUNCTION TO GET TAG VALUE FROM RESPONCEXML
+######################################################################################################
+FUNCTION xmlParseFunc1(fv_resXml,fv_startTag,fv_endTag,BYREF fv_tagValue)
+#{
+	PRINT(fv_startTag)
+	PRINT(fv_endTag)
+	fv_u = GETPOSITION(fv_resXml,fv_startTag) + STRLEN(fv_startTag) - 1
+	PRINT(fv_u)
+	IF(fv_u != 0) THEN
+	#{
+		fv_v  = GETPOSITION(fv_resXml,fv_endTag) - 1
+		PRINT(fv_v)
+		fv_tagValue = MID$(fv_resXml,fv_u,(fv_v-fv_u))
+		PRINT(fv_tagValue)
+		RETURN fv_tagValue
+	#}
+	ENDIF
+#}
+ENDFUNCTION
+
+###################################################################
+#			BATCH FRAMEWORK FUNCTION onEveryRecord()
+####################################################################
+
+SUB onEveryRecord()
+#{
+	sv_z=""
+	CUST.DATA.errMsg = ""
+	CUST.DATA.errorMsg = ""
+	CUST.DATA.SuccessMsg = ""
+	CUST.DATA.successCount = "0"
+	CUST.DATA.failureCount = "0"
+	CUST.DATA.successOrFailure = ""
+	CUST.DATA.errorFlg  = "N"
+	
+	
+	PRINT("IN ONEVERYRECORD")
+	CUST.DATA.BODDate = MID$(BANCS.STDIN.BODDate,0,10)
+	PRINT(CUST.DATA.BODDate)
+	
+	## *********** FOR ADD CUST API***************** ##
+	sub_createRepClassB("INTF","DATA")
+	
+	
+	INTF.DATA.cifNum = ""
+	INTF.DATA.titleEn = ""
+	INTF.DATA.firstNameEn = ""
+	INTF.DATA.lastNameEn = ""
+	INTF.DATA.shortName = ""
+	INTF.DATA.primaryRM = ""
+	
+	INTF.DATA.addrCount = "1"
+	INTF.DATA.addrTypeDesc1 = ""
+	INTF.DATA.addrLine11 = ""
+	INTF.DATA.addrLine21 = ""
+	INTF.DATA.addrLine31 = ""
+	INTF.DATA.addrState1 = ""
+	INTF.DATA.addrCountry1 = ""
+	INTF.DATA.addrZipCode1 = ""
+	INTF.DATA.tradeCustFlag = ""
+	INTF.DATA.title = ""
+	INTF.DATA.gender = ""
+	INTF.DATA.nonResInd  = ""
+	INTF.DATA.nationality = ""
+	INTF.DATA.holdMailInd = ""
+	
+	INTF.DATA.docCount = "1"
+	INTF.DATA.docTypeCode1 = ""
+	INTF.DATA.issueCountry1 = ""
+	INTF.DATA.expiryDate1 = ""
+	INTF.DATA.uniqueID1 = ""
+	INTF.DATA.custClassCode = ""
+	
+	
+	INTF.DATA.staffIndCode = ""
+	INTF.DATA.staffIndDesc = ""
+	
+	INTF.DATA.phoneCount = ""
+	INTF.DATA.phoneType1 = ""
+	INTF.DATA.phoneNumber1 = ""
+	INTF.DATA.phoneCntyCode1 = ""
+	
+	INTF.DATA.docRefNumber1 = ""
+	INTF.DATA.city1 = ""
+	
+	INTF.DATA.docRefNumber = ""
+	INTF.DATA.city = ""
+	
+	#------------------------------------------------------------------------------#
+	#   Initializing the fields
+	#------------------------------------------------------------------------------#
+	CUST.DATA.cifId = ""
+	CUST.DATA.cust_id  = ""
+	CUST.DATA.cust_name = ""
+	CUST.DATA.date_of_birth = ""
+	CUST.DATA.sol_id = ""
+	CUST.DATA.ibs_flg = ""
+	CUST.DATA.introd_title_code = ""
+	
+	CUST.DATA.FirstName = ""
+	CUST.DATA.MiddleName = ""
+	CUST.DATA.LastName = ""
+	
+	#~~~~~~~~Address Dtls ~~~~~~~~~~~~~~~~~#
+	CUST.DATA.cust_pager_no = ""
+	CUST.DATA.cust_comu_addr1 = ""
+	CUST.DATA.cust_comu_addr2 = ""
+	CUST.DATA.cust_comu_city_code = ""
+	CUST.DATA.cust_comu_state_code = ""
+	CUST.DATA.cust_comu_cntry_code = ""
+	CUST.DATA.cust_comu_pin_code = ""
+	
+	CUST.DATA.cust_comu_phone_num = ""
+	CUST.DATA.AddrCategoryPerm = ""
+	CUST.DATA.PrefFormatPerm = ""
+	CUST.DATA.StartDtPerm = ""
+	CUST.DATA.cust_perm_phone_num = ""
+	
+	CUST.DATA.cust_perm_addr1 = ""
+	CUST.DATA.cust_perm_addr2 = ""
+	CUST.DATA.cust_perm_city_code = ""
+	CUST.DATA.cust_perm_state_code = ""
+	CUST.DATA.cust_perm_pin_code = ""
+	CUST.DATA.cust_perm_cntry_code = ""
+	
+	CUST.DATA.cust_emp_addr1 = ""
+	CUST.DATA.cust_emp_addr2 = ""
+	CUST.DATA.cust_emp_city_code = ""
+	CUST.DATA.cust_emp_state_code = ""
+	CUST.DATA.cust_emp_pin_code = ""
+	CUST.DATA.cust_emp_cntry_code = ""
+	CUST.DATA.cust_emp_phone_num_1 = ""
+	CUST.DATA.cust_emp_phone_num_2 = ""
+	
+	CUST.DATA.nre_lcl_reltn_addr1 = ""
+	CUST.DATA.nre_lcl_reltn_addr2 = ""
+	CUST.DATA.nre_lcl_reltn_city_code = ""
+	CUST.DATA.nre_lcl_reltn_state_code = ""
+	CUST.DATA.nre_lcl_reltn_pin_code = ""
+	CUST.DATA.nre_lcl_reltn_cntry_code = ""
+	CUST.DATA.nre_lcl_reltn_phone_num = ""
+	CUST.DATA.AddrCategory = ""
+	
+	CUST.DATA.birthDate = ""
+	CUST.DATA.BirthDt = ""
+	CUST.DATA.BirthMonth = ""
+	CUST.DATA.BirthYear = ""
+	CUST.DATA.cust_minor_flg = ""
+	CUST.DATA.cust_nre_flg = ""
+	CUST.DATA.cust_gender = ""
+	CUST.DATA.cust_occp_code = ""
+	
+	
+	CUST.DATA.email_id = ""
+	CUST.DATA.cust_comu_phone_num = ""
+	CUST.DATA.commu_at = ""
+	CUST.DATA.cust_title_code = ""
+	CUST.DATA.cust_minor_flg = ""
+	CUST.DATA.ibs_flg = ""
+	CUST.DATA.introd_title_code = ""
+	
+	CUST.DATA.EmploymentStatus = ""
+	CUST.DATA.marital_status = ""
+	CUST.DATA.cust_nre_flg = ""
+	
+	CUST.DATA.SegmentationClass = ""
+	CUST.DATA.SubSegment = ""
+	CUST.DATA.TradeFinance = ""
+	
+	CUST.DATA.Language = ""
+	CUST.DATA.cust_gender = ""
+	CUST.DATA.Manager = ""
+	CUST.DATA.DefaultAddrType = ""
+	CUST.DATA.cust_introd_stat_code = ""
+	CUST.DATA.cust_introd_name = ""
+	CUST.DATA.introd_title_code = ""
+	CUST.DATA.cust_introd_stat_code = ""
+	CUST.DATA.cust_type_code = ""
+	CUST.DATA.cust_grp = ""
+	
+	CUST.DATA.HoldMailFlag = ""
+	CUST.DATA.PrefAddr = ""
+	CUST.DATA.PrefFormatComu = ""
+	CUST.DATA.PrefFormatPerm = ""
+	CUST.DATA.StartDtComu = ""
+	CUST.DATA.ft_hu_name = ""
+	CUST.DATA.Region = ""
+	CUST.DATA.RelationshipOpeningDt = ""
+	CUST.DATA.CustStatusChngDate = ""
+	CUST.DATA.cust_const =""
+	
+	CUST.DATA.minor_guard_code = ""
+	CUST.DATA.Manager  = ""
+	CUST.DATA.cust_emp_id  = ""
+	CUST.DATA.nre_becoming_nre_date = ""
+	CUST.DATA.nre_becoming_ord_date = ""
+	CUST.DATA.NativeLanguageCode = ""
+	
+	#TO BE GIVEN MAPPING
+	
+	CUST.DATA.psprt_num = ""
+	CUST.DATA.psprt_det = ""
+	CUST.DATA.psprt_exp_date = ""
+	CUST.DATA.psprt_issu_date = ""
+	CUST.DATA.IdPrfIDIssuedOrganisation = ""
+	CUST.DATA.IdPrfReferenceNum  = ""
+	CUST.DATA.IdPrfIdIssueDt  = ""
+	CUST.DATA.pan_gir_num = ""
+	CUST.DATA.IdPrfCountryOfIssue = ""
+	CUST.DATA.IdPrfDocCode  = ""
+	#MAPPING VAR ENDS
+	
+	
+	CUST.DATA.cust_commu_code = ""
+	CUST.DATA.NATIONALITY =""
+	CUST.DATA.IdPrfDocCode = ""
+	CUST.DATA.IdPrfTypeCode = ""
+	CUST.DATA.IdPrfTypeDesc = ""
+	CUST.DATA.IdPrfReferenceNum = ""
+	CUST.DATA.IdPrfPlaceOfIssue = ""
+	CUST.DATA.prefCnt = ""
+	
+	CUST.DATA.AdPrfCountryOfIssue = ""
+	CUST.DATA.AdPrfTypeDesc = ""
+	CUST.DATA.AdPrfDocCode = ""
+	CUST.DATA.AdPrfIdIssueDt = ""
+	CUST.DATA.AdPrfTypeCode = ""
+	CUST.DATA.AdPrfPlaceOfIssue = ""
+	CUST.DATA.AdPrfReferenceNum = ""
+	CUST.DATA.AdPrfIDIssuedOrganisation = ""
+	CUST.DATA.preferredUniqueId = ""
+	CUST.DATA.AdPrfIdIssueDt = ""
+	
+	CUST.DATA.childCustId = ""
+	CUST.DATA.StrText10 = ""
+	CUST.DATA.Type = ""
+	CUST.DATA.minor_guard_code = ""
+	CUST.DATA.cust_comu_telex_num = ""
+	CUST.DATA.demoHoldMailFlg = ""
+	CUST.DATA.shortNmeNative = ""
+	CUST.DATA.cust_short_name = ""
+	
+	#HardCodingScript_Variables
+	CUST.DATA.BODDate = MID$(BANCS.STDIN.BODDate,0,10)
+	PRINT(CUST.DATA.BODDate)
+	CUST.DATA.rcre_time = CUST.DATA.BODDate +  "T00:00:00.000"
+	PRINT(CUST.DATA.rcre_time)
+	
+	CUST.DATA.id_proof = ""
+	CUST.DATA.id_no = ""
+	CUST.DATA.add_proof = ""
+	CUST.DATA.cust_comu_city_code = ""
+	CUST.DATA.StartDtNRE = ""
+	CUST.DATA.StartDtEmp = ""
+	CUST.DATA.RelationshipOpeningDt =""
+	CUST.DATA.cust_occp_code = ""
+	CUST.DATA.crncyDate = ""
+	CUST.DATA.sol_id = BANCS.STDIN.mySolId
+	
+	CUST.DATA.cust_introd_cust_id = ""
+	CUST.DATA.introd_title_code = ""
+	CUST.DATA.cust_introd_name = ""
+	CUST.DATA.tax_residence = ""
+	CUST.DATA.childCustId = ""
+	CUST.DATA.AddrCategoryComu = ""
+	CUST.DATA.debit_card_flg = ""
+	CUST.DATA.card_sub_type = ""
+	
+	
+	#~~~~~~~~Address Dtls As Per New Batch Inputs Fields~~~~~~~~~~~~~~~~~#
+	CUST.DATA.addrType1 = ""
+	CUST.DATA.addrType2 = ""
+	CUST.DATA.addrType3 = ""
+	CUST.DATA.addrType4 = ""
+	CUST.DATA.addrType5 = ""
+	
+	CUST.DATA.AddrCategoryPerm = ""
+	CUST.DATA.HomeAddr = ""
+	CUST.DATA.HomeCity = ""
+	CUST.DATA.HomeState = ""
+	CUST.DATA.HomeCntry = ""
+	CUST.DATA.HomePinCode = ""
+	
+	CUST.DATA.AddrCategoryMail = ""
+	CUST.DATA.MailAddr = ""
+	CUST.DATA.MailCity = ""
+	CUST.DATA.MailState = ""
+	CUST.DATA.MailCntry = ""
+	CUST.DATA.MailPinCode = ""
+	
+	CUST.DATA.AddrCategoryWrk = ""
+	CUST.DATA.WorkAddr = ""
+	CUST.DATA.WorkCity = ""
+	CUST.DATA.WorkState = ""
+	CUST.DATA.WorkCntry = ""
+	CUST.DATA.WorkPinCode = ""
+	
+	CUST.DATA.AddrCategoryCommu = ""
+	CUST.DATA.CommuAddr = ""
+	CUST.DATA.CommuCity = ""
+	CUST.DATA.CommuState = ""
+	CUST.DATA.CommuCntry = ""
+	CUST.DATA.CommuPinCode = ""
+	
+	CUST.DATA.firstNameNativ = ""
+	CUST.DATA.lastNameNativ = ""
+	CUST.DATA.titleNativ = ""
+	
+	#ADDRESSLIST
+	CUST.DATA.modAddrCount = "0"
+	
+	#PHONELIST
+	CUST.DATA.phoneCount = "1"
+	CUST.DATA.phnEmailType1 = ""
+	CUST.DATA.phoneNumber1 = ""
+	
+	##ENTITYDOC
+	CUST.DATA.entityDocCount = "1"
+	CUST.DATA.phoneNumber1 = ""
+	CUST.DATA.telCntryCode1 = ""
+	CUST.DATA.phnEmailType1 =""
+	
+	#-----------------------------------------------------------------------
+	# GET UPLOADED FILE PATH AND FILE NAME FROM CPARAM
+	#-----------------------------------------------------------------------
+	
+	lv_u = "uplPath|SELECT PARAMETER_VALUE "
+	lv_u = lv_u + " FROM CUSTOM.C_CPMASTER CPARAM, CUSTOM.C_CPVALUE CPVALUE"
+	lv_u = lv_u + " WHERE CPVALUE.PARAMETER_ID = 'CIF_UPL_PATH' AND CPARAM.PARAMETER_ID = CPVALUE.PARAMETER_ID"
+	lv_u = lv_u + " AND CPVALUE.DEL_FLG != 'Y' AND CPVALUE.ENTITY_CRE_FLG = 'Y' AND "
+	lv_u = lv_u + " CPARAM.DEL_FLG != 'Y' AND CPARAM.ENTITY_CRE_FLG = 'Y' AND CPARAM.MODULE_NAME = 'LOANS' "
+	lv_u = lv_u + " AND CPVALUE.BANK_ID = ?SVAR  AND CPARAM.BANK_ID = ?SVAR"
+	
+	
+	BANCS.INPARAM.BINDVARS =  BANCS.STDIN.contextBankId +  "|" + BANCS.STDIN.contextBankId
+	lv_z = urhk_dbSelectWithBind(lv_u)
+	IF(lv_z != "0")THEN
+	#{
+		PRINT("CPARAM FETCH NOT SUCCESS")
+		CUST.DATA.errorMsg = "CPARAM Fetch failed for - CIF_UPL_PATH"
+		CUST.DATA.successOrFailure = "F"
+		sub_genFailureLst()
+		GOTO END
+	#}
+	ENDIF
+	sub_copyOutparamFieldB("uplPath","CUST","DATA","uplPath","")
+	PRINT(CUST.DATA.uplPath)
+	
+	
+	lv_u = "uplFileName|SELECT PARAMETER_VALUE "
+	lv_u = lv_u + " FROM CUSTOM.C_CPMASTER CPARAM, CUSTOM.C_CPVALUE CPVALUE"
+	lv_u = lv_u + " WHERE CPVALUE.PARAMETER_ID = 'CIF_UPL_FILE' AND CPARAM.PARAMETER_ID = CPVALUE.PARAMETER_ID"
+	lv_u = lv_u + " AND CPVALUE.DEL_FLG != 'Y' AND CPVALUE.ENTITY_CRE_FLG = 'Y' AND "
+	lv_u = lv_u + " CPARAM.DEL_FLG != 'Y' AND CPARAM.ENTITY_CRE_FLG = 'Y' AND CPARAM.MODULE_NAME = 'LOANS' "
+	lv_u = lv_u + " AND CPVALUE.BANK_ID = ?SVAR  AND CPARAM.BANK_ID = ?SVAR"
+	
+	
+	BANCS.INPARAM.BINDVARS =  BANCS.STDIN.contextBankId +  "|" + BANCS.STDIN.contextBankId
+	lv_z = urhk_dbSelectWithBind(lv_u)
+	IF(lv_z != "0")THEN
+	#{
+		PRINT("CPARAM FETCH NOT SUCCESS")
+		CUST.DATA.errorMsg = "CPARAM Fetch failed for - CIF_UPL_FILE"
+		CUST.DATA.successOrFailure = "F"
+		CUST.DATA.cifId = ""
+		sub_genFailureLst()
+		GOTO END
+	#}
+	ENDIF
+	sub_copyOutparamFieldB("uplFileName","CUST","DATA","uplFileName","")
+	PRINT(CUST.DATA.uplFileName)
+	
+	CUST.DATA.uplFile   = CUST.DATA.uplPath + "/" + CUST.DATA.uplFileName
+	PRINT(CUST.DATA.uplFile)
+	
+	
+	#-------------------------------------
+	# TO CHECK IF FILE IS IN .CSV FORMAT
+	#--------------------------------------
+	CUST.DATA.uplFileExtn = func_getNthFieldFromStringB(CUST.DATA.uplFile,".",2)
+	PRINT(CUST.DATA.uplFileExtn)
+	
+	IF((CUST.DATA.uplFileExtn != "txt") AND (TRIM(CUST.DATA.uplFileExtn) != "TXT"))THEN
+	#{
+		PRINT("File Extension Mismath Main")
+		
+		CUST.DATA.errorMsg = " Uploaded File should be in .csv format"
+		CUST.DATA.successOrFailure = "F"
+		CUST.DATA.cifId = ""
+		sub_genFailureLst()
+		GOTO END
+		
+	#}
+	ENDIF
+	#--------------------------------------------------------
+	# Read upload file, from upload-user's CDCI directory.
+	#--------------------------------------------------------
+	#CUST.DATA.inFile = "/HBTFALG_IT_BE/hbtfalg2/BE/Finacle/FC/app/CDCI_LOGS/RACHEL2/CIF_Uploded_sample.txt"
+	CUST.DATA.inFile = CUST.DATA.uplFile
+	PRINT(CUST.DATA.inFile)
+	
+	CUST.DATA.seterr = "N"
+	
+	sv_t= urtn_fileOpen(CUST.DATA.inFile + "|r")
+	PRINT(sv_t)
+	
+	IF (sv_t == 0) THEN
+	#{
+		CUST.DATA.fileindex = sv_t
+		PRINT(CUST.DATA.fileindex)
+		
+		sv_t = urtn_fileRead(CUST.DATA.fileindex + "|CUST.DATA.record")
+		PRINT (sv_t)
+		
+		IF (sv_t == 0) THEN
+		#{
+			#sv_n = "1" CHANGING sv_n to currRecCount
+			CUST.DATA.currRecCount = "1"
+			sv_v = "Y"
+			CUST.DATA.selRec=CUST.DATA.record
+			PRINT(CUST.DATA.selRec)
+			
+			sv_p = 1
+			CUST.DATA.currLineNum = FORMAT$(sv_p, "%d")
+			PRINT(CUST.DATA.currLineNum)
+			
+			WHILE(sv_t==0)
+			#{
+				#PRINT(sv_n)
+				PRINT(CUST.DATA.currRecCount)
+				
+				#IF(sv_n==1)THEN
+				IF(CUST.DATA.currRecCount == 1)THEN
+				#{
+					PRINT(STRLEN(CUST.DATA.selRec))
+					#H09122019
+					IF(STRLEN(CUST.DATA.selRec) != 9) THEN
+					#{
+						sv_t = urtn_fileClose(CUST.DATA.fileindex)
+						PRINT(sv_t)
+						#sv_a = urhk_SetOrbErr("Header in the file is not correct")
+						CUST.DATA.errorMsg = " Uploaded File should be in .csv format"
+						sub_genFailureLst()
+						GOTO END
+						#}
+					ELSE
+						#{
+						CUST.DATA.headerDate = MID$(CUST.DATA.selRec,1,9)
+						PRINT(CUST.DATA.headerDate)
+						
+						lv_h = "headerDate|SELECT TO_CHAR(TO_DATE(?SVAR,'DDMMYYYY'),'DD-MM-YYYY') FROM DUAL"
+						PRINT(lv_h)
+						
+						BANCS.INPARAM.BINDVARS = CUST.DATA.headerDate
+						
+						sv_d=urhk_dbSelectWithBind(lv_h)
+						sub_copyOutparamFieldB("headerDate","CUST","DATA","headerDate","")
+						CUST.DATA.headerDate = BANCS.OUTPARAM.headerDate
+						PRINT(CUST.DATA.headerDate)
+						
+						sv_e = func_dateDiffB(CUST.DATA.headerDate,CUST.DATA.BODDate,"D",BYREF CUST.DATA.diffDays)
+						PRINT(CUST.DATA.diffDays)
+						
+						IF(CUST.DATA.diffDays != "0")THEN
+						#{
+							CUST.DATA.errorMsg = "Please Upload CIF File of today''s date -" +  CUST.DATA.BODDate
+							CUST.DATA.successOrFailure = "F"
+							sub_genFailureLst()
+							GOTO END
+						#}
+						ENDIF
+						
+						PRINT("GOING TO NEXT RECORD")
+						GOTO NEXTRECORD
+					#}
+					ENDIF
+					#}
+				ELSE
+					#{
+					PRINT("currRecCount NOT 1")
+					PRINT(CUST.DATA.selRec)
+					PRINT(STRLEN(CUST.DATA.selRec))
+					
+					CUST.DATA.recordType = MID$(CUST.DATA.selRec,0,1)
+					PRINT(CUST.DATA.recordType)
+					
+					IF(CUST.DATA.recordType == "F")THEN
+					#{
+						PRINT("WHEN RECORD TYPE IS F-Trailer")
+						CUST.DATA.noOfRec = MID$(CUST.DATA.selRec,1,8)
+						PRINT(CUST.DATA.noOfRec)
+					#}
+					ENDIF
+					
+					IF(CUST.DATA.recordType == "D")THEN
+					#{
+						PRINT("WHEN RECORD TYPE IS D- Details")
+						
+						CUST.DATA.currRecNum = CUST.DATA.currLineNum
+						PRINT(CUST.DATA.currRecNum)
+						
+						CUST.DATA.recordType = MID$(CUST.DATA.selRec,0,1)
+						PRINT(CUST.DATA.recordType)
+						
+						CUST.DATA.updateFlg = MID$(CUST.DATA.selRec,1,1)
+						PRINT(CUST.DATA.updateFlg)
+						
+						
+						#*************** CIF ID*******************#
+						#RetCustModRq.RetCustModMainData.CustModData.CustId :(*)
+						CUST.DATA.custNum   = MID$(CUST.DATA.selRec,2,19)
+						PRINT(CUST.DATA.custNum)
+						CUST.DATA.cifId = CUST.DATA.custNum
+						PRINT(CUST.DATA.cifId)
+						lv_c = CUST.DATA.cifId
+						PRINT(lv_c)
+						CUST.DATA.cust_id = TRIM(CUST.DATA.custNum)
+						PRINT(CUST.DATA.cust_id)
+						#FOR ADD
+						INTF.DATA.cifNum = TRIM(CUST.DATA.custNum)
+						PRINT(INTF.DATA.cifNum)
+						
+						
+						#*************** SALUTATION *******************#
+						#RetCustModRq.RetCustModMainData.CustModData.Salutation
+						#ADD: RetCustAddRq.CustDtls.CustData.Salutation :(*)
+						CUST.DATA.engTitle   = MID$(CUST.DATA.selRec,21,40)
+						PRINT(CUST.DATA.engTitle)
+						CUST.DATA.cust_title_code = TRIM(CUST.DATA.engTitle)
+						PRINT(CUST.DATA.cust_title_code)
+						#FORADD
+						INTF.DATA.titleEn = TRIM(CUST.DATA.engTitle)
+						PRINT(INTF.DATA.titleEn)
+						
+						
+						#*********** ENGILISH FIRST NAME *************#
+						#RetCustModRq.RetCustModMainData.CustModData.FirstName
+						#ADD: RetCustAddRq.CustDtls.CustData.FirstName :
+						CUST.DATA.engFirstName    = MID$(CUST.DATA.selRec,61,40)
+						PRINT(CUST.DATA.engFirstName)
+						CUST.DATA.FirstName = TRIM(CUST.DATA.engFirstName)
+						PRINT(CUST.DATA.FirstName)
+						#FORADD
+						INTF.DATA.firstNameEn = TRIM(CUST.DATA.engFirstName)
+						PRINT(INTF.DATA.firstNameEn)
+						
+						
+						#*********** ENGILISH LAST NAME *************#
+						#RetCustModRq.RetCustModMainData.CustModData.LastName
+						#ADD:RetCustAddRq.CustDtls.CustData.LastName :(*)
+						CUST.DATA.engLastName    = MID$(CUST.DATA.selRec,101,40)
+						PRINT(CUST.DATA.engLastName)
+						CUST.DATA.LastName = TRIM(CUST.DATA.engLastName)
+						PRINT(CUST.DATA.LastName)
+						#FORADD
+						INTF.DATA.lastNameEn = TRIM(CUST.DATA.engLastName)
+						PRINT(INTF.DATA.lastNameEn)
+						
+						
+						#*************** SHORT NAME ****************#
+						#RetCustModRq.RetCustModMainData.CustModData.ShortName
+						#ADD:RetCustAddRq.CustDtls.CustData.ShortName :
+						CUST.DATA.shortName    = MID$(CUST.DATA.selRec,141,20)
+						PRINT(CUST.DATA.shortName)
+						CUST.DATA.shortNmeNative = TRIM(CUST.DATA.shortName)
+						PRINT(CUST.DATA.shortNmeNative)
+						CUST.DATA.cust_short_name = TRIM(CUST.DATA.shortName)
+						PRINT(CUST.DATA.cust_short_name)
+						## FOR ADD
+						INTF.DATA.shortName = TRIM(CUST.DATA.shortName)
+						PRINT(INTF.DATA.shortName)
+						INTF.DATA.shortName	= TRIM(MID$((INTF.DATA.shortName),0,10))
+						PRINT(INTF.DATA.shortName)
+						
+						## ONLY FOR CORPORATE CIF
+						CUST.DATA.corpName    = MID$(CUST.DATA.selRec,161,40)
+						PRINT(CUST.DATA.corpName)
+						#cust_introd_name
+						
+						#*************** PRIMARY R/N MANAGER ****************#
+						#RetCustModRq.RetCustModMainData.CustModData.Manager
+						#ADD: RetCustAddRq.CustDtls.CustData.Manager :
+						#GIVEN LENGTH ONLY 3, BUT CRM.ACCOUNTS.MANAGER(150)
+						CUST.DATA.priRlnMgrId    = MID$(CUST.DATA.selRec,201,3)
+						PRINT(CUST.DATA.priRlnMgrId)
+						CUST.DATA.Manager = TRIM(CUST.DATA.priRlnMgrId)
+						PRINT(CUST.DATA.Manager)
+						## FOR ADD
+						INTF.DATA.primaryRM = TRIM(CUST.DATA.priRlnMgrId)
+						PRINT(INTF.DATA.primaryRM)
+						
+						#NOT REQUIRED
+						CUST.DATA.forceLoanCls    = MID$(CUST.DATA.selRec,204,1)
+						PRINT(CUST.DATA.forceLoanCls)
+						
+						#ADD-RetCustAddRq.CustDtls.CustData.Sector
+						#NO MAPPING GIVEN IN JYOTI CODE
+						#MOD-RetCustModRq.RetCustModMainData.CustModData.Sector :
+						CUST.DATA.sector    = MID$(CUST.DATA.selRec,205,1)
+						PRINT(CUST.DATA.sector)
+						
+						#ADD--RetCustAddRq.CustDtls.CustData.SubSector
+						#MOD--RetCustModRq.RetCustModMainData.CustModData.SubSector :
+						CUST.DATA.subSector    = MID$(CUST.DATA.selRec,206,1)
+						PRINT(CUST.DATA.subSector)
+						
+						#Only for Corporate Customer
+						CUST.DATA.businessType    = MID$(CUST.DATA.selRec,207,8)
+						PRINT(CUST.DATA.businessType)
+						CUST.DATA.cust_occp_code  = TRIM(CUST.DATA.businessType)
+						PRINT(CUST.DATA.cust_occp_code)
+						
+						#RetCustModRq.RetailCustModRelatedData.DemographicModData.PhoneHome
+						CUST.DATA.homePhn    = MID$(CUST.DATA.selRec,215,20)
+						PRINT(CUST.DATA.homePhn)
+						CUST.DATA.cust_perm_phone_num = TRIM(CUST.DATA.homePhn)
+						PRINT(CUST.DATA.cust_perm_phone_num)
+						
+						#RetCustModRq.RetailCustModRelatedData.DemographicModData.PhoneWork
+						CUST.DATA.officePhn    = MID$(CUST.DATA.selRec,235,20)
+						PRINT(CUST.DATA.officePhn)
+						CUST.DATA.cust_emp_phone_num_1 = CUST.DATA.officePhn
+						PRINT(CUST.DATA.cust_emp_phone_num_1)
+						
+						#RetCustModRq.RetailCustModRelatedData.DemographicModData.PhoneOther
+						CUST.DATA.othrPhn    = MID$(CUST.DATA.selRec,255,20)
+						PRINT(CUST.DATA.othrPhn)
+						CUST.DATA.cust_comu_phone_num = TRIM(CUST.DATA.othrPhn)
+						PRINT(CUST.DATA.cust_comu_phone_num)
+						
+						#RetCustModRq.RetCustModMainData.CustModData.PhoneEmailModData[0].PhoneNumCountryCode
+						#ADD:RetCustAddRq.CustDtls.CustData.PhoneEmailDtls[0].PhoneNumCountryCode
+						CUST.DATA.telCntryCode    = MID$(CUST.DATA.selRec,275,2)
+						PRINT(CUST.DATA.telCntryCode)
+						IF(TRIM(CUST.DATA.telCntryCode)== "")THEN
+						#{
+							CUST.DATA.telCntryCode = "66"
+						#}
+						ENDIF
+						CUST.DATA.telCntryCode1 = CUST.DATA.telCntryCode
+						INTF.DATA.phoneCntyCode1 = CUST.DATA.telCntryCode
+						
+						
+						#*************** DOC DESC ****************#
+						#RetCustModRq.RetailCustModRelatedData.EntityDocModData[0].Desc
+						CUST.DATA.electronicAddr    = MID$(CUST.DATA.selRec,277,30)
+						PRINT(CUST.DATA.electronicAddr)
+						#AdPrfTypeDesc
+						CUST.DATA.AdPrfTypeDesc = CUST.DATA.electronicAddr
+						PRINT(CUST.DATA.AdPrfTypeDesc)
+						
+						
+						
+						#*************** DOC CODE/TYPE ****************#
+						#RetCustModRq.RetailCustModRelatedData.EntityDocModData[0].TypeCode
+						#ADD:RetCustAddRq.RelatedDtls.EntityDoctData[0].TypeCode :(*)
+						#CRMUSER.ENTITYDOCUMENT.DOCTYPECODE(75)
+						### Id Proof(passport)/AdreessProof/PanDetails
+						
+						CUST.DATA.idTypeCode    = MID$(CUST.DATA.selRec,307,2)
+						PRINT(CUST.DATA.idTypeCode)
+						#AdPrfTypeCode /pan_entitydoc/IdPrfDocCode === DocCode
+						CUST.DATA.DocCode = TRIM(CUST.DATA.idTypeCode)
+						PRINT(CUST.DATA.DocCode)
+						
+						CUST.DATA.IdPrfTypeCode = CUST.DATA.DocCode
+						CUST.DATA.AdPrfTypeCode = CUST.DATA.DocCode
+						CUST.DATA.pan_entitydoc = CUST.DATA.DocCode
+						##FOR ADD
+						INTF.DATA.docTypeCode1 =TRIM(CUST.DATA.idTypeCode)
+						PRINT(INTF.DATA.docTypeCode1)
+						
+						
+						#*************** ID DESC ****************#
+						#RetCustModRq.RetailCustModRelatedData.EntityDocModData[0].TypeDesc
+						CUST.DATA.idDesc    = MID$(CUST.DATA.selRec,309,50)
+						PRINT(CUST.DATA.idDesc)
+						#IdPrfTypeDesc
+						CUST.DATA.IdPrfTypeDesc = CUST.DATA.idDesc
+						PRINT(CUST.DATA.IdPrfTypeDesc)
+						
+						#*******************ISSUE DATE *********************#
+						#RetCustModRq.RetailCustModRelatedData.EntityDocModData[0].IssueDt
+						
+						CUST.DATA.issueDate    = MID$(CUST.DATA.selRec,359,8)
+						PRINT(CUST.DATA.issueDate)
+						#psprt_issu_date/IdPrfIdIssueDt/AdPrfIdIssueDt
+						PRINT(STRLEN(CUST.DATA.issueDate))
+						
+						
+						IF((TRIM (CUST.DATA.issueDate) != "") AND ((STRLEN(CUST.DATA.issueDate) == 8)))THEN
+						#{
+							lv_h = "issueDate|SELECT TO_CHAR(TO_DATE(?SVAR,'DDMMYYYY'),'YYYY-MM-DD') FROM DUAL"
+							PRINT(lv_h)
+							
+							BANCS.INPARAM.BINDVARS = CUST.DATA.issueDate
+							
+							sv_d=urhk_dbSelectWithBind(lv_h)
+							sub_copyOutparamFieldB("issueDate","CUST","DATA","issueDate","")
+							CUST.DATA.issueDate = BANCS.OUTPARAM.issueDate
+							PRINT(CUST.DATA.issueDate)
+							CUST.DATA.issueDate = CUST.DATA.issueDate +  "T00:00:00.000"
+							PRINT(CUST.DATA.issueDate)
+							CUST.DATA.psprt_issu_date = CUST.DATA.issueDate
+							CUST.DATA.IdPrfIdIssueDt = CUST.DATA.issueDate
+							CUST.DATA.AdPrfIdIssueDt = CUST.DATA.issueDate
+						#}
+						ENDIF
+						PRINT(CUST.DATA.issueDate)
+						
+						##FOR ADD
+						INTF.DATA.issueDate1 = CUST.DATA.issueDate
+						PRINT(INTF.DATA.issueDate1)
+						
+						
+						
+						#*******************ID NUMBER *********************#
+						#RetCustModRq.RetailCustModRelatedData.EntityDocModData[0].EntityDocumentID
+						#ADD - RetCustAddRq.RelatedDtls.EntityDoctData[0].ReferenceNum :(*)
+						CUST.DATA.idNum    = MID$(CUST.DATA.selRec,367,15)
+						PRINT(CUST.DATA.idNum)
+						#psprt_num
+						CUST.DATA.psprt_num = CUST.DATA.idNum
+						PRINT(CUST.DATA.psprt_num)
+						INTF.DATA.docRefNumber = CUST.DATA.idNum
+						
+						
+						#RetCustModRq.RetailCustModRelatedData.EntityDocModData[0].CountryOfIssue
+						CUST.DATA.idIssueCntryCode   = MID$(CUST.DATA.selRec,382,3)
+						PRINT(CUST.DATA.idIssueCntryCode)
+						CUST.DATA.IdPrfCountryOfIssue = CUST.DATA.idIssueCntryCode
+						PRINT(CUST.DATA.IdPrfCountryOfIssue)
+						##FOR ADD
+						INTF.DATA.issueCountry1 = CUST.DATA.IdPrfCountryOfIssue
+						PRINT(INTF.DATA.issueCountry1)
+						
+						
+						#*******************EXPIRY DATE *********************#
+						#RetCustModRq.RetailCustModRelatedData.EntityDocModData[0].ExpDt
+						CUST.DATA.expDate    = MID$(CUST.DATA.selRec,385,8)
+						PRINT(CUST.DATA.expDate)
+						#psprt_exp_date
+						PRINT(STRLEN(CUST.DATA.expDate))
+						
+						
+						
+						IF((TRIM (CUST.DATA.expDate) != "") AND ((STRLEN(CUST.DATA.expDate) == 8)))THEN
+						#{
+							lv_h = "expDate|SELECT TO_CHAR(TO_DATE(?SVAR,'DDMMYYYY'),'YYYY-MM-DD') FROM DUAL"
+							PRINT(lv_h)
+							
+							BANCS.INPARAM.BINDVARS = CUST.DATA.expDate
+							
+							sv_d=urhk_dbSelectWithBind(lv_h)
+							sub_copyOutparamFieldB("expDate","CUST","DATA","expDate","")
+							CUST.DATA.expDate = BANCS.OUTPARAM.expDate
+							PRINT(CUST.DATA.expDate)
+							CUST.DATA.expDate = CUST.DATA.expDate +  "T00:00:00.000"
+							CUST.DATA.psprt_exp_date = CUST.DATA.expDate
+							PRINT(CUST.DATA.psprt_exp_date)
+							
+							#}
+						ELSE
+							#{
+							CUST.DATA.expDate = CUST.DATA.rcre_time
+							PRINT(CUST.DATA.expDate)
+						#}
+						ENDIF
+						PRINT(CUST.DATA.expDate)
+						PRINT(CUST.DATA.psprt_exp_date)
+						##FORADD
+						INTF.DATA.expiryDate1 = CUST.DATA.expDate
+						PRINT(INTF.DATA.expiryDate1)
+						
+						
+						#-----------------TAX ID-----------------------#
+						CUST.DATA.taxId    = MID$(CUST.DATA.selRec,393,15)
+						PRINT(CUST.DATA.taxId)
+						CUST.DATA.pan_gir_num = CUST.DATA.taxId
+						PRINT(CUST.DATA.pan_gir_num)
+						
+						#------------------------- Address Fields Starts   ---------------------------------
+						#AddressType:
+						#		1 = registered
+						#		2 = mailling
+						#		3 = work
+						#		4 = communication
+						
+						##FOR ADD
+						
+						
+						#~~~~~~~~~~~~~ 1 = registered ~~~~~~~~~~~~~~~~~~~~~
+						CUST.DATA.addrType1    = MID$(CUST.DATA.selRec,408,1)
+						PRINT(CUST.DATA.addrType1)
+						#DefaultAddrType
+						##FOR ADD
+						
+						
+						IF(TRIM(CUST.DATA.addrType1) != "")THEN
+						#{
+							CUST.DATA.modAddrCount = CINT(CUST.DATA.modAddrCount) + 1
+						#}
+						ENDIF
+						
+						IF(CUST.DATA.addrType1 == "2")THEN
+						#{
+							INTF.DATA.addrTypeDesc1 = "MAILING"
+							CUST.DATA.addrTypeDesc1 = "MAILING"
+						#}
+						ENDIF
+						
+						CUST.DATA.addr1   = MID$(CUST.DATA.selRec,409,200)
+						PRINT(CUST.DATA.addr1)
+						##FOR ADD
+						INTF.DATA.addrLine11 = CUST.DATA.addr1
+						PRINT(INTF.DATA.addrLine11)
+						
+						
+						CUST.DATA.cityStateZip1   = MID$(CUST.DATA.selRec,609,40)
+						PRINT(CUST.DATA.cityStateZip1)
+						##FOR ADD
+						INTF.DATA.city = CUST.DATA.cityStateZip1
+						PRINT(INTF.DATA.city)
+						
+						CUST.DATA.state1   = MID$(CUST.DATA.selRec,649,20)
+						PRINT(CUST.DATA.state1)
+						##FOR ADD
+						INTF.DATA.addrState1 = CUST.DATA.state1
+						PRINT(INTF.DATA.addrState1)
+						
+						
+						CUST.DATA.cntry1    = MID$(CUST.DATA.selRec,669,3)
+						PRINT(CUST.DATA.cntry1)
+						##FOR ADD
+						INTF.DATA.addrCountry1 = CUST.DATA.cntry1
+						PRINT(INTF.DATA.addrCountry1)
+						
+						
+						CUST.DATA.zipCode1    = MID$(CUST.DATA.selRec,672,5)
+						PRINT(CUST.DATA.zipCode1)
+						##FOR ADD
+						INTF.DATA.addrZipCode1 = CUST.DATA.zipCode1
+						PRINT(INTF.DATA.addrZipCode1)
+						
+						
+						#~~~~~~~~~~~~~ 2 = mailling ~~~~~~~~~~~~~~~~~~~~~
+						CUST.DATA.addrType2    = MID$(CUST.DATA.selRec,677,1)
+						PRINT(CUST.DATA.addrType2)
+						
+						IF(TRIM(CUST.DATA.addrType2) != "")THEN
+						#{
+							CUST.DATA.modAddrCount = CINT(CUST.DATA.modAddrCount) + 1
+						#}
+						ENDIF
+						
+						##FOR ADD
+						IF(CUST.DATA.addrType2 == "2")THEN
+						#{
+							INTF.DATA.addrTypeDesc2 = "MAILING"
+							CUST.DATA.addrTypeDesc2 = "MAILING"
+							
+						#}
+						ENDIF
+						
+						CUST.DATA.addr2    = MID$(CUST.DATA.selRec,678,200)
+						PRINT(CUST.DATA.addr2)
+						##FOR ADD
+						INTF.DATA.addrLine12 = CUST.DATA.addr2
+						PRINT(INTF.DATA.addrLine12)
+						
+						CUST.DATA.cityStateZip2   = MID$(CUST.DATA.selRec,878,40)
+						PRINT(CUST.DATA.cityStateZip2)
+						
+						CUST.DATA.state2    = MID$(CUST.DATA.selRec,918,20)
+						PRINT(CUST.DATA.state2)
+						##FOR ADD
+						INTF.DATA.addrState2 = CUST.DATA.state2
+						PRINT(INTF.DATA.addrState2)
+						
+						CUST.DATA.cntry2    = MID$(CUST.DATA.selRec,938,3)
+						PRINT(CUST.DATA.cntry2)
+						##FOR ADD
+						INTF.DATA.addrCountry2 = CUST.DATA.cntry2
+						PRINT(INTF.DATA.addrCountry2)
+						
+						CUST.DATA.zipCode2    = MID$(CUST.DATA.selRec,941,5)
+						PRINT(CUST.DATA.zipCode2)
+						##FOR ADD
+						INTF.DATA.addrZipCode2 = CUST.DATA.zipCode2
+						PRINT(INTF.DATA.addrZipCode2)
+						
+						#~~~~~~~~~~~~~~~~~ 3 = work ~~~~~~~~~~~~~~~~~~~~~~~~~
+						CUST.DATA.addrType3    = MID$(CUST.DATA.selRec,946,1)
+						PRINT(CUST.DATA.addrType3)
+						
+						IF(TRIM(CUST.DATA.addrType3) != "")THEN
+						#{
+							CUST.DATA.modAddrCount = CINT(CUST.DATA.modAddrCount) + 1
+							
+						#}
+						ENDIF
+						
+						##FOR ADD
+						IF(CUST.DATA.addrType3 == "2")THEN
+						#{
+							INTF.DATA.addrTypeDesc3 = "MAILING"
+							CUST.DATA.addrTypeDesc3 = "MAILING"
+						#}
+						ENDIF
+						
+						CUST.DATA.addr3    = MID$(CUST.DATA.selRec,947,200)
+						PRINT(CUST.DATA.addr3)
+						
+						CUST.DATA.cityStateZip3    = MID$(CUST.DATA.selRec,1147,40)
+						PRINT(CUST.DATA.cityStateZip3)
+						
+						CUST.DATA.state3    = MID$(CUST.DATA.selRec,1187,20)
+						PRINT(CUST.DATA.state3)
+						##FOR ADD
+						INTF.DATA.addrState3 = CUST.DATA.state3
+						PRINT(INTF.DATA.addrState3)
+						
+						CUST.DATA.cntry3    = MID$(CUST.DATA.selRec,1207,3)
+						PRINT(CUST.DATA.cntry3)
+						##FOR ADD
+						INTF.DATA.addrCountry3 = CUST.DATA.cntry3
+						PRINT(INTF.DATA.addrCountry3)
+						
+						CUST.DATA.zipCode3    = MID$(CUST.DATA.selRec,1210,5)
+						PRINT(CUST.DATA.zipCode3)
+						##FOR ADD
+						INTF.DATA.addrZipCode3 = CUST.DATA.zipCode3
+						PRINT(INTF.DATA.addrZipCode3)
+						
+						#~~~~~~~~~~~~~~~~~4 = communication~~~~~~~~~~~~~~~~~~~~~~~~~
+						CUST.DATA.addrType4    = MID$(CUST.DATA.selRec,1215,1)
+						PRINT(CUST.DATA.addrType4)
+						
+						IF(TRIM(CUST.DATA.addrType4) != "")THEN
+						#{
+							CUST.DATA.modAddrCount = CINT(CUST.DATA.modAddrCount) + 1
+						#}
+						ENDIF
+						
+						##FOR ADD
+						IF(CUST.DATA.addrType4 == "2")THEN
+						#{
+							INTF.DATA.addrTypeDesc4 = "MAILING"
+							CUST.DATA.addrTypeDesc4 = "MAILING"
+						#}
+						ENDIF
+						
+						CUST.DATA.addr4    = MID$(CUST.DATA.selRec,1216,200)
+						PRINT(CUST.DATA.addr4)
+						
+						CUST.DATA.cityStateZip4    = MID$(CUST.DATA.selRec,1416,40)
+						PRINT(CUST.DATA.cityStateZip4)
+						
+						CUST.DATA.state4    = MID$(CUST.DATA.selRec,1456,20)
+						PRINT(CUST.DATA.state4)
+						##FOR ADD
+						INTF.DATA.addrState4 = CUST.DATA.state4
+						PRINT(INTF.DATA.addrState4)
+						
+						CUST.DATA.cntry4   = MID$(CUST.DATA.selRec,1476,3)
+						PRINT(CUST.DATA.cntry4)
+						##FOR ADD
+						INTF.DATA.addrCountry4 = CUST.DATA.cntry4
+						PRINT(INTF.DATA.addrCountry4)
+						
+						CUST.DATA.zipCode4  = MID$(CUST.DATA.selRec,1479,5)
+						PRINT(CUST.DATA.zipCode4)
+						##FOR ADD
+						INTF.DATA.addrZipCode4 = CUST.DATA.zipCode4
+						PRINT(INTF.DATA.addrZipCode4)
+						
+						#~~~~~~~~~~~~~~~~~5 == ~~~~~~~~~~~~~~~~~~~~~~~~~
+						CUST.DATA.addrType5    = MID$(CUST.DATA.selRec,1484,1)
+						PRINT(CUST.DATA.addrType5)
+						
+						IF(TRIM(CUST.DATA.addrType5) != "")THEN
+						#{
+							CUST.DATA.modAddrCount = CINT(CUST.DATA.modAddrCount) + 1
+						#}
+						ENDIF
+						
+						##FOR ADD
+						IF(CUST.DATA.addrType5 == "2")THEN
+						#{
+							INTF.DATA.addrTypeDesc5 = "MAILING"
+							CUST.DATA.addrTypeDesc5 = "MAILING"
+						#}
+						ENDIF
+						
+						CUST.DATA.addr5    = MID$(CUST.DATA.selRec,1485,200)
+						PRINT(CUST.DATA.addr5)
+						
+						CUST.DATA.cityStateZip5    = MID$(CUST.DATA.selRec,1685,40)
+						PRINT(CUST.DATA.cityStateZip5)
+						
+						CUST.DATA.state5    = MID$(CUST.DATA.selRec,1743,20)
+						PRINT(CUST.DATA.state5)
+						##FOR ADD
+						INTF.DATA.addrState5 = CUST.DATA.state5
+						PRINT(INTF.DATA.addrState5)
+						
+						CUST.DATA.cntry5   = MID$(CUST.DATA.selRec,1763,3)
+						PRINT(CUST.DATA.cntry5)
+						##FOR ADD
+						INTF.DATA.addrCountry5 = CUST.DATA.cntry5
+						PRINT(INTF.DATA.addrCountry5)
+						
+						CUST.DATA.zipCode5   = MID$(CUST.DATA.selRec,1766,5)
+						PRINT(CUST.DATA.zipCode5)
+						##FOR ADD
+						INTF.DATA.addrZipCode5 = CUST.DATA.zipCode5
+						PRINT(INTF.DATA.addrZipCode5)
+						
+						PRINT(CUST.DATA.modAddrCount)
+						INTF.DATA.addrCount = CUST.DATA.modAddrCount
+						
+						#------------------------- Address Fields Ends   ---------------------------------
+						
+						
+						#~~~~~~~~Additional Fields from Upload File ~~~~~~~~~~~
+						
+						##*******************TRADE FINANCE FLG **************************###
+						#RetCustModRq.RetCustModMainData.CustModData.TradeFinFlag
+						CUST.DATA.TFflg    = MID$(CUST.DATA.selRec,1771,1)
+						PRINT(CUST.DATA.TFflg)
+						CUST.DATA.TradeFinance = CUST.DATA.TFflg
+						PRINT(CUST.DATA.TradeFinance)
+						##FOR ADD
+						INTF.DATA.tradeCustFlag = CUST.DATA.TradeFinance
+						PRINT(INTF.DATA.tradeCustFlag)
+						
+						
+						CUST.DATA.TSflg    = MID$(CUST.DATA.selRec,1772,1)
+						PRINT(CUST.DATA.TSflg)
+						
+						#RetCustModRq.RetCustModMainData.CustModData.CustType
+						CUST.DATA.custType    = MID$(CUST.DATA.selRec,1773,1)
+						PRINT(CUST.DATA.custType)
+						
+						#NOT REQUIRED
+						CUST.DATA.classCode    = MID$(CUST.DATA.selRec,1774,1)
+						PRINT(CUST.DATA.classCode)
+						
+						#NOT REQUIRED
+						CUST.DATA.classCodeDesc    = MID$(CUST.DATA.selRec,1775,20)
+						PRINT(CUST.DATA.classCodeDesc)
+						
+						#RetCustModRq.RetCustModMainData.CustModData.NativeLanguageTitle
+						CUST.DATA.titleNativ    = MID$(CUST.DATA.selRec,1795,20)
+						PRINT(CUST.DATA.titleNativ)
+						## FOR ADD -tag:/NativeLanguageTitle
+						INTF.DATA.title = TRIM(CUST.DATA.titleNativ)
+						PRINT(INTF.DATA.title)
+						
+						#RetCustModRq.RetCustModMainData.CustModData.FirstNameNative
+						CUST.DATA.firstNameNativ    = MID$(CUST.DATA.selRec,1842,40)
+						PRINT(CUST.DATA.firstNameNativ)
+						
+						#RetCustModRq.RetCustModMainData.CustModData.LastNameNative
+						CUST.DATA.lastNameNativ    = MID$(CUST.DATA.selRec,1882,40)
+						PRINT(CUST.DATA.lastNameNativ)
+						
+						#RetCustModRq.RetCustModMainData.CustModData.NickName
+						CUST.DATA.aliasName    = MID$(CUST.DATA.selRec,1922,40)
+						PRINT(CUST.DATA.aliasName)
+						CUST.DATA.nickName = TRIM(CUST.DATA.aliasName)
+						PRINT(CUST.DATA.nickName)
+						
+						
+						##******************* GENDER **************************###
+						#RetCustModRq.RetCustModMainData.CustModData.Gender
+						CUST.DATA.gender    = MID$(CUST.DATA.selRec,1962,1)
+						PRINT(CUST.DATA.gender)
+						CUST.DATA.cust_gender = CUST.DATA.gender
+						PRINT(CUST.DATA.cust_gender)
+						##FOR ADD
+						INTF.DATA.gender = CUST.DATA.gender
+						PRINT(INTF.DATA.gender)
+						
+						
+						##******************* DATE OF BIRTH **************************###
+						#RetCustModRq.RetCustModMainData.CustModData.DateOfBirth
+						#comes in format "yyyy-mm-dd"..FI will take as dd-mm-yyyy
+						CUST.DATA.birthDateInp    = MID$(CUST.DATA.selRec,1963,8)
+						PRINT(CUST.DATA.birthDateInp)
+						
+						##******************TO GET MINOR_FLG VALUE**************************###
+						fv_m = func_deriveMinorFlg(CUST.DATA.birthDateInp)
+						PRINT(fv_m)
+						INTF.DATA.isMinor = fv_m
+						
+						IF((TRIM (CUST.DATA.birthDateInp) == "") AND ((STRLEN(CUST.DATA.birthDateInp) != 8)))THEN
+						#{
+							CUST.DATA.birthDate = "1900-01-01" +  "T00:00:00.000"
+							PRINT(CUST.DATA.birthDate)
+						#}
+						ENDIF
+						
+						
+						IF((TRIM (CUST.DATA.birthDateInp) != "") AND ((STRLEN(CUST.DATA.birthDateInp) == 8)))THEN
+						#{
+							lv_h = "birthDate|SELECT TO_CHAR(TO_DATE(?SVAR,'DDMMYYYY'),'YYYY-MM-DD') FROM DUAL"
+							PRINT(lv_h)
+							
+							BANCS.INPARAM.BINDVARS = CUST.DATA.birthDateInp
+							
+							sv_d=urhk_dbSelectWithBind(lv_h)
+							sub_copyOutparamFieldB("birthDate","CUST","DATA","birthDate","")
+							CUST.DATA.birthDate = BANCS.OUTPARAM.birthDate
+							CUST.DATA.birthDate = CUST.DATA.birthDate +  "T00:00:00.000"
+							PRINT(CUST.DATA.birthDate)
+						#}
+						ENDIF
+						PRINT(CUST.DATA.birthDate)
+						## FOR ADD
+						INTF.DATA.birthDate = CUST.DATA.birthDate
+						PRINT(INTF.DATA.birthDate)
+						
+						
+						
+						
+						
+						##******************* NON RESIDENT FLG**************************###
+						#<IsCustNRE>
+						CUST.DATA.nonResidentFlg    = MID$(CUST.DATA.selRec,1971,1)
+						PRINT(CUST.DATA.nonResidentFlg)
+						CUST.DATA.cust_nre_flg = CUST.DATA.nonResidentFlg
+						PRINT(CUST.DATA.cust_nre_flg)
+						## FOR ADD
+						INTF.DATA.nonResInd = CUST.DATA.cust_nre_flg
+						PRINT(INTF.DATA.nonResInd)
+						
+						
+						#*************** NATIONALITY ****************#
+						#RetCustModRq.RetailCustModRelatedData.DemographicModData.Nationality
+						CUST.DATA.nationality    = MID$(CUST.DATA.selRec,1972,3)
+						PRINT(CUST.DATA.nationality)
+						CUST.DATA.NATIONALITY = CUST.DATA.nationality
+						PRINT(CUST.DATA.NATIONALITY)
+						##FOR ADD
+						INTF.DATA.nationality = CUST.DATA.nationality
+						PRINT(INTF.DATA.nationality)
+						
+						#*************** MARITAL STATUS ****************#
+						#RetCustModRq.RetailCustModRelatedData.DemographicModData.MaritalStatus :
+						CUST.DATA.maritalStatus    = MID$(CUST.DATA.selRec,1975,1)
+						PRINT(CUST.DATA.maritalStatus)
+						CUST.DATA.marital_status = CUST.DATA.maritalStatus
+						PRINT(CUST.DATA.marital_status)
+						##FOR ADD
+						INTF.DATA.martialStCode = CUST.DATA.maritalStatus
+						PRINT(INTF.DATA.martialStCode)
+						
+						#NOTREQUIRED
+						CUST.DATA.maritalStatusDesc    = MID$(CUST.DATA.selRec,1976,20)
+						PRINT(CUST.DATA.maritalStatusDesc)
+						
+						#***************HOLD MAIL INDICATOR ****************#
+						#as per excel needs to be mapped to DemographicModData Tag
+						#RetCustModRq.RetailCustModRelatedData.DemographicModData.HoldMailFlag
+						CUST.DATA.holdMailInd    = MID$(CUST.DATA.selRec,1996,1)
+						PRINT(CUST.DATA.holdMailInd)
+						CUST.DATA.demoHoldMailFlg = CUST.DATA.holdMailInd
+						PRINT(CUST.DATA.demoHoldMailFlg)
+						##FOR ADD
+						INTF.DATA.holdMailInd = CUST.DATA.holdMailInd
+						PRINT(INTF.DATA.holdMailInd)
+						
+						
+						CUST.DATA.otherName    = MID$(CUST.DATA.selRec,1997,20)
+						PRINT(CUST.DATA.otherName)
+						
+						#FOR CORPORATE
+						CUST.DATA.rlnshpCIF    = MID$(CUST.DATA.selRec,2017,19)
+						PRINT(CUST.DATA.rlnshpCIF)
+						
+						#FOR CORPORATE
+						CUST.DATA.rlnshpType    = MID$(CUST.DATA.selRec,2036,2)
+						PRINT(CUST.DATA.rlnshpType)
+						
+						CUST.DATA.incorpDate    = MID$(CUST.DATA.selRec,2038,8)
+						PRINT(CUST.DATA.incorpDate)
+						
+						IF((TRIM (CUST.DATA.incorpDate) == "") AND ((STRLEN(CUST.DATA.incorpDate) != 8)))THEN
+						#{
+							CUST.DATA.incorpDate = CUST.DATA.date_of_birth
+							PRINT(CUST.DATA.incorpDate)
+						#}
+						ENDIF
+						
+						
+						IF((TRIM (CUST.DATA.incorpDate) != "") AND ((STRLEN(CUST.DATA.incorpDate) == 8)))THEN
+						#{
+							lv_h = "incorpDate|SELECT TO_CHAR(TO_DATE(?SVAR,'DDMMYYYY'),'YYYY-MM-DD') FROM DUAL"
+							PRINT(lv_h)
+							
+							BANCS.INPARAM.BINDVARS = CUST.DATA.incorpDate
+							
+							sv_d=urhk_dbSelectWithBind(lv_h)
+							sub_copyOutparamFieldB("incorpDate","CUST","DATA","incorpDate","")
+							CUST.DATA.incorpDate = BANCS.OUTPARAM.incorpDate
+							CUST.DATA.incorpDate = CUST.DATA.incorpDate +  "T00:00:00.000"
+							PRINT(CUST.DATA.incorpDate)
+						#}
+						ENDIF
+						PRINT(CUST.DATA.incorpDate)
+						
+						#FOR CORPORATE
+						CUST.DATA.incorpCntry    = MID$(CUST.DATA.selRec,2046,3)
+						PRINT(CUST.DATA.incorpCntry)
+						
+						#FOR CORPORATE
+						CUST.DATA.ultimateRiskCntry    = MID$(CUST.DATA.selRec,2049,3)
+						PRINT(CUST.DATA.ultimateRiskCntry)
+						
+						CUST.DATA.custRating    = MID$(CUST.DATA.selRec,2052,3)
+						PRINT(CUST.DATA.custRating)
+						
+						CUST.DATA.custRatingDesc    = MID$(CUST.DATA.selRec,2055,20)
+						PRINT(CUST.DATA.custRatingDesc)
+						
+						#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###
+						### CALL FUNCTION TO MODIFY CIF DETAILS
+						#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###
+						IF(CUST.DATA.updateFlg == "U")THEN
+						#{
+							PRINT("TO CALL MODIFY API")
+							sv_r = func_modifyUplCIF("CUST","DATA")
+							PRINT(sv_r)
+							
+							IF(sv_r != 0)THEN
+							#{
+								#MOVE TO FAILURE LST
+								PRINT(CUST.DATA.errorMsg)
+								PRINT(CUST.DATA.errorFlg)
+								sub_genFailureLst()
+								#GOTO END
+								
+							#}
+							ENDIF
+							
+							IF(sv_r == 0)THEN
+							#{
+								#MOVE TO SUCCESS LST
+								sub_genSuccessLst()
+							#}
+							ENDIF
+						#}
+						ENDIF
+						
+						#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###
+						### CALL FUNCTION TO ADD CIF DETAILS
+						#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###
+						
+						IF(CUST.DATA.updateFlg == "N")THEN
+						#{
+							PRINT("TO CALL ADD API")
+							INTF.DATA.srvReqId  = "RetCustAdd"
+							INTF.DATA.custType = "RETAIL"
+							
+							#BELOW SUB IS FROM LIABLITIES TEAM-JYOTI
+							sub_createCIFAdd("INTF","DATA")
+							
+							
+							PRINT("BACK FROM SCL")
+							PRINT(BANCS.OUTPARAM.RespMesg)
+							
+							CUST.DATA.responseXml = BANCS.OUTPARAM.RespMesg
+							
+							#xmlParseFunc1 defined above
+							sv_e = func_xmlParseFunc1(CUST.DATA.responseXml,"<Status>","</Status>",BYREF CUST.DATA.FIStatus)
+							PRINT(CUST.DATA.FIStatus)
+							
+							IF(CUST.DATA.FIStatus == "SUCCESS") THEN
+							#{
+								sv_e = func_xmlParseFunc1(CUST.DATA.responseXml,"<CustId>","</CustId>",BYREF CUST.DATA.genCifId)
+								PRINT(CUST.DATA.genCifId)
+								
+								
+								
+								CUST.DATA.errorFlg  = "N"
+								CUST.DATA.cifId = CUST.DATA.genCifId
+								CUST.DATA.SuccessMsg = "Retail Customer successfully created"
+								
+								#}
+							ELSE
+								#{
+								sv_e = func_xmlParseFunc1(CUST.DATA.responseXml,"<ErrorDesc>","</ErrorDesc>",BYREF CUST.DATA.errorMsg)
+								PRINT( CUST.DATA.errorMsg)
+								CUST.DATA.errorFlg = "Y"
+							#}
+							ENDIF
+							PRINT(CUST.DATA.errorMsg)
+							PRINT(CUST.DATA.errorFlg)
+							
+							
+							#IF(sv_r != 0)THEN
+							IF((CUST.DATA.errorFlg == "Y")) THEN
+							#{
+								sub_genFailureLst()
+								#GOTO END
+								
+							#}
+							ENDIF
+							
+							IF( (CUST.DATA.errorFlg != "Y")) THEN
+							#{
+								#MOVE TO SUCCESS LST
+								sub_genSuccessLst()
+							#}
+							ENDIF
+						#}
+						ENDIF
+						
+						PRINT(sv_p)
+						sv_p = sv_p + 1
+						PRINT(sv_p)
+						CUST.DATA.currLineNum = FORMAT$(sv_p, "%d")
+						PRINT(CUST.DATA.currLineNum )
+						
+					#}
+					ENDIF
+					
+					IF((CUST.DATA.recordType != "F") AND (CUST.DATA.recordType != "D"))THEN
+					#{
+						PRINT("ONLY HEADER IS PRESENT")
+						CUST.DATA.errorMsg = " Only Header is present"
+						CUST.DATA.successOrFailure = "F"
+						sub_genFailureLst()
+						GOTO END
+					#}
+					ENDIF
+					
+				#}
+				ENDIF
+				
+				NEXTRECORD:
+					sv_v="Y"
+					PRINT(CUST.DATA.fileindex)
+					sv_t = urtn_fileRead(CUST.DATA.fileindex + "|" + "CUST.DATA.selRec")
+					PRINT(sv_t)
+					#PRINT(sv_n)
+					PRINT(CUST.DATA.currRecCount)
+					PRINT(CUST.DATA.selRec)
+					
+					CUST.DATA.recCnt = CUST.DATA.currRecCount
+					sv_n = CINT(CUST.DATA.recCnt) + 1
+					CUST.DATA.currRecCount = sv_n
+					PRINT(CUST.DATA.currRecCount)
+					#CUST.DATA.recCnt = sv_n
+					#sv_n = CUST.DATA.recCnt
+					#PRINT(sv_n)
+				#}
+				DO
+				
+				PRINT(CUST.DATA.currRecNum)
+				PRINT(CUST.DATA.currLineNum)
+				PRINT(CUST.DATA.noOfRec)
+				
+				IF(CINT(CUST.DATA.noOfRec)!=(CINT(CUST.DATA.currLineNum) - 1)) THEN
+				#{
+					PRINT("NUMBER OF RECORDS NOT CORRECT")
+					CUST.DATA.errorMsg = " Number of records is not correct"
+					CUST.DATA.successOrFailure = "F"
+					sv_t = urtn_fileClose(CUST.DATA.fileindex)
+					PRINT(sv_t)
+					sub_genFailureLst()
+					GOTO END
+				#}
+				ENDIF
+				
+				sv_t = urtn_fileClose(CUST.DATA.fileindex)
+				PRINT(sv_t)
+				#}
+			ELSE
+				#{
+				PRINT("INPUT FILE IS BLANK")
+				CUST.DATA.errorMsg = "Input file:  " + CUST.DATA.inFile + " is blank"
+				CUST.DATA.successOrFailure = "F"
+				sv_t = urtn_fileClose(CUST.DATA.fileindex)
+				PRINT(sv_t)
+				
+				sub_genFailureLst()
+				GOTO END
+			#}
+			ENDIF
+			#}
+		ELSE
+			#{
+			PRINT("INPUT FILE NOT PRESNT OR UNABLE TO READ FILE")
+			CUST.DATA.errorMsg = "Input file: " + CUST.DATA.inFile + " is not present OR Unable to read the input file"
+			CUST.DATA.successOrFailure = "F"
+			sub_genFailureLst()
+			GOTO END
+		#}
+		ENDIF
+		
+		PRINT(CUST.DATA.errMsg)
+		PRINT("END OF SUB")
+	END:
+	#}
+	ENDSUB
+	
+	
+	
+<--START
+END-->

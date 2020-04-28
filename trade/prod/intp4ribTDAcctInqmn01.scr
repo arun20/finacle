@@ -1,0 +1,577 @@
+#######################################################################################################################################################
+#    Name                : intp4ribTDAcctInqmn01.scr
+#    Date                : 20-Jun-2018
+#    Description         : Account Details of Child TD Account
+#    Input               : Child TD Account Number
+#    Output              : Child TD Account Details
+#    Author              : Divya
+#    Called Script       : None
+#    Calling Script      : None
+#    Reference           : None
+#    Modification History: v1.0
+#    version	Date		Author	        Description
+#	1.0	20-06-2018	Divya K		Base Version
+#######################################################################################################################################################
+
+<--START
+TRACE ON
+
+	#====================================
+	# CREATING CUST REPOS AND DATA CLASS
+	#====================================
+	
+		IF (REPEXISTS("CUST") == 0) THEN
+		#{
+			CREATEREP("CUST")
+		#}
+		ENDIF
+		
+		IF (CLASSEXISTS("CUST", "DATA") == 0) THEN
+		#{
+			CREATECLASS("CUST", "DATA", 5)
+		#}
+		ENDIF
+	
+	#===============================
+	# Reading input variables
+	#===============================
+		sv_e = 0
+	
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctInq_Req.accountNumber")) == 0) THEN
+		#{
+			sv_e = 1
+			CUST.DATA.ERRORCODE = "INTF006"
+			CUST.DATA.SuccessOrFailure = "F"
+			CUST.DATA.ERRORMSG= "Account Number not populated"
+			print(CUST.DATA.ERRORMSG)
+			GOTO ENDOFSCRIPT
+		#}
+		ELSE
+		#{
+			CUST.DATA.accountNumber =  TRIM(("BANCS").("INPUT").("TDAcctInq_Req.accountNumber"))
+			print(CUST.DATA.accountNumber)
+		#}
+		ENDIF
+		
+	#===============================
+	# Defining Output Variables
+	#===============================
+	
+		CUST.DATA.mAcctNumber		=	""
+		CUST.DATA.schmType			=	""
+		CUST.DATA.acctCrncy			=	""
+		CUST.DATA.cifId				=	""
+		CUST.DATA.custName			=	""
+		CUST.DATA.clsFlag			=	""
+		CUST.DATA.acctStatus		=	""
+		CUST.DATA.maturityDate		=	""
+		CUST.DATA.depositMonths		=	""
+		CUST.DATA.depositDays		=	""
+		CUST.DATA.interestRate		=	""
+		CUST.DATA.AvailableBalance	=	""
+		CUST.DATA.LedgerBalance		=	""
+		CUST.DATA.autoRenewal		=	""
+		CUST.DATA.interestPayout	=	""
+		
+	#===========================================
+	# Validating Account Number
+	#===========================================
+
+		sv_s = "recCount|"
+		sv_s = sv_s + "SELECT count(*)"
+		sv_s = sv_s + " FROM TBAADM.MAM WHERE "
+		sv_s = sv_s + " MASTER_ACCT_NUM = ?SVAR AND "
+		sv_s = sv_s + " BANK_ID = ?SVAR"
+		
+		BANCS.INPARAM.BINDVARS = CUST.DATA.accountNumber + "|" + BANCS.STDIN.contextBankId
+		
+		print(sv_s)
+		print(BANCS.INPARAM.BINDVARS)
+		sv_h = urhk_dbSelectWithBind(sv_s)		
+		print(sv_h)	
+		
+		IF(sv_h == 0)THEN
+		#{
+			CUST.DATA.recCount = BANCS.OUTPARAM.recCount
+			sv_m = CINT(CUST.DATA.recCount)
+			IF(sv_m == 0)THEN
+			#{
+				sv_e = 1
+				CUST.DATA.ERRORCODE = "INTF012"
+				CUST.DATA.SuccessOrFailure = "F"
+				CUST.DATA.ERRORMSG= "Invalid Master Account"
+				print(CUST.DATA.ERRORMSG)
+				GOTO ENDOFSCRIPT
+			#}
+			ELSE
+			#{
+				print("Valid Matser Account")
+			#}
+			ENDIF
+		#}
+		ELSE
+		#{
+			sv_e = 1
+			CUST.DATA.ERRORCODE = "INTF002"
+			CUST.DATA.SuccessOrFailure = "F"
+			CUST.DATA.ERRORMSG= "Internal Finacle Error.Select Query Failed"
+			print(CUST.DATA.ERRORMSG)
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+	
+	#=====================================
+	# Fetching the common details
+	#=====================================
+	
+	sv_s = "consCrncyCode,cifId,acctName,acctClsFlg|"
+	sv_s = sv_s + "SELECT CONSOL_CRNCY_CODE,CIF_ID,ACCT_NAME,ACCT_CLS_FLG"
+	sv_s = sv_s + " FROM tbaadm.MAM where MASTER_ACCT_NUM = ?SVAR and BANK_ID = ?SVAR"
+	
+	BANCS.INPARAM.BINDVARS = CUST.DATA.accountNumber + "|" + BANCS.STDIN.contextBankId
+	
+	print(sv_s)
+	print(BANCS.INPARAM.BINDVARS)
+	
+	sv_h = urhk_dbSelectWithBind(sv_s)		
+	print(sv_h)	
+		
+	IF(sv_h == 0)THEN
+	#{
+		CUST.DATA.mAcctNumber	= CUST.DATA.accountNumber
+		CUST.DATA.schmType	= "TDA"
+		CUST.DATA.acctCrncy	= BANCS.OUTPARAM.consCrncyCode
+		CUST.DATA.cifId		= BANCS.OUTPARAM.cifId
+		CUST.DATA.custName	= BANCS.OUTPARAM.acctName
+		CUST.DATA.clsFlag	= BANCS.OUTPARAM.acctClsFlg
+		CUST.DATA.acctStatus	= ""
+		
+		IF(CUST.DATA.clsFlag == "Y")THEN
+		#{
+			CUST.DATA.acctStatus = "I"
+		#}
+		ELSE
+		#{
+			CUST.DATA.acctStatus = "A"
+		#}
+		ENDIF
+	#}
+	ELSE
+	#{
+		sv_e = 1
+		CUST.DATA.ERRORCODE = "INTF002"
+		CUST.DATA.SuccessOrFailure = "F"
+		CUST.DATA.ERRORMSG= "Internal Finacle Error.Select Query Failed"
+		print(CUST.DATA.ERRORMSG)
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF	
+	
+	#=====================================
+	# Fetching the Child TD Accounts
+	#=====================================
+	
+	sv_s = "forAcid,acid,schmType,schmCode,acctCrncy,cifId,custName,cAcctStatus,chClsFlag,chOperAcct,maturityDate,depositMonths,depositDays,interestRate,LedgerBalance,autoRenewal|"
+	sv_s = sv_s + "SELECT g.foracid,g.acid,g.schm_type,g.schm_code,g.acct_crncy_code,g.cif_id,g.acct_name,t.acct_status,g.acct_cls_flg,t.link_oper_account,"
+	sv_s = sv_s + "CONCAT(TO_CHAR(t.maturity_date,'YYYY-MM-DD'),'T00:00:00.000'),t.deposit_period_mths,t.deposit_period_days,e.interest_rate,g.clr_bal_amt,t.auto_renewal_flg"
+	sv_s = sv_s + " FROM TBAADM.GAM g, TBAADM.TAM t, TBAADM.EIT e, TBAADM.MAM m WHERE"
+	sv_s = sv_s + " m.MASTER_B2K_ID = g.MASTER_B2K_ID AND"
+	sv_s = sv_s + " m.MASTER_ACCT_NUM = ?SVAR AND"
+	sv_s = sv_s + "	g.ACID = t.ACID AND g.ACID = e.ENTITY_ID AND m.BANK_ID = ?SVAR "
+	sv_s = sv_s + " ORDER BY t.maturity_date ASC"
+	
+	BANCS.INPARAM.BINDVARS = CUST.DATA.accountNumber + "|" + BANCS.STDIN.contextBankId
+	
+	print(sv_s)
+	print(BANCS.INPARAM.BINDVARS)
+
+	sv_i = urhk_dbCursorOpenWithBind(sv_s)
+	print(sv_i)
+	
+	IF(sv_i == 0) THEN
+	#{
+		sv_j = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+		sv_n = urhk_dbCursorFetch(sv_j)
+		
+		print(sv_n)
+		IF (sv_n !=0) THEN
+		#{
+			sv_e = 1
+			CUST.DATA.ERRORCODE = "INTF030"
+			CUST.DATA.SuccessOrFailure = "F"
+			CUST.DATA.ERRORMSG= "No Child Accounts Exist for the Master Account"
+			print(CUST.DATA.ERRORMSG)
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+		
+		# Initializing number to zero. Will be used as seq for populating multirec output.
+		CUST.DATA.number = "0"
+		sv_b = 0
+
+		# Initializing variable for common details population
+		sv_x = 0
+		
+		WHILE(sv_n == 0)
+		#{
+			CUST.DATA.forAcid		=	BANCS.OUTPARAM.forAcid
+			CUST.DATA.cAcctStatus		=	BANCS.OUTPARAM.cAcctStatus
+			CUST.DATA.chClsFlag		=	BANCS.OUTPARAM.chClsFlag
+			CUST.DATA.maturityDate		=	BANCS.OUTPARAM.maturityDate
+			CUST.DATA.depositMonths		=	BANCS.OUTPARAM.depositMonths
+			CUST.DATA.depositDays		=	BANCS.OUTPARAM.depositDays
+			CUST.DATA.interestRate		=	BANCS.OUTPARAM.interestRate
+			CUST.DATA.LedgerBalance		=	BANCS.OUTPARAM.LedgerBalance
+			CUST.DATA.autoRenewal		=	BANCS.OUTPARAM.autoRenewal
+			CUST.DATA.chOperAcct		=	BANCS.OUTPARAM.chOperAcct
+			CUST.DATA.acid			=	BANCS.OUTPARAM.acid
+			CUST.DATA.schmCode		=	BANCS.OUTPARAM.schmCode	
+
+			print(CUST.DATA.interestRate)
+			
+			#Deriving Available Balance
+			BANCS.INPARAM.acctId = CUST.DATA.forAcid
+			BANCS.INPARAM.asOnDate = BANCS.STDIN.BODDate
+			print(BANCS.INPARAM.acctId)
+			print(BANCS.INPARAM.asOnDate)
+
+			sv_a = urhk_getAcctBalanceAsOnDate("")
+			print(sv_a)
+
+			IF(sv_a == 0)THEN
+			#{
+				print(BANCS.OUTPARAM.acctBal)
+				CUST.DATA.AvailableBalance = BANCS.OUTPARAM.acctBal
+				print(CUST.DATA.AvailableBalance)
+			#}
+			ELSE
+			#{
+				sv_e = 1
+				CUST.DATA.ERRORCODE = "INTF014"
+				CUST.DATA.SuccessOrFailure = "F"
+				CUST.DATA.ERRORMSG= "Internal Finacle Error.User Hook execution failed"
+				print(CUST.DATA.ERRORMSG)
+				GOTO ENDOFSCRIPT
+			#}
+			ENDIF
+
+			IF((CUST.DATA.autoRenewal == "U") OR (CUST.DATA.autoRenewal == "L"))THEN
+			#{
+				CUST.DATA.interestPayout = "A"	
+			#}
+			ELSE
+			#{
+				IF(TRIM(CUST.DATA.chOperAcct) == "")THEN
+				#{
+					CUST.DATA.interestPayout = "S"				
+				#}
+				ELSE
+				#{
+					CUST.DATA.interestPayout = "D"	
+				#}
+				ENDIF
+			#}
+			ENDIF
+
+			#Deriving Interest Rate for Child Account
+			print(CUST.DATA.forAcid)
+			CUST.DATA.srvName = "SRV_InquireTDAcct"
+		
+			sv_r = urhk_SetUrhkInp("acctCommonInfo.acctGeneralInfo.acctBasic.foracid|" + CUST.DATA.forAcid)
+			print(sv_r)
+
+			sv_u = urhk_ExecSrv(CUST.DATA.srvName + "|retain_all_output = Y|call_mode = N")
+			print(sv_u)
+
+			sv_r = urhk_GetUrhkOut("acctCommonInfo.acctInterestTax.basicInterest.netInt")
+			print(sv_r)
+
+			IF(sv_r == 0)THEN
+			#{
+				CUST.DATA.interestRate = BANCS.OUTPARAM.srvValue
+				CUST.DATA.interestRate = FORMAT$(CDOUBLE(CUST.DATA.interestRate),"%2.2f")
+				print(CUST.DATA.interestRate)
+			#}
+			ELSE
+			#{
+				sv_e = 1
+                                CUST.DATA.ERRORCODE = "INTF031"
+                                CUST.DATA.SuccessOrFailure = "F"
+                                CUST.DATA.ERRORMSG= "Internal Finacle Error.SRV execution failed"
+                                print(CUST.DATA.ERRORMSG)
+                                GOTO ENDOFSCRIPT
+			#}
+			ENDIF
+			
+			#=====================================
+			#Sending the o/p to reponse xml
+		    	#=====================================
+			IF(sv_x == 0)THEN
+			#{
+				#==========================================================
+        			#Setting common fields to response
+        			#==========================================================
+        			IF(CUST.DATA.mAcctNumber == "")THEN
+        			#{
+                			CUST.DATA.mAcctNumber  = " "
+        			#}
+        			ENDIF
+        			sv_z ="TDAcctInq_Res.mAcctNumber"+ "|" + CUST.DATA.mAcctNumber
+        			sv_a = urhk_SetOrbOut(sv_z)
+
+        			IF(CUST.DATA.schmType == "")THEN
+        			#{
+                			CUST.DATA.schmType  = " "
+        			#}
+        			ENDIF
+        			sv_z ="TDAcctInq_Res.schmType"+ "|" + CUST.DATA.schmType
+        			sv_a = urhk_SetOrbOut(sv_z)
+
+        			IF(CUST.DATA.acctCrncy == "")THEN
+        			#{
+               				CUST.DATA.acctCrncy  = " "
+        			#}
+        			ENDIF
+        			sv_z ="TDAcctInq_Res.acctCrncy"+ "|" + CUST.DATA.acctCrncy
+        			sv_a = urhk_SetOrbOut(sv_z)
+
+        			IF(CUST.DATA.cifId == "")THEN
+        			#{
+               				CUST.DATA.cifId  = " "
+        			#}
+        			ENDIF
+        			sv_z ="TDAcctInq_Res.cifId"+ "|" + CUST.DATA.cifId
+        			sv_a = urhk_SetOrbOut(sv_z)
+
+        			IF(CUST.DATA.custName == "")THEN
+        			#{
+               				CUST.DATA.custName  = " "
+        			#}
+        			ENDIF
+        			sv_z ="TDAcctInq_Res.custName"+ "|" + CUST.DATA.custName
+        			sv_a = urhk_SetOrbOut(sv_z)
+
+			        IF(CUST.DATA.acctStatus == "")THEN
+        			#{
+               				CUST.DATA.acctStatus  = " "
+        			#}
+        			ENDIF
+        			sv_z ="TDAcctInq_Res.acctStatus"+ "|" + CUST.DATA.acctStatus
+        			sv_a = urhk_SetOrbOut(sv_z)
+
+        			IF(CUST.DATA.clsFlag == "")THEN
+        			#{
+               				CUST.DATA.clsFlag  = " "
+        			#}
+        			ENDIF
+        			sv_z ="TDAcctInq_Res.clsFlag"+ "|" + CUST.DATA.clsFlag
+        			sv_a = urhk_SetOrbOut(sv_z)
+			
+				sv_x = sv_x + 1
+				print(sv_x)
+			#}	
+			ENDIF
+			
+			IF(CUST.DATA.accountNumber == "")THEN
+			#{
+				CUST.DATA.accountNumber  = " "
+			#}
+			ENDIF
+			sv_z ="TDAcctInq_Res.accountDetail.<rec_"+CUST.DATA.number+">.accountNumber"+ "|" + CUST.DATA.forAcid
+			sv_a = urhk_SetOrbOut(sv_z)
+			
+			IF(CUST.DATA.cAcctStatus == "")THEN
+			#{
+					CUST.DATA.cAcctStatus  = " "
+			#}
+			ENDIF
+			sv_z ="TDAcctInq_Res.accountDetail.<rec_"+CUST.DATA.number+">.cAcctStatus"+ "|" + CUST.DATA.cAcctStatus
+			sv_a = urhk_SetOrbOut(sv_z)
+			
+			IF(CUST.DATA.chClsFlag == "")THEN
+			#{
+					CUST.DATA.chClsFlag  = " "
+			#}
+			ENDIF
+			sv_z ="TDAcctInq_Res.accountDetail.<rec_"+CUST.DATA.number+">.chClsFlag"+ "|" + CUST.DATA.chClsFlag
+			sv_a = urhk_SetOrbOut(sv_z)
+			
+			IF(CUST.DATA.maturityDate == "")THEN
+			#{
+				CUST.DATA.maturityDate  = " "
+			#}
+			ENDIF
+			sv_z ="TDAcctInq_Res.accountDetail.<rec_"+CUST.DATA.number+">.maturityDate"+ "|" + CUST.DATA.maturityDate
+			sv_a = urhk_SetOrbOut(sv_z)
+			
+			IF(CUST.DATA.depositMonths == "")THEN
+			#{
+				CUST.DATA.depositMonths  = " "
+			#}
+			ENDIF
+			sv_z ="TDAcctInq_Res.accountDetail.depositTerm.<rec_"+CUST.DATA.number+">.depositMonths"+ "|" + CUST.DATA.depositMonths
+			sv_a = urhk_SetOrbOut(sv_z)
+			
+			IF(CUST.DATA.depositDays == "")THEN
+			#{
+				CUST.DATA.depositDays  = " "
+			#}
+			ENDIF
+			sv_z ="TDAcctInq_Res.accountDetail.depositTerm.<rec_"+CUST.DATA.number+">.depositDays"+ "|" + CUST.DATA.depositDays
+			sv_a = urhk_SetOrbOut(sv_z)
+			
+			IF(CUST.DATA.interestRate == "")THEN
+			#{
+				CUST.DATA.interestRate  = " "
+			#}
+			ENDIF
+			sv_z ="TDAcctInq_Res.accountDetail.<rec_"+CUST.DATA.number+">.interestRate"+ "|" + CUST.DATA.interestRate
+			sv_a = urhk_SetOrbOut(sv_z)
+			
+			IF(CUST.DATA.AvailableBalance == "")THEN
+			#{
+				CUST.DATA.AvailableBalance  = " "
+			#}
+			ENDIF
+			sv_z ="TDAcctInq_Res.accountDetail.<rec_"+CUST.DATA.number+">.AvailableBalance"+ "|" + CUST.DATA.AvailableBalance
+			sv_a = urhk_SetOrbOut(sv_z)
+			
+			IF(CUST.DATA.LedgerBalance == "")THEN
+			#{
+				CUST.DATA.LedgerBalance  = " "
+			#}
+			ENDIF
+			sv_z ="TDAcctInq_Res.accountDetail.<rec_"+CUST.DATA.number+">.LedgerBalance"+ "|" + CUST.DATA.LedgerBalance
+			sv_a = urhk_SetOrbOut(sv_z)
+			
+			IF(CUST.DATA.autoRenewal == "")THEN
+			#{
+				CUST.DATA.autoRenewal  = " "
+			#}
+			ENDIF
+			sv_z ="TDAcctInq_Res.accountDetail.<rec_"+CUST.DATA.number+">.autoRenewal"+ "|" + CUST.DATA.autoRenewal
+			sv_a = urhk_SetOrbOut(sv_z)
+			
+			IF(CUST.DATA.interestPayout == "")THEN
+			#{
+				CUST.DATA.interestPayout  = " "
+			#}
+			ENDIF
+			sv_z ="TDAcctInq_Res.accountDetail.<rec_"+CUST.DATA.number+">.interestPayout"+ "|" + CUST.DATA.interestPayout
+			sv_a = urhk_SetOrbOut(sv_z)		
+			
+			sv_b = sv_b+1
+			print(sv_b)
+			CUST.DATA.number = sv_b
+			print(CUST.DATA.number)
+			
+			sv_n = urhk_dbCursorFetch(sv_j)
+		#}
+		DO
+		sv_n = urhk_dbCursorClose(sv_j)
+	#}
+	ELSE
+	#{
+		sv_e = 1
+		CUST.DATA.ERRORCODE = "INTF002"
+		CUST.DATA.SuccessOrFailure = "F"
+		CUST.DATA.ERRORMSG= "Internal Finacle Error.Select Query Failed"
+		print(CUST.DATA.ERRORMSG)
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+
+	ENDOFSCRIPT:
+	IF (sv_e == 1) THEN
+	#{
+		IF (CUST.DATA.ERRORMSG != "") THEN
+		#{
+			BANCS.OUTPUT.successOrFailure="F"
+			sv_a = "ERROR.FIBUSINESSEXCEPTION.ERRORDETAIL.ERRORCODE"+"|"+CUST.DATA.ERRORCODE
+			sv_u = urhk_SetOrbOut(sv_a)
+			sv_a = "ERROR.FIBUSINESSEXCEPTION.ERRORDETAIL.ERRORDESC"+"|"+CUST.DATA.ERRORMSG
+			sv_u = urhk_SetOrbOut(sv_a)
+			sv_a = "ERROR.FIBUSINESSEXCEPTION.ERRORDETAIL.ERROTYPE"+"|BE"
+			sv_u = urhk_SetOrbOut(sv_a)
+		#}
+		ENDIF
+		trace off
+		EXITSCRIPT
+	#}
+	ENDIF
+
+	#==========================================================
+	#Setting common fields to response
+	#==========================================================
+        IF(CUST.DATA.mAcctNumber == "")THEN
+        #{
+	        CUST.DATA.mAcctNumber  = " "
+        #}
+        ENDIF
+        sv_z ="TDAcctInq_Res.mAcctNumber"+ "|" + CUST.DATA.mAcctNumber
+        sv_a = urhk_SetOrbOut(sv_z)
+
+        IF(CUST.DATA.schmType == "")THEN
+        #{
+                CUST.DATA.schmType  = " "
+        #}
+        ENDIF
+        sv_z ="TDAcctInq_Res.schmType"+ "|" + CUST.DATA.schmType
+        sv_a = urhk_SetOrbOut(sv_z)
+
+        IF(CUST.DATA.acctCrncy == "")THEN
+        #{
+               CUST.DATA.acctCrncy  = " "
+        #}
+        ENDIF
+        sv_z ="TDAcctInq_Res.acctCrncy"+ "|" + CUST.DATA.acctCrncy
+        sv_a = urhk_SetOrbOut(sv_z)
+
+        IF(CUST.DATA.cifId == "")THEN
+        #{
+               CUST.DATA.cifId  = " "
+        #}
+        ENDIF
+        sv_z ="TDAcctInq_Res.cifId"+ "|" + CUST.DATA.cifId
+        sv_a = urhk_SetOrbOut(sv_z)
+
+        IF(CUST.DATA.custName == "")THEN
+        #{
+               CUST.DATA.custName  = " "
+        #}
+        ENDIF
+        sv_z ="TDAcctInq_Res.custName"+ "|" + CUST.DATA.custName
+        sv_a = urhk_SetOrbOut(sv_z)
+        IF(CUST.DATA.acctStatus == "")THEN
+        #{
+               CUST.DATA.acctStatus  = " "
+        #}
+        ENDIF
+        sv_z ="TDAcctInq_Res.acctStatus"+ "|" + CUST.DATA.acctStatus
+        sv_a = urhk_SetOrbOut(sv_z)
+
+        IF(CUST.DATA.clsFlag == "")THEN
+        #{
+               CUST.DATA.clsFlag  = " "
+        #}
+        ENDIF
+        sv_z ="TDAcctInq_Res.clsFlag"+ "|" + CUST.DATA.clsFlag
+        sv_a = urhk_SetOrbOut(sv_z)
+	
+	#=============================================================================================
+	#Deleting repository and class
+	#=============================================================================================
+	IF (CLASSEXISTS("CUST", "DATA") != 0) THEN
+	#{
+		DELETECLASS("CUST", "DATA")
+	#}
+	ENDIF
+
+	IF (REPEXISTS("CUST") != 0) THEN
+	#{
+		DELETEREP("CUST")
+	#}
+	ENDIF
+
+TRACE OFF
+END-->

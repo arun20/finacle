@@ -1,0 +1,287 @@
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+	TRACE ON
+	LIBNAME CUSTOMSO
+	#------------------------------------------
+	# Creating the repositories
+	#------------------------------------------
+	IF (REPEXISTS("PAYSYS") == 0 ) THEN
+	#{
+		CREATEREP("PAYSYS")
+	#}
+	ENDIF
+	IF (CLASSEXISTS("PAYSYS","GLBDATA") == 0) THEN
+	#{
+		CREATECLASS("PAYSYS","GLBDATA",5)
+	#}
+	ENDIF
+	#-------------------------------------
+	# Creating a File
+	#-------------------------------------
+	PAYSYS.GLBDATA.inputFile = "inputFile.txt"
+	PAYSYS.GLBDATA.outputFile = "outputFile.csv"
+	PAYSYS.GLBDATA.FormattedPaysysMsg = ""
+	PAYSYS.GLBDATA.SenderRefNum = ""
+	PAYSYS.GLBDATA.RecvrBIC = ""
+	PAYSYS.GLBDATA.SolId = ""
+	PAYSYS.GLBDATA.runningSeq = ""
+	PAYSYS.GLBDATA.recCount = "0"
+	PAYSYS.GLBDATA.MessageId = ""
+	PAYSYS.GLBDATA.Today = MID$(BANCS.STDIN.BODDate,6,4) + MID$(BANCS.STDIN.BODDate,3,2) + LEFT$(BANCS.STDIN.BODDate,2)	
+        PRINT(PAYSYS.GLBDATA.AMLBatchPath)
+        sv_h = strlen(PAYSYS.GLBDATA.AMLBatchPath)
+        print(sv_h)
+	sv_n = "echo 'MESSAGE_KEY|TENANT_CD|FULL_MESSAGE|RECEIVING_FI_BRANCH_KEY|SENDING_FI_BRANCH_KEY' > " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.outputFile
+	print(sv_n)
+	sv_k = system(sv_n)
+	print(sv_k)
+
+	sv_r = "ls " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.outputFileTemp + " > " + PAYSYS.GLBDATA.inputFile
+	PRINT(sv_r)
+	sv_s = system(sv_r)
+	PRINT(sv_s)
+	IF (sv_s != 0) THEN
+	#{
+		PAYSYS.GLBDATA.errMsg = "Response file not found"
+		sv_s = "echo " + PAYSYS.GLBDATA.errMsg + " >> " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.failLog
+		print(sv_s)
+		sv_t = system(sv_s)
+		print(sv_t)	
+		GOTO ENDOFSCRIPT
+	#}
+	ELSE
+	#{
+		sv_t = urtn_fileOpen(PAYSYS.GLBDATA.inputFile + "|r")
+		PRINT(sv_t)
+		IF (sv_t < 0) THEN
+		#{
+			PAYSYS.GLBDATA.errMsg = "Unable to open MT7XX file"
+			sv_s = "echo " + PAYSYS.GLBDATA.errMsg + " >> " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.failLog
+			print(sv_s)
+			sv_t = system(sv_s)
+			print(sv_t)	
+			GOTO ENDOFSCRIPT
+		#}
+		ELSE
+		#{
+			PAYSYS.GLBDATA.readFileIndex = sv_t
+			PAYSYS.GLBDATA.fileListRecord = ""
+			sv_t = urtn_fileRead(PAYSYS.GLBDATA.readFileIndex + "|PAYSYS.GLBDATA.fileListRecord")
+			print(sv_t)
+			print(PAYSYS.GLBDATA.fileListRecord)
+	
+			WHILE (sv_t ==0)
+			#{	
+				sv_f = strlen(PAYSYS.GLBDATA.fileListRecord)
+				print(sv_f)
+				PAYSYS.GLBDATA.inputFileName = MID$(PAYSYS.GLBDATA.fileListRecord,sv_h,sv_f)
+				print(PAYSYS.GLBDATA.inputFileName)
+		
+				sv_m = getposition(PAYSYS.GLBDATA.inputFileName,".")
+				print(sv_m)
+				PAYSYS.GLBDATA.newInputFileName = MID$(PAYSYS.GLBDATA.inputFileName,0,sv_m-1)
+				print(PAYSYS.GLBDATA.newInputFileName)
+				PAYSYS.GLBDATA.newInputFileName = PAYSYS.GLBDATA.newInputFileName + ".txt"
+				print(PAYSYS.GLBDATA.newInputFileName)
+		
+				sv_a = urtn_fileAccess(PAYSYS.GLBDATA.fileListRecord)
+				print(sv_a)
+				IF(sv_a != 0) THEN
+				#{	
+					PAYSYS.GLBDATA.errMsg = "Unable to Access the file."
+					sv_s = "echo " + PAYSYS.GLBDATA.errMsg + " >> " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.failLog
+					print(sv_s)
+					sv_u = system(sv_s)
+					print(sv_u)	
+					GOTO NEXTFILE
+				#}
+				ENDIF
+		
+				sv_t = urtn_fileOpen(PAYSYS.GLBDATA.fileListRecord + "|r")
+				PRINT(sv_t)
+				IF (sv_t < 0) THEN
+				#{
+					PAYSYS.GLBDATA.errMsg = "Unable to open file."
+					sv_s = "echo " + PAYSYS.GLBDATA.errMsg + " >> " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.failLog
+					print(sv_s)
+					sv_u = system(sv_s)
+					print(sv_u)	
+					GOTO NEXTFILE
+				#}
+				ENDIF
+	
+				PAYSYS.GLBDATA.readIndex = sv_t
+				PAYSYS.GLBDATA.record = ""
+				PAYSYS.GLBDATA.recordTemp = ""
+
+				sv_v = urtn_fileRead(PAYSYS.GLBDATA.readIndex + "|PAYSYS.GLBDATA.record")
+				print(sv_v)
+				IF (sv_v != 0) THEN
+				#{	
+					PAYSYS.GLBDATA.errMsg = "No record found inside the input file."
+					sv_s = "echo " + PAYSYS.GLBDATA.errMsg + " >> " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.failLog
+					print(sv_s)
+					sv_u = system(sv_s)
+					print(sv_u)	
+					GOTO NEXTFILE
+				#}
+				ENDIF
+		
+				WHILE(sv_v == 0)
+				#{
+					PAYSYS.GLBDATA.fieldList = "swSrlNum,swiftMsg"
+					print(PAYSYS.GLBDATA.fieldList)
+					print(PAYSYS.GLBDATA.record)
+					PAYSYS.GLBDATA.recordTemp2 = PAYSYS.GLBDATA.record
+					print(PAYSYS.GLBDATA.recordTemp2)
+					IF(PAYSYS.GLBDATA.recordTemp != "") THEN
+					#{
+						PAYSYS.GLBDATA.record = PAYSYS.GLBDATA.recordTemp + PAYSYS.GLBDATA.record
+						PAYSYS.GLBDATA.recordTemp = ""
+						print(PAYSYS.GLBDATA.record)
+					#}
+					ENDIF
+					print(strlen(PAYSYS.GLBDATA.recordTemp2))
+					IF(strlen(PAYSYS.GLBDATA.recordTemp2) == 2047) THEN
+					#{
+						PAYSYS.GLBDATA.recordTemp = PAYSYS.GLBDATA.recordTemp2
+						GOTO NEXTREC
+					#}
+					ENDIF
+					WHILE(PAYSYS.GLBDATA.fieldList != "")
+					#{
+						sv_l = STRLEN(PAYSYS.GLBDATA.fieldList)
+						sv_p = GETPOSITION(PAYSYS.GLBDATA.fieldList, ",")
+						IF(sv_p == 0) THEN
+						#{
+							sv_d = PAYSYS.GLBDATA.fieldList
+							PAYSYS.GLBDATA.fieldList = ""
+						#}
+						ELSE
+						#{
+							sv_d = MID$(PAYSYS.GLBDATA.fieldList, 0, sv_p - 1)
+							print(sv_d)
+							PAYSYS.GLBDATA.fieldList = MID$(PAYSYS.GLBDATA.fieldList, sv_p, sv_l)
+						#}
+						ENDIF
+						("PAYSYS").("GLBDATA").(sv_d) = ""
+						sv_r = STRLEN(PAYSYS.GLBDATA.record)
+						sv_g = GETPOSITION(PAYSYS.GLBDATA.record, "***")
+						IF(sv_g == 0) THEN
+						#{
+							sv_f = PAYSYS.GLBDATA.record
+							PAYSYS.GLBDATA.record = ""
+						#}
+						ELSE
+						#{
+							sv_f = MID$(PAYSYS.GLBDATA.record, 0, sv_g - 1)
+							print(sv_f)
+							PAYSYS.GLBDATA.record = MID$(PAYSYS.GLBDATA.record, sv_g + 2, sv_r)
+						#}
+						ENDIF
+						("PAYSYS").("GLBDATA").(sv_d) = sv_f
+						PRINT(("PAYSYS").("GLBDATA").(sv_d))
+					#}
+					DO
+					print(PAYSYS.GLBDATA.swSrlNum)
+					print(PAYSYS.GLBDATA.swiftMsg)
+					sv_s = "runningSeq|SELECT LPAD(CUSTOM.C_AML_BATCH_SEQ.NEXTVAL,6,0) FROM DUAL"
+					print(sv_s)
+					sv_d = urhk_dbSelectWithBind(sv_s)
+					print(sv_d)
+					IF(sv_d == 0) THEN
+					#{
+						PAYSYS.GLBDATA.runningSeq = BANCS.OUTPARAM.runningSeq
+						print(PAYSYS.GLBDATA.runningSeq)
+					#}
+					ENDIF
+					PAYSYS.GLBDATA.recCount = CINT(PAYSYS.GLBDATA.recCount) + 1	
+					CALL("AMLRequestdp002.scr")
+					print(PAYSYS.GLBDATA.FormattedPaysysMsg)
+					PAYSYS.GLBDATA.FormattedPaysysMsg = func_replaceCharB(PAYSYS.GLBDATA.FormattedPaysysMsg,"'","")
+					print(PAYSYS.GLBDATA.FormattedPaysysMsg)
+					PAYSYS.GLBDATA.FormattedPaysysMsg = func_replaceCharB(PAYSYS.GLBDATA.FormattedPaysysMsg,"|","&&&")
+					print(PAYSYS.GLBDATA.FormattedPaysysMsg)
+					PAYSYS.GLBDATA.FormattedPaysysMsg = "TF" + PAYSYS.GLBDATA.Today + PAYSYS.GLBDATA.SenderRefNum + PAYSYS.GLBDATA.runningSeq  + "|N/A|@@@{4:&&&" + PAYSYS.GLBDATA.FormattedPaysysMsg + "&&&-}@@@|" + PAYSYS.GLBDATA.RecvrBIC + "|" + PAYSYS.GLBDATA.SolId
+					print(PAYSYS.GLBDATA.FormattedPaysysMsg)
+					sv_s = "echo '" + PAYSYS.GLBDATA.FormattedPaysysMsg + "' >> " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.outputFile
+					print(sv_s)
+					sv_t = system(sv_s)
+					print(sv_t)
+					BANCS.INPARAM.BINDVARS = PAYSYS.GLBDATA.SenderRefNum + "|" + PAYSYS.GLBDATA.MessageId
+					sv_s = "oldCount|SELECT COUNT(1) FROM CUSTOM.C_AUT WHERE SENDER_REF_NUM = ?SVAR AND MT_NO = ?SVAR"
+					sv_d = urhk_dbSelectWithBind(sv_s)
+					print(sv_d)
+					PAYSYS.GLBDATA.oldCount = BANCS.OUTPARAM.oldCount
+					print(PAYSYS.GLBDATA.oldCount)
+					PAYSYS.GLBDATA.uniqueId = "TF" + PAYSYS.GLBDATA.Today + PAYSYS.GLBDATA.SenderRefNum + PAYSYS.GLBDATA.runningSeq
+					IF(PAYSYS.GLBDATA.oldCount == 0) THEN
+					#{
+						BANCS.INPARAM.BINDVARS = PAYSYS.GLBDATA.SenderRefNum + "|" + PAYSYS.GLBDATA.uniqueId + "|" + PAYSYS.GLBDATA.MessageId
+						sv_s = "INSERT INTO CUSTOM.C_AUT VALUES (?SVAR,?SVAR,'',?SVAR)"
+						sv_a = urhk_dbSQLWithBind(sv_s)
+						print(sv_a)
+					#}
+					ELSE
+					#{
+						BANCS.INPARAM.BINDVARS = PAYSYS.GLBDATA.uniqueId + "|" + PAYSYS.GLBDATA.SenderRefNum + "|" + PAYSYS.GLBDATA.MessageId
+						sv_s = "UPDATE CUSTOM.C_AUT SET UNIQUE_ID = ?SVAR WHERE SENDER_REF_NUM = ?SVAR AND MT_NO = ?SVAR"
+						sv_a = urhk_dbSQLWithBind(sv_s)
+						print(sv_a)
+					#}
+					ENDIF
+					
+					NEXTREC:
+					sv_v = urtn_fileRead(PAYSYS.GLBDATA.readIndex + "|PAYSYS.GLBDATA.record")
+					print(sv_v)
+				#}
+				DO
+		
+				NEXTFILE:	
+				sv_a = urtn_fileClose(PAYSYS.GLBDATA.readIndex)
+				print(sv_a)
+				sv_t = urtn_fileRead(PAYSYS.GLBDATA.readFileIndex + "|PAYSYS.GLBDATA.fileListRecord")
+				print(sv_t)
+				print(PAYSYS.GLBDATA.fileListRecord)	
+			#}
+			DO
+			sv_s = "echo 'T" + PAYSYS.GLBDATA.recCount + "' >> " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.outputFile
+			print(sv_s)
+			sv_t = system(sv_s)
+			print(sv_t)
+			sv_a = urtn_fileClose(PAYSYS.GLBDATA.readFileIndex)
+			print(sv_a)
+			sv_u = urhk_getFileLocation("COM|AMLRequest.com")
+			print(sv_u)
+			IF(sv_u == 0) THEN
+			#{
+				sv_m = BANCS.OUTPARAM.fileLocation
+				print(sv_m)
+				sv_a = sv_m + "AMLRequest.com " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.outputFile
+				print(PAYSYS.GLBDATA.outPutFile)
+				IF(PAYSYS.GLBDATA.outputFileTemp == "outputFile1.csv") THEN
+				#{
+					sv_a = sv_a + " " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.requestFile1
+				#}
+				ELSE
+				#{
+					sv_a = sv_a + " " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.requestFile2
+				#}
+				ENDIF
+				print(sv_a)
+				sv_v = system(sv_a)
+				print(sv_v)
+			#}
+			ENDIF
+			sv_m = "rm -f " + PAYSYS.GLBDATA.AMLBatchPath + "outputFile*.csv"
+			print(sv_m)
+			sv_v = system(sv_m)
+			print(sv_v)
+		#}
+		ENDIF
+	#}
+	ENDIF
+	ENDOFSCRIPT:
+	TRACE OFF
+END-->

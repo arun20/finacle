@@ -1,0 +1,385 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: OGM_inqTransferFund.scr
+# Type: NA|default
+# Description: OGM_inqTransferFund.scr
+# Author: Saisomasekhar_N
+# Date: 6/22/18 4:15 PM
+# Modification Log:
+#============================================================
+<--START
+	# Script body goes here
+	TRACE ON
+	
+	IF(FIELDEXISTS(ONS.CUSTOM.custDataIn) == 0)THEN
+	#{
+		EXITSCRIPT
+	#}
+	ENDIF
+	IF(TRIM(ONS.CUSTOM.custDataIn) == "")THEN
+	#{
+		EXITSCRIPT
+	#}
+	ENDIF
+	sv_a = urhk_ParseONSCustData(ONS.CUSTOM.custDataIn)
+	PRINT(sv_a)
+	
+	### 1.INITIALIZE VARIABLES ###
+	CUST.DATA.drCount = "0"
+	CUST.DATA.crCount = "0"
+	CUST.DATA.crCount1 = "0"
+	CUST.DATA.drCount1 = "0"
+	sub_copyOptionalFieldB("errorFlg","CUST","DATA","errorFlg","N")
+	sub_copyOptionalFieldB("errorMsg","CUST","DATA","errorMsg","")
+	
+	
+	### 2.ONS REPOS IS APPENDED WITH intFlag|noOfRecs|noOfFldsPerRec BEFORE THE MULTI-REC CUSTOM DATA ###
+	### FIND NO OF RECORDS AND NO OF FIELDS PER REC FROM ONS ###
+	sub_getFieldValuesfromONSB("2","CUST","DATA","tfc_charge_details_FIELD_2|tfc_charge_details_FIELD_3","noOfRecs|noOfFldsPerRec","0")
+	PRINT(CUST.DATA.noOfRecs)
+	PRINT(CUST.DATA.noOfFldsPerRec)
+	
+	### 3.FETCH PREVIOUS OPERATION VALUES ON THIS ENTITY ###
+	BANCS.INPARAM.BINDVARS = CUST.DATA.entityB2kId + "|" + CUST.DATA.b2kIdType + "|" + BANCS.STDIN.contextBankId
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + CUST.DATA.entityB2kId + "|" + CUST.DATA.b2kIdType + "|" + BANCS.STDIN.contextBankId
+	PRINT(BANCS.INPARAM.BINDVARS)
+	sv_a = "slLimitId,prevEntityAmt,prevEntityCcy,prevAmdInd,prevAmdAmt|SELECT SL_LIMIT_ID,ENTITY_AMOUNT,ENTITY_CCY,AMEND_IND,AMEND_AMT"
+	sv_a = sv_a + " FROM CUSTOM.C_TFCT_TBL WHERE B2K_ID = ?SVAR AND B2KID_TYPE = ?SVAR AND BANK_ID = ?SVAR AND SRL_NUM = "
+	sv_a = sv_a + " (SELECT MAX(SRL_NUM) FROM CUSTOM.C_TFCT_TBL WHERE B2K_ID = ?SVAR AND B2KID_TYPE = ?SVAR AND BANK_ID = ?SVAR) AND ROWNUM=1"
+	PRINT(sv_a)
+	sv_a = urhk_dbSelectWithBind(sv_a)
+	PRINT(sv_a)
+	sub_copyOutparamFieldB("slLimitId","CUST","DATA","slLimitId","")
+	sub_copyOutparamFieldB("prevEntityAmt","CUST","DATA","prevEntityAmt","0")
+	sub_copyOutparamFieldB("prevEntityCcy","CUST","DATA","prevEntityCcy","")
+	sub_copyOutparamFieldB("prevAmdInd","CUST","DATA","prevAmdInd","")
+	sub_copyOutparamFieldB("prevAmdAmt","CUST","DATA","prevAmdAmt","0")
+	IF(sv_a != 0)THEN
+	#{
+		sub_getFieldValuesfromONSB("1","CUST","DATA","tfc_limit_details_FIELD_1","slLimitId","")
+		CUST.DATA.slLimitId	= TOUPPER(CUST.DATA.slLimitId)
+		CUST.DATA.isNewEntity = "Y"
+	#}
+	ENDIF
+	PRINT(CUST.DATA.slLimitId)
+	PRINT(CUST.DATA.prevEntityAmt)
+	PRINT(CUST.DATA.prevEntityCcy)
+	PRINT(CUST.DATA.prevAmdInd)
+	PRINT(CUST.DATA.prevAmdAmt)
+	
+	### GET MULTI-REC CHARGE DETAILS TAB FIELD VALUES ###
+	IF(CUST.DATA.menuId == "OGM")THEN
+	#{
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA","bgChargeDtl.entityChargeLL.<rec_0>.key.serial_num","chrgSrlNum")
+	#}
+	ENDIF
+	IF(CUST.DATA.menuId == "ODCM")THEN
+	#{
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA","dcChargeDtl.entityChargeLL.<rec_0>.key.serial_num","chrgSrlNum")
+	#}
+	ENDIF
+	IF(CUST.DATA.menuId == "IGM")THEN
+	#{
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA","bgInMsg.bgChargeDtl.entityChargeLL.<rec_0>.key.serial_num","chrgSrlNum")
+	#}
+	ENDIF
+	IF(CUST.DATA.menuId == "IDCM")THEN
+	#{
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA","dcInMsgDtl.dcChargeDtl.entityChargeLL.<rec_0>.key.serial_num","chrgSrlNum")
+	#}
+	ENDIF
+	PRINT(CUST.DATA.chrgSrlNum)
+	
+	CUST.DATA.counter  = "0"
+	CUST.DATA.counter1 = "1"
+	
+	WHILE(CINT(CUST.DATA.chrgSrlNum) != 0)
+	#{
+		### CHARGE EVENT ID/TYPE AND TFCT SRL NUM ###
+		IF(CUST.DATA.menuId == "OGM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "bgChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.crDrInd|bgChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.currChrgCollAmt"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "ODCM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "dcChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.crDrInd|dcChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.currChrgCollAmt"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "IGM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "bgInMsg.bgChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.crDrInd|bgInMsg.bgChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.currChrgCollAmt"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "IDCM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "dcInMsgDtl.dcChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.crDrInd|dcInMsgDtl.dcChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.currChrgCollAmt"
+		#}
+		ENDIF
+		CUST.DATA.srvFieldValues = "drCrInd|tranAmt"
+		sub_getFieldValuesfromSRVStructB("2","CUST","DATA",CUST.DATA.srvFieldNames,CUST.DATA.srvFieldValues)
+		PRINT(CUST.DATA.drCrInd)
+		PRINT(CUST.DATA.tranAmt)
+		
+		### GET CUSTOM FIELD VALUES FOR EACH RECORD FROM ONS BEGIN ###
+		IF((CUST.DATA.menuId == "IDCM") OR (CUST.DATA.menuId == "IGM") OR (CUST.DATA.menuId == "OGM") OR (CUST.DATA.menuId == "ODCM")) THEN
+		#{
+			CUST.DATA.slAcctIdPos = (CINT(CUST.DATA.noOfFldsPerRec) * CINT(CUST.DATA.chrgSrlNum)) - 3
+		#}
+		ELSE
+		#{
+			CUST.DATA.slAcctIdPos = (CINT(CUST.DATA.noOfFldsPerRec) * CINT(CUST.DATA.chrgSrlNum)) - 2
+		#}
+		ENDIF
+		CUST.DATA.ONSFields   = "tfc_charge_details_FIELD_" + CUST.DATA.slAcctIdPos
+		PRINT(CUST.DATA.ONSFields)
+		CUST.DATA.outputFields = "slAcctId"
+		sub_getFieldValuesfromONSB("1","CUST","DATA", CUST.DATA.ONSFields, CUST.DATA.outputFields,"0")
+		PRINT(CUST.DATA.slAcctId)
+		CUST.DATA.crCount = CINT(CUST.DATA.crCount) + 1	
+		IF((CUST.DATA.slAcctId != "NULL") AND (TRIM(CUST.DATA.slAcctId) != "") AND (CUST.DATA.drCrInd == "C"))THEN
+		#{
+			CUST.DATA.crCount1 = CINT(CUST.DATA.crCount1) + 1
+			("BANCS").("INPUT").("accNum"+FORMAT$(CINT(CUST.DATA.crCount),"%d")) = CUST.DATA.slAcctId
+			("BANCS").("INPUT").("txnAmount"+FORMAT$(CINT(CUST.DATA.crCount),"%d")) = FORMAT$(CDOUBLE(CUST.DATA.tranAmt),"%2.2f")
+		#}
+		ELSE
+		#{
+			("BANCS").("INPUT").("accNum"+FORMAT$(CINT(CUST.DATA.crCount),"%d")) = ""
+			("BANCS").("INPUT").("txnAmount"+FORMAT$(CINT(CUST.DATA.crCount),"%d")) = ""
+		#}
+		ENDIF
+		
+		### INCREMENT COUNTER ###
+		CUST.DATA.counter = CINT(CUST.DATA.counter) + 1
+		IF(CUST.DATA.menuId == "OGM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "bgChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.key.serial_num"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "ODCM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "dcChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.key.serial_num"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "IGM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "bgInMsg.bgChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.key.serial_num"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "IDCM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "dcInMsgDtl.dcChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.key.serial_num"
+		#}
+		ENDIF
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA",CUST.DATA.srvFieldNames,"chrgSrlNum")
+		PRINT(CUST.DATA.chrgSrlNum)
+		IF(TRIM(CUST.DATA.chrgSrlNum) == "")THEN
+		#{
+			CUST.DATA.chrgSrlNum = 0
+		#}
+		ENDIF
+	#}
+	DO
+	IF((CUST.DATA.menuId == "OGM") OR (CUST.DATA.menuId == "IGM")) THEN
+	#{
+		sub_getFieldValuesfromONSB("1","CUST","DATA","FRWK_OGMINVOCDET_FIELD_1","slAcctId","")
+		PRINT(CUST.DATA.slAcctId)
+		IF(CUST.DATA.slAcctId != "") THEN
+		#{
+			IF(CUST.DATA.menuId == "OGM") THEN
+			#{
+				CUST.DATA.srvFieldNames = "bgMarkInvocationDtl.markInvocationAmt"
+			#}
+			ELSE
+			#{
+				CUST.DATA.srvFieldNames = "bgInMsg.bgMarkInvocationDtl.markInvocationAmt"
+			#}
+			ENDIF
+			CUST.DATA.srvFieldValues = "invAmt"
+			sub_getFieldValuesfromSRVStructB("1","CUST","DATA",CUST.DATA.srvFieldNames,CUST.DATA.srvFieldValues)
+			PRINT(CUST.DATA.invAmt)
+			PRINT(FORMAT$(CDOUBLE(CUST.DATA.invAmt),"%2.2f"))
+			CUST.DATA.crCount1 = CINT(CUST.DATA.crCount1) + 1
+			CUST.DATA.crCount = CINT(CUST.DATA.crCount) + 1
+			PRINT(CUST.DATA.crCount)
+			("BANCS").("INPUT").("accNum"+FORMAT$(CINT(CUST.DATA.crCount1),"%d")) = CUST.DATA.slAcctId
+			("BANCS").("INPUT").("txnAmount"+FORMAT$(CINT(CUST.DATA.crCount1),"%d")) = FORMAT$(CDOUBLE(CUST.DATA.invAmt),"%2.2f")
+		#}
+		ENDIF	
+	#}
+	ENDIF
+
+	PRINT(CUST.DATA.crCount)
+	IF(CINT(CUST.DATA.crCount) > 5)THEN
+	#{
+		CUST.DATA.errorFlg = "Y"
+		CUST.DATA.errorMsg = "No of Cr. Legs cannot be more than 5"
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+	IF((CINT(CUST.DATA.crCount) != 0) AND (CINT(CUST.DATA.crCount1) > 0))THEN
+	#{
+		BANCS.INPUT.direction 		= "C"
+		BANCS.INPUT.reversalFlag 	= ""
+		BANCS.INPUT.reversalTxnSeq 	= "0"
+		CALLSCRIPTIFEXIST("transferFund.scr")
+		IF(INTF.DATA.orgCode != "000")THEN
+		#{
+			CUST.DATA.errorMsg = INTF.DATA.orgCode+"-"+INTF.DATA.ErrorDesc
+			CUST.DATA.errorFlg = "Y"
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+	#}
+	ENDIF
+	### GET MULTI-REC CHARGE DETAILS TAB FIELD VALUES ###
+	IF(CUST.DATA.menuId == "OGM")THEN
+	#{
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA","bgChargeDtl.entityChargeLL.<rec_0>.key.serial_num","chrgSrlNum")
+	#}
+	ENDIF
+	IF(CUST.DATA.menuId == "ODCM")THEN
+	#{
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA","dcChargeDtl.entityChargeLL.<rec_0>.key.serial_num","chrgSrlNum")
+	#}
+	ENDIF
+	IF(CUST.DATA.menuId == "IGM")THEN
+	#{
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA","bgInMsg.bgChargeDtl.entityChargeLL.<rec_0>.key.serial_num","chrgSrlNum")
+	#}
+	ENDIF
+	IF(CUST.DATA.menuId == "IDCM")THEN
+	#{
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA","dcInMsgDtl.dcChargeDtl.entityChargeLL.<rec_0>.key.serial_num","chrgSrlNum")
+	#}
+	ENDIF
+	PRINT(CUST.DATA.chrgSrlNum)
+	
+	CUST.DATA.counter  = "0"
+	CUST.DATA.counter1 = "1"
+	WHILE(CINT(CUST.DATA.chrgSrlNum) != 0)
+	#{
+		### CHARGE EVENT ID/TYPE AND TFCT SRL NUM ###
+		IF(CUST.DATA.menuId == "OGM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "bgChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.crDrInd|bgChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.currChrgCollAmt"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "ODCM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "dcChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.crDrInd|dcChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.currChrgCollAmt"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "IGM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "bgInMsg.bgChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.crDrInd|bgInMsg.bgChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.currChrgCollAmt"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "IDCM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "dcInMsgDtl.dcChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.crDrInd|dcInMsgDtl.dcChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.currChrgCollAmt"
+		#}
+		ENDIF
+		CUST.DATA.srvFieldValues = "drCrInd|tranAmt"
+		sub_getFieldValuesfromSRVStructB("2","CUST","DATA",CUST.DATA.srvFieldNames,CUST.DATA.srvFieldValues)
+		PRINT(CUST.DATA.drCrInd)
+		PRINT(CUST.DATA.tranAmt)
+		
+		### GET CUSTOM FIELD VALUES FOR EACH RECORD FROM ONS BEGIN ###
+		IF((CUST.DATA.menuId == "IDCM") OR (CUST.DATA.menuId == "IGM") OR (CUST.DATA.menuId == "OGM") OR (CUST.DATA.menuId == "ODCM")) THEN
+		#{
+			CUST.DATA.slAcctIdPos = (CINT(CUST.DATA.noOfFldsPerRec) * CINT(CUST.DATA.chrgSrlNum)) - 3
+		#}
+		ELSE
+		#{
+			CUST.DATA.slAcctIdPos = (CINT(CUST.DATA.noOfFldsPerRec) * CINT(CUST.DATA.chrgSrlNum)) - 2
+		#}
+		ENDIF
+		CUST.DATA.ONSFields   = "tfc_charge_details_FIELD_" + CUST.DATA.slAcctIdPos
+		PRINT(CUST.DATA.ONSFields)
+		CUST.DATA.outputFields = "slAcctId"
+		sub_getFieldValuesfromONSB("1","CUST","DATA", CUST.DATA.ONSFields, CUST.DATA.outputFields,"0")
+		PRINT(CUST.DATA.slAcctId)
+		CUST.DATA.drCount = CINT(CUST.DATA.drCount) + 1	
+		IF((CUST.DATA.slAcctId != "NULL") AND (TRIM(CUST.DATA.slAcctId) != "") AND (CUST.DATA.drCrInd == "D"))THEN
+		#{
+			CUST.DATA.drCount1 = CINT(CUST.DATA.drCount1) + 1
+			("BANCS").("INPUT").("accNum"+FORMAT$(CINT(CUST.DATA.drCount),"%d")) = CUST.DATA.slAcctId
+			("BANCS").("INPUT").("txnAmount"+FORMAT$(CINT(CUST.DATA.drCount),"%d")) = FORMAT$(CDOUBLE(CUST.DATA.tranAmt),"%2.2f")
+		#}
+		ELSE
+		#{
+			("BANCS").("INPUT").("accNum"+FORMAT$(CINT(CUST.DATA.drCount),"%d")) = ""
+			("BANCS").("INPUT").("txnAmount"+FORMAT$(CINT(CUST.DATA.drCount),"%d")) = ""
+		#}
+		ENDIF
+		
+		### INCREMENT COUNTER ###
+		CUST.DATA.counter = CINT(CUST.DATA.counter) + 1
+		IF(CUST.DATA.menuId == "OGM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "bgChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.key.serial_num"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "ODCM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "dcChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.key.serial_num"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "IGM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "bgInMsg.bgChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.key.serial_num"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "IDCM")THEN
+		#{
+			CUST.DATA.srvFieldNames = "dcInMsgDtl.dcChargeDtl.entityChargeLL.<rec_"+CUST.DATA.counter+">.key.serial_num"
+		#}
+		ENDIF
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA",CUST.DATA.srvFieldNames,"chrgSrlNum")
+		PRINT(CUST.DATA.chrgSrlNum)
+		IF(TRIM(CUST.DATA.chrgSrlNum) == "")THEN
+		#{
+			CUST.DATA.chrgSrlNum = 0
+		#}
+		ENDIF
+	#}
+	DO
+	PRINT(CUST.DATA.drCount)
+	IF(CINT(CUST.DATA.drCount) > 5)THEN
+	#{
+		CUST.DATA.errorFlg = "Y"
+		CUST.DATA.errorMsg = "No of Dr. Legs cannot be more than 5"
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+	IF((CINT(CUST.DATA.drCount) !=0) AND (CINT(CUST.DATA.drCount1)>0)) THEN
+	#{
+		BANCS.INPUT.direction 		= "D"
+		BANCS.INPUT.reversalFlag 	= ""
+		BANCS.INPUT.reversalTxnSeq 	= "0"
+		CALLSCRIPTIFEXIST("transferFund.scr")
+		IF(INTF.DATA.orgCode != "000")THEN
+		#{
+			CUST.DATA.errorMsg = INTF.DATA.orgCode+"-"+INTF.DATA.ErrorDesc
+			CUST.DATA.errorFlg = "Y"
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+	#}
+	ENDIF
+	#sv_a = urhk_B2k_PrintRepos("BANCS")
+	ENDOFSCRIPT :
+		#sv_a = urhk_B2k_PrintRepos("BANCS")
+		IF(CUST.DATA.errorFlg == "Y")THEN
+		#{
+			PRINT(CUST.DATA.errorMsg)
+			sv_a = urhk_SRV_SetErr(CUST.DATA.errorMsg)
+			sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+			BANCS.OUTPUT.successOrFailure = "F"
+		#}
+		ENDIF
+END-->

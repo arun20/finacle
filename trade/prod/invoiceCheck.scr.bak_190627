@@ -1,0 +1,46 @@
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+        # Script body goes here
+        TRACE ON
+	sub_createRepClassB("CUST","DATA")
+	sv_a    = urhk_SRV_GetVal("acctCommonInfo.acctGeneralInfo.acctBasic.foracid")
+	CUST.DATA.foracid = BANCS.OUTPARAM.srvValue
+	PRINT(CUST.DATA.foracid)
+	sv_u = urhk_SRV_GetVal("acctCommonInfo.acctClassMISC.freeText3")
+	IF(sv_u == 0) THEN
+	#{
+		CUST.DATA.invoiceNum = BANCS.OUTPARAM.srvValue
+		PRINT(CUST.DATA.invoiceNum)
+		IF(CUST.DATA.foracid != "") THEN
+		#{
+			BANCS.INPARAM.BINDVARS = CUST.DATA.invoiceNum + "|" + CUST.DATA.foracid
+		#}
+		ELSE
+		#{
+			BANCS.INPARAM.BINDVARS = CUST.DATA.invoiceNum
+		#}
+		ENDIF
+		sv_v = "invoiceCount|"
+		sv_v = sv_v + "SELECT COUNT(1) FROM TBAADM.GAC WHERE FREE_TEXT_3 = ?SVAR"
+		IF(CUST.DATA.foracid != "") THEN
+		#{
+			sv_v = sv_v + " AND ACID != (SELECT ACID FROM TBAADM.GAM WHERE FORACID = ?SVAR)"
+		#}
+		ENDIF
+		PRINT(sv_v)
+		sv_m = urhk_dbSelectWithBind(sv_v)
+		CUST.DATA.invoiceCount = BANCS.OUTPARAM.invoiceCount
+		PRINT(CUST.DATA.invoiceCount)
+		IF(CUST.DATA.invoiceCount > 0) THEN
+		#{
+			CUST.DATA.errorMsg = "Invoice Number Is Already Used"
+			#sv_a = urhk_SRV_SetErr(CUST.DATA.errorMsg)
+			#sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+			BANCS.OUTPUT.successOrFailure = "F"
+			sv_a = urhk_B2k_PutUserException("DIN")
+		#}
+		ENDIF
+	#}
+	ENDIF
+END-->

@@ -1,0 +1,22 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: SRV_FetchInwardDcDtlForTransfer_post_process_data.scr
+# Type: NA|default
+# Description: SRV_FetchInwardDcDtlForTransfer_post_process_data.scr
+# Author: Saisomasekhar_N
+# Date: 8/1/18 6:25 PM
+# Modification Log:
+#============================================================
+
+<--START
+	# Script body goes here
+	IF(BANCS.STDIN.menuId == "IDCM") THEN
+	#{
+		CALL("IdcmTransferFetchCust.scr")
+		CALL("SLAcctChrgDtls_Fetch.scr")
+	#}
+	ENDIF
+
+END-->

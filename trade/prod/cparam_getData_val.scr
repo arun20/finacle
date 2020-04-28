@@ -1,0 +1,724 @@
+#=================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# category: Script Name Based
+# script: cparam_getData_val.scr
+# event: NA
+# description: Get data for Parameter Values for Multirec
+#=================================================
+
+
+# ********************************************************************************
+#   Source Name       :     cparam_getData_val.scr
+#   Date              :     23-05-2011
+#   Author            :     Shankar. K
+#   Description       :     Get data for Parameter Values for Multirec
+#   Called file       :     
+#   Calling file      :     
+#   Input             :     
+#   Output            :     
+#   Modification History:
+#	<Serial No.>   <Date>   <Author Name>	<Description>
+#	0.1		25-11-12  Santosh	Made Changes for New CPARAM 10X.
+# ********************************************************************************
+<--start
+trace on
+sv_r = REPEXISTS("STDWFS")
+IF (sv_r == 0) THEN
+#{
+	CREATEREP("STDWFS")
+#}
+ENDIF
+sv_r = CLASSEXISTS("STDWFS", "GLBDATA")
+IF (sv_r == 0) THEN
+#{
+	CREATECLASS("STDWFS", "GLBDATA", 5)
+#}
+ENDIF
+
+#----------------------------
+# Calling CReAM_INFENG.scr
+#----------------------------
+sv_s = "CReAM_" + BANCS.STDIN.languageCode + ".scr"
+print(sv_s)
+sv_u = urhk_getFileLocation("SCRIPT|" + sv_s)
+IF (sv_u !=0) THEN
+#{
+        GOTO ENDOFSCRIPT
+#}
+ENDIF
+CALL(sv_s)
+
+sv_e = 0
+
+
+
+
+####################################################################################
+# Validation Call
+#################################################################################
+CALL("cparam_val.scr")
+IF (STDWFS.GLBDATA.successFailure == "F") THEN
+#{
+	GOTO endOfScript
+#}
+ENDIF
+
+
+STDWFS.GLBDATA.funcCode = BANCS.INPUT.funcCode
+STDWFS.GLBDATA.paramLevel = BANCS.INPUT.paramlev
+STDWFS.GLBDATA.moduleName = BANCS.INPUT.modName
+STDWFS.GLBDATA.paramIdCrit = BANCS.INPUT.paramId
+STDWFS.GLBDATA.successFailure = "S"
+STDWFS.GLBDATA.numInt = "NUMERIC INTEGER"
+STDWFS.GLBDATA.numFlt = "NUMERIC FLOAT"
+STDWFS.GLBDATA.alphaNum = "ALPHANUMERIC"
+STDWFS.GLBDATA.strchar = "CHAR"
+
+
+
+
+IF (STDWFS.GLBDATA.paramLevel == "BNKL") THEN
+#{
+	STDWFS.GLBDATA.levelCode1 = "ALL"
+	STDWFS.GLBDATA.levelCode2 = " "
+#}
+ELSE
+#{
+	IF (STDWFS.GLBDATA.paramLevel == "SOLL") THEN
+	#{
+		STDWFS.GLBDATA.levelCode1 = BANCS.INPUT.solid
+		STDWFS.GLBDATA.levelCode2 = " "
+	#}
+	ELSE
+	#{
+		IF (STDWFS.GLBDATA.paramLevel == "SCHM") THEN
+		#{
+			STDWFS.GLBDATA.levelCode1 = BANCS.INPUT.schcod
+			STDWFS.GLBDATA.levelCode2 = " "
+		#}
+		ELSE
+		#{
+			IF (STDWFS.GLBDATA.paramLevel == "CURL") THEN
+			#{
+				STDWFS.GLBDATA.levelCode1 = BANCS.INPUT.cccod
+				STDWFS.GLBDATA.levelCode2 = " "
+			#}
+			ELSE
+			#{
+				IF (STDWFS.GLBDATA.paramLevel == "SHCR") THEN
+				#{
+					STDWFS.GLBDATA.levelCode1 = BANCS.INPUT.schcod
+					STDWFS.GLBDATA.levelCode2 = BANCS.INPUT.cccod
+				#}
+				ELSE
+				#{
+					STDWFS.GLBDATA.levelCode1 = BANCS.INPUT.gencod
+					STDWFS.GLBDATA.levelCode2 = BANCS.INPUT.genid
+				#}
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ENDIF
+#}
+ENDIF
+
+
+IF ((STDWFS.GLBDATA.funcCode == "M")) THEN
+#{
+	GOTO STEP1
+#}
+ENDIF
+IF ((STDWFS.GLBDATA.funcCode == "I")) THEN
+#{
+	GOTO STEP3
+#}
+ENDIF
+IF ((STDWFS.GLBDATA.funcCode == "V") OR (STDWFS.GLBDATA.funcCode == "C")) THEN
+#{
+	GOTO STEP2
+#}
+ELSE
+#{
+	GOTO Finish
+#}
+ENDIF
+
+
+STEP1:
+#===============================================================
+# Get the param values from C_CPMASTER and values from C_CPVALUE
+#===============================================================
+IF (STDWFS.GLBDATA.levelCode1 == "ALL") THEN
+#{
+	sv_a = "paramId,paramDesc,paramType,listType"
+	sv_a = sv_a + "| SELECT CPM.PARAMETER_ID,CPM.PARAMETER_DESC,CPM.PARAMETER_TYPE,CPM.LIST_TYPE "
+	sv_a = sv_a + " FROM C_CPMASTER CPM"
+	sv_a = sv_a + " WHERE CPM.MODULE_NAME = ?SVAR"
+	sv_a = sv_a + " AND CPM.PARAMETER_LEVEL = ?SVAR"
+	sv_a = sv_a + " AND CPM.BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.moduleName + "|" + STDWFS.GLBDATA.paramLevel + "|" + BANCS.STDIN.contextBankId
+	IF (STDWFS.GLBDATA.paramIdCrit != "") THEN
+	#{
+		sv_a = sv_a + " AND CPM.PARAMETER_ID(+) = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramIdCrit
+	#}
+	ENDIF
+	sv_a = sv_a + " ORDER BY CPM.PARAMETER_ID"
+#}
+ELSE
+#{
+	sv_a = "paramId,paramDesc,paramType,listType"
+	sv_a = sv_a + "| SELECT DISTINCT CPM.PARAMETER_ID,CPM.PARAMETER_DESC,CPM.PARAMETER_TYPE,CPM.LIST_TYPE "
+	sv_a = sv_a + " FROM C_CPMASTER CPM, C_CPVALUE CPV"
+	sv_a = sv_a + " WHERE CPM.MODULE_NAME = ?SVAR"
+	sv_a = sv_a + " AND CPM.PARAMETER_LEVEL = ?SVAR"
+	sv_a = sv_a + " AND CPM.BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.moduleName + "|" + STDWFS.GLBDATA.paramLevel + "|" + BANCS.STDIN.contextBankId
+	IF (STDWFS.GLBDATA.paramIdCrit != "") THEN
+	#{
+		sv_a = sv_a + " AND CPM.PARAMETER_ID(+) = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramIdCrit
+	#}
+	ENDIF
+	sv_a = sv_a + " AND CPV.PARAMETER_ID(+) = CPM.PARAMETER_ID"
+	sv_a = sv_a + " AND CPV.LEVELCODE_1(+)  = ?SVAR"
+	sv_a = sv_a + " AND CPV.LEVELCODE_2(+)  = ?SVAR"
+	sv_a = sv_a + " AND CPV.BANK_ID(+) = ?SVAR"
+	sv_a = sv_a + " ORDER BY CPM.PARAMETER_ID"
+	PRINT(sv_a)
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode1 + "|" + STDWFS.GLBDATA.levelCode2 + "|" + BANCS.STDIN.contextBankId
+#}
+ENDIF
+PRINT(BANCS.INPARAM.BINDVARS)
+sv_b = urhk_dbCursorOpenWithBind(sv_a)
+
+IF (sv_b == 0) THEN
+#{
+	sv_c = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+	sv_d = urhk_dbCursorFetch(sv_c)
+	IF (sv_d != 0) THEN
+	#{
+		STDWFS.GLBDATA.successFailure = "F"
+		#STDWFS.GLBDATA.message = "Record Fetch Failed"
+		STDWFS.GLBDATA.message = CREAM.MESG.M0886
+		GOTO Finish
+	#}
+	ENDIF
+	sv_e = 0
+	
+	STDWFS.GLBDATA.recCount = sv_e
+	WHILE(sv_d == 0)
+	#{
+		STDWFS.GLBDATA.paramId = BANCS.OUTPARAM.paramId
+		STDWFS.GLBDATA.paramDesc = BANCS.OUTPARAM.paramDesc
+		STDWFS.GLBDATA.paramType = BANCS.OUTPARAM.paramType
+		STDWFS.GLBDATA.listType = BANCS.OUTPARAM.listType
+		
+		sv_a = "paramValue|SELECT CPV.PARAMETER_VALUE FROM C_CPVALUE CPV "
+		sv_a = sv_a + " WHERE CPV.PARAMETER_ID = ?SVAR"
+		sv_a = sv_a + " AND   CPV.LEVELCODE_1  = ?SVAR"
+		sv_a = sv_a + " AND   NVL(LEVELCODE_2,' ')  = ?SVAR"
+		sv_a = sv_a + " AND   CPV.BANK_ID = ?SVAR"
+		sv_a = sv_a + " AND   EXISTS(SELECT 1 FROM C_CPVALUE WHERE PARAMETER_ID=?SVAR"
+		sv_a = sv_a + " AND   LEVELCODE_1  = ?SVAR"
+		sv_a = sv_a + " AND   NVL(LEVELCODE_2,' ')  = ?SVAR AND BANK_ID = ?SVAR)"
+		sv_a = sv_a + " UNION"
+		sv_a = sv_a + " SELECT NULL FROM DUAL"
+		sv_a = sv_a + " WHERE  NOT EXISTS(SELECT 1 FROM C_CPVALUE WHERE PARAMETER_ID=?SVAR"
+		sv_a = sv_a + " AND   LEVELCODE_1  = ?SVAR"
+		sv_a = sv_a + " AND   NVL(LEVELCODE_2,' ')  = ?SVAR AND BANK_ID = ?SVAR)"
+		
+		BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.paramId + "|" + STDWFS.GLBDATA.levelCode1 + "|" + STDWFS.GLBDATA.levelCode2
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + BANCS.STDIN.contextBankId + "|" + STDWFS.GLBDATA.paramId
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode1 + "|" + STDWFS.GLBDATA.levelCode2
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + BANCS.STDIN.contextBankId + "|" + STDWFS.GLBDATA.paramId
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode1 + "|" + STDWFS.GLBDATA.levelCode2
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + BANCS.STDIN.contextBankId
+		PRINT(BANCS.INPARAM.BINDVARS)
+		
+		sv_r = urhk_dbSelectWithBind(sv_a)
+		
+		
+		IF (sv_r != 0) THEN
+		#{
+			STDWFS.GLBDATA.successFailure = "F"
+			#STDWFS.GLBDATA.message = "Record Fetch Failed"
+			STDWFS.GLBDATA.message = CREAM.MESG.M0886
+			GOTO Finish
+		#}
+		ENDIF
+		
+		STDWFS.GLBDATA.paramValue = BANCS.OUTPARAM.paramValue
+		IF (STDWFS.GLBDATA.paramValue == "") THEN
+		#{
+			STDWFS.GLBDATA.paramValue = "NULL"
+		#}
+		ENDIF
+		
+		IF (STDWFS.GLBDATA.listType == "") THEN
+		#{
+			STDWFS.GLBDATA.listType = "FT"
+		#}
+		ENDIF
+		IF (STDWFS.GLBDATA.paramDesc == "") THEN
+		#{
+			STDWFS.GLBDATA.paramDesc = "NULL"
+		#}
+		ENDIF
+		IF (STDWFS.GLBDATA.paramType == "AN") THEN
+		#{
+			STDWFS.GLBDATA.paramType = STDWFS.GLBDATA.alphaNum
+		#}
+		ELSE
+		#{
+			IF (STDWFS.GLBDATA.paramType == "CH") THEN
+			#{
+				STDWFS.GLBDATA.paramType = STDWFS.GLBDATA.strchar
+			#}
+			ELSE
+			#{
+				IF (STDWFS.GLBDATA.paramType == "NI") THEN
+				#{
+					STDWFS.GLBDATA.paramType = STDWFS.GLBDATA.numInt
+				#}
+				ELSE
+				#{
+					IF (STDWFS.GLBDATA.paramType == "NF") THEN
+					#{
+						STDWFS.GLBDATA.paramType = STDWFS.GLBDATA.numFlt
+					#}
+					ENDIF
+				#}
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+		PRINT(STDWFS.GLBDATA.paramIdCrit)
+		IF (STDWFS.GLBDATA.paramIdCrit != "") THEN
+		#{
+			sv_u = urhk_SetOrbOut("paramId|" + STDWFS.GLBDATA.paramId)
+			sv_u = urhk_SetOrbOut("paramDescr|" + STDWFS.GLBDATA.paramDesc)
+			sv_u = urhk_SetOrbOut("paramTyp|" + STDWFS.GLBDATA.paramType)
+			sv_u = urhk_SetOrbOut("listTyp|" + STDWFS.GLBDATA.listType)
+			sv_u = urhk_SetOrbOut("paramVal|" + STDWFS.GLBDATA.paramValue)
+		#}
+		ENDIF
+		
+		sv_u = urhk_SetOrbOut("parID_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.paramId)
+		sv_u = urhk_SetOrbOut("parName_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.paramDesc)
+		sv_u = urhk_SetOrbOut("parTyp_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.paramType)
+		sv_u = urhk_SetOrbOut("listTyp_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.listType)
+		sv_u = urhk_SetOrbOut("Del_" + FORMAT$(sv_e, "%d") + "|N")
+		sv_u = urhk_SetOrbOut("paramValue_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.paramValue)
+		sv_d = urhk_dbCursorFetch(sv_c)
+		sv_e = sv_e + 1
+	#}
+	DO
+	#while close
+	sv_a = urhk_dbCursorClose(sv_c)
+	sv_e = sv_e
+	STDWFS.GLBDATA.recCount = sv_e
+	
+	sv_z = urhk_SetOrbOut("TotRecCount|" + STDWFS.GLBDATA.recCount)
+	sv_r = urhk_SetOrbOut("MaxRecsPerPage|15")
+	sv_z = urhk_SetOrbOut("lowerLimit|1")
+	
+	IF (CINT(STDWFS.GLBDATA.recCount) > 15) THEN
+	#{
+		sv_r = urhk_SetOrbOut("higherLimit|15")
+	#}
+	ELSE
+	#{
+		sv_r = urhk_SetOrbOut("higherLimit|" + STDWFS.GLBDATA.recCount)
+	#}
+	ENDIF
+	
+	sv_r = urhk_SetOrbOut("mrhTotalRecords|" + STDWFS.GLBDATA.recCount)
+	sv_z = urhk_SetOrbOut("SuccessOrFailure|Y")
+	
+#}
+ELSE
+#{
+	STDWFS.GLBDATA.successFailure = "F"
+	#STDWFS.GLBDATA.message = "Record Fetch Failed"
+	STDWFS.GLBDATA.message = CREAM.MESG.M0886
+	GOTO Finish
+#}
+ENDIF
+GOTO Finish
+
+STEP2:
+#===============================================================
+# Get the param values from C_CPMASTER and values from C_CPVALUE
+#===============================================================
+
+sv_a = "paramId,paramDesc,paramType,listType,paramValue"
+sv_a = sv_a + "| SELECT CPM.PARAMETER_ID,CPM.PARAMETER_DESC,CPM.PARAMETER_TYPE,CPM.LIST_TYPE,CPV.PARAMETER_VALUE "
+sv_a = sv_a + " FROM C_CPMASTER CPM, C_CPVALUE_MOD CPV"
+sv_a = sv_a + " WHERE   CPM.PARAMETER_ID = CPV.PARAMETER_ID"
+BANCS.INPARAM.BINDVARS = ""
+
+IF (STDWFS.GLBDATA.paramIdCrit != "") THEN
+#{
+	sv_a = sv_a + " AND CPM.PARAMETER_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.paramIdCrit + "|"
+#}
+ENDIF
+sv_a = sv_a + " AND     CPM.MODULE_NAME = ?SVAR"
+sv_a = sv_a + " AND     CPM.PARAMETER_LEVEL = ?SVAR"
+sv_a = sv_a + " AND	CPV.LEVELCODE_1  = ?SVAR"
+sv_a = sv_a + " AND	NVL(CPV.LEVELCODE_2,' ')  = ?SVAR"
+sv_a = sv_a + " AND CPV.BANK_ID = CPM.BANK_ID "
+sv_a = sv_a + " AND  CPV.BANK_ID = ?SVAR"
+sv_a = sv_a + " ORDER BY CPM.PARAMETER_ID"
+
+BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS  + STDWFS.GLBDATA.moduleName + "|" + STDWFS.GLBDATA.paramLevel + "|" + STDWFS.GLBDATA.levelCode1
+BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode2 + "|" + BANCS.STDIN.contextBankId
+PRINT(BANCS.INPARAM.BINDVARS)
+
+sv_b = urhk_dbCursorOpenWithBind(sv_a)
+
+IF (sv_b == 0) THEN
+#{
+	sv_c = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+	sv_d = urhk_dbCursorFetch(sv_c)
+	IF (sv_d != 0) THEN
+	#{
+		STDWFS.GLBDATA.successFailure = "F"
+		#STDWFS.GLBDATA.message = "Record Fetch Failed"
+		STDWFS.GLBDATA.message = CREAM.MESG.M0886
+		GOTO Finish
+	#}
+	ENDIF
+	sv_e = 0
+	STDWFS.GLBDATA.recCount = sv_e
+	WHILE(sv_d == 0)
+	#{
+		STDWFS.GLBDATA.paramId = BANCS.OUTPARAM.paramId
+		STDWFS.GLBDATA.paramDesc = BANCS.OUTPARAM.paramDesc
+		STDWFS.GLBDATA.paramType = BANCS.OUTPARAM.paramType
+		STDWFS.GLBDATA.paramValue = BANCS.OUTPARAM.paramValue
+		STDWFS.GLBDATA.listType = BANCS.OUTPARAM.listType
+		IF (STDWFS.GLBDATA.paramValue == "") THEN
+		#{
+			STDWFS.GLBDATA.paramValue = "NULL"
+		#}
+		ENDIF
+		IF (STDWFS.GLBDATA.listType == "") THEN
+		#{
+			STDWFS.GLBDATA.listType = "FT"
+		#}
+		ENDIF
+		IF (STDWFS.GLBDATA.listType == "") THEN
+		#{
+			STDWFS.GLBDATA.listType = "FT"
+		#}
+		ENDIF
+		IF (STDWFS.GLBDATA.paramDesc == "") THEN
+		#{
+			STDWFS.GLBDATA.paramDesc = "NULL"
+		#}
+		ENDIF
+		IF (STDWFS.GLBDATA.paramType == "AN") THEN
+		#{
+			STDWFS.GLBDATA.paramType = STDWFS.GLBDATA.alphaNum
+		#}
+		ELSE
+		#{
+			IF (STDWFS.GLBDATA.paramType == "CH") THEN
+			#{
+				STDWFS.GLBDATA.paramType = STDWFS.GLBDATA.strchar
+			#}
+			ELSE
+			#{
+				IF (STDWFS.GLBDATA.paramType == "NI") THEN
+				#{
+					STDWFS.GLBDATA.paramType = STDWFS.GLBDATA.numInt
+				#}
+				ELSE
+				#{
+					IF (STDWFS.GLBDATA.paramType == "NF") THEN
+					#{
+						STDWFS.GLBDATA.paramType = STDWFS.GLBDATA.numFlt
+					#}
+					ENDIF
+				#}
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF            
+		
+		IF (STDWFS.GLBDATA.paramIdCrit != "") THEN
+		#{
+			sv_u = urhk_SetOrbOut("paramId|" + STDWFS.GLBDATA.paramId)
+			sv_u = urhk_SetOrbOut("paramDescr|" + STDWFS.GLBDATA.paramDesc)
+			sv_u = urhk_SetOrbOut("paramTyp|" + STDWFS.GLBDATA.paramType)
+			sv_u = urhk_SetOrbOut("listTyp|" + STDWFS.GLBDATA.listType)
+			sv_u = urhk_SetOrbOut("paramVal|" + STDWFS.GLBDATA.paramValue)
+			PRINT(sv_u)
+		#}
+		ENDIF
+		sv_u = urhk_SetOrbOut("parID_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.paramId)
+		sv_u = urhk_SetOrbOut("parName_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.paramDesc)
+		sv_u = urhk_SetOrbOut("parTyp_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.paramType)
+		sv_u = urhk_SetOrbOut("paramValue_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.paramValue)
+		sv_u = urhk_SetOrbOut("listTyp_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.listType)
+		sv_u = urhk_SetOrbOut("Del_" + FORMAT$(sv_e, "%d") + "|N")
+		sv_d = urhk_dbCursorFetch(sv_c)
+		sv_e = sv_e + 1
+		
+	#}
+	DO
+	#while close
+	sv_a = urhk_dbCursorClose(sv_c)
+	#sv_e = sv_e 
+	
+	STDWFS.GLBDATA.recCount = sv_e
+	
+	
+	sv_z = urhk_SetOrbOut("TotRecCount|" + STDWFS.GLBDATA.recCount)
+	sv_r = urhk_SetOrbOut("MaxRecsPerPage|16")
+	sv_z = urhk_SetOrbOut("lowerLimit|1")
+	IF (CINT(STDWFS.GLBDATA.recCount) > 16) THEN
+	#{
+		sv_r = urhk_SetOrbOut("higherLimit|16")
+	#}
+	ELSE
+	#{
+		sv_r = urhk_SetOrbOut("higherLimit|" + STDWFS.GLBDATA.recCount)
+	#}
+	ENDIF
+	sv_r = urhk_SetOrbOut("mrhTotalRecords|" + STDWFS.GLBDATA.recCount)
+	sv_z = urhk_SetOrbOut("SuccessOrFailure|Y")
+#}
+ELSE
+#{
+	STDWFS.GLBDATA.successFailure = "F"
+	#STDWFS.GLBDATA.message = "Record Fetch Failed"
+	STDWFS.GLBDATA.message = CREAM.MESG.M0886
+	GOTO Finish
+#}
+ENDIF
+GOTO Finish
+
+
+STEP3:
+#===============================================================
+# Get the param values from C_CPMASTER and values from C_CPVALUE
+#===============================================================
+IF (STDWFS.GLBDATA.levelCode1 == "ALL") THEN
+#{
+	sv_a = "paramId,paramDesc,paramType,listType"
+	sv_a = sv_a + "| SELECT CPM.PARAMETER_ID,CPM.PARAMETER_DESC,CPM.PARAMETER_TYPE,CPM.LIST_TYPE "
+	sv_a = sv_a + " FROM C_CPMASTER CPM"
+	sv_a = sv_a + " WHERE CPM.MODULE_NAME = ?SVAR"
+	sv_a = sv_a + " AND CPM.PARAMETER_LEVEL = ?SVAR"
+	sv_a = sv_a + " AND CPM.BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.moduleName + "|" + STDWFS.GLBDATA.paramLevel + "|" + BANCS.STDIN.contextBankId
+	IF (STDWFS.GLBDATA.paramIdCrit != "") THEN
+	#{
+		sv_a = sv_a + " AND CPM.PARAMETER_ID = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramIdCrit
+	#}
+	ENDIF
+	sv_a = sv_a + " ORDER BY CPM.PARAMETER_ID"
+#}
+ELSE
+#{
+	sv_a = "paramId,paramDesc,paramType,listType"
+	sv_a = sv_a + "| SELECT DISTINCT CPM.PARAMETER_ID,CPM.PARAMETER_DESC,CPM.PARAMETER_TYPE,CPM.LIST_TYPE "
+	sv_a = sv_a + " FROM C_CPMASTER CPM, C_CPVALUE CPV"
+	sv_a = sv_a + " WHERE CPM.MODULE_NAME = ?SVAR"
+	sv_a = sv_a + " AND CPM.PARAMETER_LEVEL = ?SVAR"
+	sv_a = sv_a + " AND CPM.BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.moduleName + "|" + STDWFS.GLBDATA.paramLevel + "|" + BANCS.STDIN.contextBankId
+	IF (STDWFS.GLBDATA.paramIdCrit != "") THEN
+	#{
+		sv_a = sv_a + " AND CPM.PARAMETER_ID = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramIdCrit
+	#}
+	ENDIF
+	sv_a = sv_a + " AND CPV.PARAMETER_ID = CPM.PARAMETER_ID"
+	sv_a = sv_a + " AND CPV.LEVELCODE_1  = ?SVAR"
+	sv_a = sv_a + " AND   NVL(LEVELCODE_2,' ')  = ?SVAR"
+	sv_a = sv_a + " AND CPV.BANK_ID = ?SVAR"
+	sv_a = sv_a + " ORDER BY CPM.PARAMETER_ID"
+	PRINT(sv_a)
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode1 + "|" + STDWFS.GLBDATA.levelCode2 + "|" + BANCS.STDIN.contextBankId
+#}
+ENDIF
+PRINT(BANCS.INPARAM.BINDVARS)
+sv_b = urhk_dbCursorOpenWithBind(sv_a)
+
+IF (sv_b == 0) THEN
+#{
+	sv_c = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+	sv_d = urhk_dbCursorFetch(sv_c)
+	IF (sv_d != 0) THEN
+	#{
+		STDWFS.GLBDATA.successFailure = "F"
+		#STDWFS.GLBDATA.message = "Record Fetch Failed"
+		STDWFS.GLBDATA.message = CREAM.MESG.M0886
+		GOTO Finish
+	#}
+	ENDIF
+	sv_e = 0
+	
+	STDWFS.GLBDATA.recCount = sv_e
+	WHILE(sv_d == 0)
+	#{
+		STDWFS.GLBDATA.paramId = BANCS.OUTPARAM.paramId
+		STDWFS.GLBDATA.paramDesc = BANCS.OUTPARAM.paramDesc
+		STDWFS.GLBDATA.paramType = BANCS.OUTPARAM.paramType
+		STDWFS.GLBDATA.listType = BANCS.OUTPARAM.listType
+		
+		sv_a = "paramValue|SELECT CPV.PARAMETER_VALUE FROM C_CPVALUE CPV "
+		sv_a = sv_a + " WHERE CPV.PARAMETER_ID = ?SVAR"
+		sv_a = sv_a + " AND   CPV.LEVELCODE_1  = ?SVAR"
+		sv_a = sv_a + " AND   NVL(LEVELCODE_2,' ')  = ?SVAR"
+		sv_a = sv_a + " AND   CPV.BANK_ID = ?SVAR"
+		sv_a = sv_a + " AND   EXISTS(SELECT 1 FROM C_CPVALUE WHERE PARAMETER_ID=?SVAR"
+		sv_a = sv_a + " AND   LEVELCODE_1  = ?SVAR"
+		sv_a = sv_a + " AND   NVL(LEVELCODE_2,' ')  = ?SVAR AND BANK_ID = ?SVAR)"
+		sv_a = sv_a + " UNION"
+		sv_a = sv_a + " SELECT NULL FROM DUAL"
+		sv_a = sv_a + " WHERE  NOT EXISTS(SELECT 1 FROM C_CPVALUE WHERE PARAMETER_ID=?SVAR"
+		sv_a = sv_a + " AND   LEVELCODE_1  = ?SVAR"
+		sv_a = sv_a + " AND   NVL(LEVELCODE_2,' ')  = ?SVAR AND BANK_ID = ?SVAR)"
+		
+		BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.paramId + "|" + STDWFS.GLBDATA.levelCode1 + "|" + STDWFS.GLBDATA.levelCode2
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + BANCS.STDIN.contextBankId + "|" + STDWFS.GLBDATA.paramId
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode1 + "|" + STDWFS.GLBDATA.levelCode2
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + BANCS.STDIN.contextBankId + "|" + STDWFS.GLBDATA.paramId
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode1 + "|" + STDWFS.GLBDATA.levelCode2
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + BANCS.STDIN.contextBankId
+		PRINT(BANCS.INPARAM.BINDVARS)
+		
+		sv_r = urhk_dbSelectWithBind(sv_a)
+		
+		
+		IF (sv_r != 0) THEN
+		#{
+			STDWFS.GLBDATA.successFailure = "F"
+			#STDWFS.GLBDATA.message = "Record Fetch Failed"
+			STDWFS.GLBDATA.message = CREAM.MESG.M0886
+			GOTO Finish
+		#}
+		ENDIF
+		
+		STDWFS.GLBDATA.paramValue = BANCS.OUTPARAM.paramValue
+		IF (STDWFS.GLBDATA.paramValue == "") THEN
+		#{
+			STDWFS.GLBDATA.paramValue = "NULL"
+		#}
+		ENDIF
+		
+		IF (STDWFS.GLBDATA.listType == "") THEN
+		#{
+			STDWFS.GLBDATA.listType = "FT"
+		#}
+		ENDIF
+		IF (STDWFS.GLBDATA.paramDesc == "") THEN
+		#{
+			STDWFS.GLBDATA.paramDesc = "NULL"
+		#}
+		ENDIF
+		IF (STDWFS.GLBDATA.paramType == "AN") THEN
+		#{
+			STDWFS.GLBDATA.paramType = STDWFS.GLBDATA.alphaNum
+		#}
+		ELSE
+		#{
+			IF (STDWFS.GLBDATA.paramType == "CH") THEN
+			#{
+				STDWFS.GLBDATA.paramType = STDWFS.GLBDATA.strchar
+			#}
+			ELSE
+			#{
+				IF (STDWFS.GLBDATA.paramType == "NI") THEN
+				#{
+					STDWFS.GLBDATA.paramType = STDWFS.GLBDATA.numInt
+				#}
+				ELSE
+				#{
+					IF (STDWFS.GLBDATA.paramType == "NF") THEN
+					#{
+						STDWFS.GLBDATA.paramType = STDWFS.GLBDATA.numFlt
+					#}
+					ENDIF
+				#}
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+		PRINT(STDWFS.GLBDATA.paramIdCrit)
+		IF (STDWFS.GLBDATA.paramIdCrit != "") THEN
+		#{
+			sv_u = urhk_SetOrbOut("paramId|" + STDWFS.GLBDATA.paramId)
+			sv_u = urhk_SetOrbOut("paramDescr|" + STDWFS.GLBDATA.paramDesc)
+			sv_u = urhk_SetOrbOut("paramTyp|" + STDWFS.GLBDATA.paramType)
+			sv_u = urhk_SetOrbOut("listTyp|" + STDWFS.GLBDATA.listType)
+			sv_u = urhk_SetOrbOut("paramVal|" + STDWFS.GLBDATA.paramValue)
+		#}
+		ENDIF
+		
+		sv_u = urhk_SetOrbOut("parID_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.paramId)
+		sv_u = urhk_SetOrbOut("parName_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.paramDesc)
+		sv_u = urhk_SetOrbOut("parTyp_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.paramType)
+		sv_u = urhk_SetOrbOut("listTyp_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.listType)
+		sv_u = urhk_SetOrbOut("Del_" + FORMAT$(sv_e, "%d") + "|N")
+		sv_u = urhk_SetOrbOut("paramValue_" + FORMAT$(sv_e, "%d") + "|" + STDWFS.GLBDATA.paramValue)
+		sv_d = urhk_dbCursorFetch(sv_c)
+		sv_e = sv_e + 1
+	#}
+	DO
+	#while close
+	sv_a = urhk_dbCursorClose(sv_c)
+	sv_e = sv_e
+	STDWFS.GLBDATA.recCount = sv_e
+	
+	sv_z = urhk_SetOrbOut("TotRecCount|" + STDWFS.GLBDATA.recCount)
+	sv_r = urhk_SetOrbOut("MaxRecsPerPage|15")
+	sv_z = urhk_SetOrbOut("lowerLimit|1")
+	
+	IF (CINT(STDWFS.GLBDATA.recCount) > 15) THEN
+	#{
+		sv_r = urhk_SetOrbOut("higherLimit|15")
+	#}
+	ELSE
+	#{
+		sv_r = urhk_SetOrbOut("higherLimit|" + STDWFS.GLBDATA.recCount)
+	#}
+	ENDIF
+	
+	sv_r = urhk_SetOrbOut("mrhTotalRecords|" + STDWFS.GLBDATA.recCount)
+	sv_z = urhk_SetOrbOut("SuccessOrFailure|Y")
+	
+#}
+ELSE
+#{
+	STDWFS.GLBDATA.successFailure = "F"
+	#STDWFS.GLBDATA.message = "Record Fetch Failed"
+	STDWFS.GLBDATA.message = CREAM.MESG.M0886
+	GOTO Finish
+#}
+ENDIF
+GOTO Finish
+
+Finish:
+IF (STDWFS.GLBDATA.successFailure == "F") THEN
+#{
+	sv_z = urhk_SetOrbOut("Error_0|ERROR^" + STDWFS.GLBDATA.message + "^dummy")
+	sv_u = urhk_SetOrbOut("SuccessOrFailure|N")
+#}
+ENDIF
+EXITSCRIPT
+
+end-->
+

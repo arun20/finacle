@@ -1,0 +1,67 @@
+#########################################################################################################################
+# Name of the file      : SRV_PostTran_post_process_data.scr
+# Start Date            : 21-May-2018
+# Description           : This script will call tmdet_insert.scr to insert data into custom table.
+# Design Id             : AOC07
+# Menu Option           : HTM,HXFER,HCASHDEP,HCASHWD
+# Input parameters      : NA
+# Output parameters     : NA
+# Author                : Isha Gupta
+# Called Script         : NA
+# Calling Script        : tmdet_insert.scr,cust_slAcctPostTran.scr
+# Bank                  : LH Bank
+# Modification History:
+# <Serial No.>         <Date>         <Author Name>              <Description>
+#      0.1            21-May-2018     Isha Gupta               Initial Draft
+#      0.2            21-Jun-2018     Amandeep Kaur            For posting of transaction in Silverlake (3rd party system) in HTM and HXFER
+##############################################################################################################################
+<--START
+TRACE ON   
+libname CUSTOMSO
+#sv_a = urhk_B2k_printRepos("ONS")
+#sv_a = urhk_B2k_printRepos("BANCS")
+IF (FIELDEXISTS(BANCS.STDIN.menuId)) THEN
+#{
+	IF ((BANCS.STDIN.menuId == "HTM")OR(BANCS.STDIN.menuId == "HXFER")OR(BANCS.STDIN.menuId == "HCASHDEP")OR(BANCS.STDIN.menuId == "HCASHWD")) THEN
+	#{
+		# cust_slAcctPostTran.scr to be called at the end of the post process always
+		IF ((BANCS.STDIN.menuId == "HTM")OR(BANCS.STDIN.menuId == "HXFER")) THEN
+		#{
+			sv_u = urhk_SRV_GetVal("tranHdr.tranTypeSubType.tranType")
+			IF(sv_u == 0) THEN
+			#{
+				BANCS.OUTPUT.tranType = BANCS.OUTPARAM.srvValue
+				PRINT(BANCS.OUTPUT.tranType)
+			#}
+			ENDIF
+
+			sv_u = urhk_SRV_GetVal("tranHdr.tranTypeSubType.tranSubType")
+			IF(sv_u == 0) THEN
+			#{
+				BANCS.OUTPUT.tranSubType = BANCS.OUTPARAM.srvValue
+				PRINT(BANCS.OUTPUT.tranType)
+			#}
+			ENDIF
+
+			IF ((BANCS.OUTPUT.tranType == "T") AND ((BANCS.OUTPUT.tranSubType == "BI") or (BANCS.OUTPUT.tranSubType == "CI")))THEN
+			#{
+				CALLSCRIPTIFEXIST("cust_slAcctPostTran.scr")
+			#}
+			ENDIF
+		#}
+		ENDIF
+		
+		CALLSCRIPTIFEXIST("tmdet_insert.scr")
+	#}
+	ENDIF
+	IF (BANCS.STDIN.menuId == "HTM")THEN
+	#{
+		CALLSCRIPTIFEXIST("Tr_limit_reversal.scr")
+	#}
+	ENDIF
+	
+#}
+ENDIF
+ENDOFSCRIPT:
+EXITSCRIPT
+END-->

@@ -1,0 +1,224 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: AMLNameScrn0011.scr
+# Type: NA|default
+# Description: Interface Script for AMLNameScrn0011
+# Author: Sreedevi_Neelam
+# Date: 5/24/18 3:27 PM
+# Modification Log:
+#============================================================
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT common_business_XMLFunctions
+IMPORT AMLNameScrn0011Input
+<--START
+	# Script body goes here
+	TRACE ON
+	#--------------------------------------
+	#Creating repository and classes
+	#--------------------------------------
+	sub_createRepClassB("INTF","DATA")
+	sub_createRepClassB("CUST","TBL")
+	sub_createRepClassB("CUST","DATA")
+
+	#sv_r = urhk_b2k_printrepos("BANCS")
+	
+	PRINT(BANCS.STDIN.menuId)
+	
+	##################Initializing Variables###################
+	BANCS.OUTPUT.successOrFailure = "S"
+	BANCS.OUTPUT.ErrorDesc = "SUCCESS"
+	INTF.DATA.outputString = ""
+	INTF.DATA.AMLStat = "N"
+	
+	
+	BANCS.INPARAM.srvReqId 			= "AMLNameScrn"
+	BANCS.INPARAM.SERVICE_NAME  		= "FIJCA"
+	BANCS.INPARAM.SEND_RECV_FLG 		= "R"
+	BANCS.INPARAM.IsRespReqd 		= "Y"
+	BANCS.INPARAM.rqAppId      		= "8001"
+	BANCS.INPARAM.rqTxnCode  		= "ESB400001"
+	BANCS.INPARAM.rqUserId 			= "98001FinCore"
+	BANCS.INPARAM.rqToken  			= "98001FinCore"
+	BANCS.INPARAM.rqTerminalTypeCode  	= "80"
+	BANCS.INPARAM.rqLangPref  		= "en"
+	
+	#----------------------------
+	#Getting and Forming the XML Header , Body and Footer Details
+	#------------------------------
+	sv_c = func_xmlHeaderDetails()
+	BANCS.OUTPARAM.XMLHeader = sv_c
+	
+	sv_c = func_xmlBodyDetails()
+	BANCS.OUTPARAM.XMLBody = sv_c
+	
+	sv_c = func_xmlFooterDetails()
+	BANCS.OUTPARAM.XMLFooter = sv_c
+	
+	sv_s = BANCS.OUTPARAM.XMLHeader + BANCS.OUTPARAM.XMLBody + BANCS.OUTPARAM.XMLFooter
+	PRINT(sv_s)
+
+	#---------------------------------------------
+        #Custom Table Insertion & variable definition
+        #---------------------------------------------
+
+        CUST.TBL.apiName = "AMLNameScrn"
+        CUST.TBL.menuName = BANCS.STDIN.menuId
+        CUST.TBL.invDate = BANCS.STDIN.BODDate
+        CUST.TBL.reqId = "Req_"+BANCS.INPARAM.requestuuid
+        CUST.TBL.soapReqId = BANCS.INPARAM.rqUID
+        CUST.TBL.reqXML = sv_s
+        CUST.TBL.userId = BANCS.STDIN.userId
+
+        CALLSCRIPTIFEXIST("insertInterfaceRecord.scr")	
+	
+	#-----------------------------------------------------
+	#Sending the request xml to FI service provider
+	#-----------------------------------------------------
+	sv_a = func_ConnectToFIAndSendMsg("INTF","DATA",sv_s,BYREF INTF.DATA.responseXml,BYREF INTF.DATA.msgDescription,BYREF INTF.DATA.successFailure)
+	
+	#-----------------------------------------------------
+	#When request is triggered successfully from Finacle
+	#-----------------------------------------------------
+	IF(INTF.DATA.successFailure == "Success") THEN
+	#{
+		sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<Status>","</Status>",BYREF INTF.DATA.FIStatus)
+		PRINT(sv_e)
+		sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<rsCode>","</rsCode>",BYREF INTF.DATA.orgCode)
+		PRINT(sv_e)
+		#--------------------------------------------------------------------------------------------------------------------------------
+		#Request triggered successfully and processed by host system successfully - Can be a positive (or) negative response.
+		#--------------------------------------------------------------------------------------------------------------------------------
+		IF((INTF.DATA.FIStatus == "processed") OR (INTF.DATA.FIStatus == "SUCCESS")) THEN
+		#{
+			INTF.DATA.status = "S"
+			#-------------------------------------
+			#When response from host is positive 
+			#-------------------------------------
+			IF(INTF.DATA.orgCode == 000) THEN
+			#{
+				INTF.DATA.noOfFields = "1"
+				INTF.DATA.tagFields	= "hasHits"
+				
+				sub_getFieldsFromRespXml(INTF.DATA.noOfFields,INTF.DATA.responseXml,INTF.DATA.tagFields,"")
+				
+				PRINT(BANCS.OUTPUT.hasHits)
+				
+				INTF.DATA.outputString = BANCS.OUTPUT.hasHits
+				IF(INTF.DATA.outputString == "true") THEN
+				#{
+					INTF.DATA.AMLStat = "1"
+				#}
+				ENDIF
+				IF(INTF.DATA.outputString == "false") THEN
+				#{
+                                        INTF.DATA.AMLStat = "0"
+				#}
+                                ENDIF
+			#}
+			#-------------------------------------
+			#When response from host is negative
+			#-------------------------------------
+			ELSE
+			#{
+				sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<orgDesc>","</orgDesc>",BYREF INTF.DATA.ErrorDesc)
+				PRINT(sv_e)
+				BANCS.OUTPUT.successOrFailure = "F"
+				INTF.DATA.status = "F"
+				CUST.DATA.errorFlg = "Y"
+				BANCS.OUTPUT.ErrorDesc = INTF.DATA.ErrorDesc
+				CUST.DATA.errorMsg = INTF.DATA.ErrorDesc	
+				sv_u = urhk_setOrbOut("outputString|"+ BANCS.OUTPUT.ErrorDesc)
+				GOTO ENDOFSCRIPT
+			#}
+			ENDIF
+		#}
+		#---------------------------------------------------------
+		# When request to host times out/when host system is down
+		#---------------------------------------------------------
+		ELSE
+		#{
+			sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<ErrorCode>","</ErrorCode>",BYREF INTF.DATA.orgCode)
+			PRINT(sv_e)
+            sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<ErrorDesc>","</ErrorDesc>",BYREF INTF.DATA.ErrorDesc)
+			PRINT(sv_e)
+			
+			BANCS.OUTPUT.successOrFailure = "F"
+			INTF.DATA.status = "F"
+			
+			BANCS.OUTPUT.ErrorDesc = INTF.DATA.ErrorDesc
+			BANCS.OUTPUT.hasHits = "false"
+			CUST.DATA.errorFlg = "Y"
+			CUST.DATA.errorMsg = INTF.DATA.ErrorDesc
+			sv_u = urhk_setOrbOut("outputString|"+ BANCS.OUTPUT.ErrorDesc)
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+		
+		IF((INTF.DATA.outputString == "true") AND (CUST.DATA.type == "APPL")) THEN
+		#{
+			BANCS.OUTPUT.successOrFailure = "F"
+			INTF.DATA.status = "F"
+			sv_a = urhk_B2k_PutUserException("AN1")
+			print(sv_a)
+			#EXITSCRIPT
+		#}
+		ENDIF
+		IF(CUST.DATA.type == "APPL") THEN
+		#{
+			INTF.DATA.AMLRes = CUST.DATA.type + "" + INTF.DATA.AMLStat
+			PRINT(INTF.DATA.AMLRes)
+		#}
+                ENDIF
+		IF((INTF.DATA.outputString == "true") AND (CUST.DATA.type == "BENF")) THEN
+		#{
+			BANCS.OUTPUT.successOrFailure = "F"
+			INTF.DATA.status = "F"
+			sv_a = urhk_B2k_PutUserException("AN2")
+			print(sv_a)
+			#EXITSCRIPT
+		#}
+		ENDIF
+		IF(CUST.DATA.type == "BENF") THEN
+                #{
+			IF((BANCS.STDIN.menuId == "HOAACOD") OR (BANCS.STDIN.menuId== "HOAACMOD") OR (BANCS.STDIN.menuId == "OAACPS") OR (BANCS.STDIN.menuId == "OAACMPS")) THEN
+			#{
+				INTF.DATA.AMLRes = CUST.DATA.type + "" + INTF.DATA.AMLStat
+			#}
+			ELSE
+			#{
+				INTF.DATA.AMLRes = INTF.DATA.AMLRes + "" + CUST.DATA.type + "" + INTF.DATA.AMLStat
+				PRINT(INTF.DATA.AMLRes)
+			#}
+			ENDIF
+		#}
+                ENDIF	
+		#-----------------------------------------------------------
+		#Updating response XML and Status in interface custom table
+		#-----------------------------------------------------------
+
+		BANCS.INPARAM.BINDVARS = INTF.DATA.responseXml + "|" + INTF.DATA.status + "|" + CUST.TBL.reqId
+
+		sv_s = "UPDATE CUSTOM.C_ICIT "
+		sv_s = sv_s + "SET RESPONSE_XML = ?SVAR, STATUS = ?SVAR "
+		sv_s = sv_s + "WHERE REQUEST_ID = ?SVAR "
+		print(sv_s)
+		sv_a = urhk_dbSQLWithBind(sv_s)
+		print(sv_a)
+	#}
+	#--------------------------------------------------------
+	#When request is not triggered successfully from Finacle
+	#--------------------------------------------------------
+	ELSE
+	#{
+		BANCS.OUTPUT.successOrFailure = "F"
+		INTF.DATA.status = "F"
+		BANCS.OUTPUT.ErrorDesc = INTF.DATA.msgDescription
+		sv_u = urhk_setOrbOut("outputString|"+INTF.DATA.msgDescription)
+	#}
+	ENDIF
+#ENDOFSCRIPT:
+EXITSCRIPT
+END-->

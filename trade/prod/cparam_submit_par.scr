@@ -1,0 +1,263 @@
+#=================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# category: Script Name Based
+# script: cparam_submit_par.scr
+# event: NA
+# description: Submit on details page
+#=================================================
+
+##############################################################################
+#	Date				:	23-05-2011
+#	Description			:	This script will perform Add,Verify,cancel operations 
+#	Input				:	The user entered values from front end
+#	Output				:	Outputs to JSP
+#	Author				:	Anilla Chacko
+#	Called Script		:	cparam_submit_par.scr	
+#	Calling Script		:	None
+#	Modification History:
+#	<Serial No.>   <Date>   <Author Name>	<Description>
+#	0.1		25-11-12  Santosh	Made Changes for New CPARAM 10X.
+#################################################################################
+<--start
+
+#----------------------------------------------------------------------
+# Create the necessary repos and classes
+#----------------------------------------------------------------------
+
+IF (REPEXISTS("STDWFS") == 0 ) THEN
+#{
+	CREATEREP("STDWFS")
+#}
+ENDIF
+
+IF (CLASSEXISTS("STDWFS","GLBDATA") == 0) THEN
+#{
+	CREATECLASS("STDWFS","GLBDATA",5)
+#}
+ENDIF
+
+#----------------------------
+# Calling CReAM_INFENG.scr
+#----------------------------
+sv_s = "CReAM_" + BANCS.STDIN.languageCode + ".scr"
+print(sv_s)
+sv_u = urhk_getFileLocation("SCRIPT|" + sv_s)
+IF (sv_u !=0) THEN
+#{
+        GOTO ENDOFSCRIPT
+#}
+ENDIF
+CALL(sv_s)
+
+#----------------------------------------------------------------------------------
+#   Accepting the variables from front end.
+#----------------------------------------------------------------------------------
+STDWFS.GLBDATA.funcCode       	=   BANCS.INPUT.funcCode
+STDWFS.GLBDATA.paramLev         =   BANCS.INPUT.paramlev
+STDWFS.GLBDATA.modName         	=   BANCS.INPUT.modName
+STDWFS.GLBDATA.schmCode         =   BANCS.INPUT.schcod
+STDWFS.GLBDATA.solId        	=   BANCS.INPUT.solid
+STDWFS.GLBDATA.curCode        	=   BANCS.INPUT.cccod
+STDWFS.GLBDATA.genCode        	=   BANCS.INPUT.gencod
+STDWFS.GLBDATA.genId        	=   BANCS.INPUT.genid
+STDWFS.GLBDATA.paramId          =   BANCS.INPUT.paramId
+STDWFS.GLBDATA.paramDescr        =   BANCS.INPUT.paramDescr
+STDWFS.GLBDATA.paramTyp         =   BANCS.INPUT.paramTyp 
+STDWFS.GLBDATA.listTyp         	=   BANCS.INPUT.listTyp 
+STDWFS.GLBDATA.querName         =   BANCS.INPUT.querName 
+STDWFS.GLBDATA.queryId         	=   BANCS.INPUT.querId 
+STDWFS.GLBDATA.querDet         	=   BANCS.INPUT.querDet 
+STDWFS.GLBDATA.lchgDate         =   BANCS.STDIN.sysDate
+STDWFS.GLBDATA.rcreDate         =   BANCS.STDIN.sysDate
+STDWFS.GLBDATA.lchgUserId       =   BANCS.STDIN.userId
+STDWFS.GLBDATA.rcreUserId       =   BANCS.STDIN.userId
+
+STDWFS.GLBDATA.funcCode       	=   TRIM(STDWFS.GLBDATA.funcCode)
+STDWFS.GLBDATA.paramLev         =   TRIM(STDWFS.GLBDATA.paramLev)
+STDWFS.GLBDATA.modName         	=   TRIM(STDWFS.GLBDATA.modName)
+STDWFS.GLBDATA.schmCode         =   TRIM(STDWFS.GLBDATA.schmCode)
+STDWFS.GLBDATA.solId        	=   TRIM(STDWFS.GLBDATA.solId)
+STDWFS.GLBDATA.curCode        	=   TRIM(STDWFS.GLBDATA.curCode)
+STDWFS.GLBDATA.genCode        	=   TRIM(STDWFS.GLBDATA.genCode)
+STDWFS.GLBDATA.genId        	=   TRIM(STDWFS.GLBDATA.genId)
+STDWFS.GLBDATA.paramId          =   TRIM(STDWFS.GLBDATA.paramId)
+STDWFS.GLBDATA.paramDescr        =   TRIM(STDWFS.GLBDATA.paramDescr)
+STDWFS.GLBDATA.paramTyp         =   TRIM(STDWFS.GLBDATA.paramTyp)
+STDWFS.GLBDATA.listTyp         	=   TRIM(STDWFS.GLBDATA.listTyp)
+STDWFS.GLBDATA.querName         =   TRIM(STDWFS.GLBDATA.querName)
+STDWFS.GLBDATA.queryId         	=   TRIM(STDWFS.GLBDATA.queryId)
+STDWFS.GLBDATA.querDet         	=   TRIM(STDWFS.GLBDATA.querDet)
+STDWFS.GLBDATA.lchgDate			=	TRIM(STDWFS.GLBDATA.lchgDate)
+STDWFS.GLBDATA.rcreDate			=	TRIM(STDWFS.GLBDATA.rcreDate)
+STDWFS.GLBDATA.lchgUserId		=	TRIM(STDWFS.GLBDATA.lchgUserId)
+STDWFS.GLBDATA.rcreUserId		=	TRIM(STDWFS.GLBDATA.rcreUserId)
+
+STDWFS.GLBDATA.successFailure  = "S"
+
+
+#---------------------------------------------------------------------------------
+#if function is ADD then insert into the table
+#----------------------------------------------------------------------------------
+
+IF(STDWFS.GLBDATA.funcCode == "A") THEN
+#{
+
+	#--------------------------------------------------------------------------
+	# Check if the record already exists or not
+	#--------------------------------------------------------------------------
+
+	sv_q = "record|select count(1) from C_CPMASTER where PARAMETER_ID = ?SVAR "
+	sv_q = sv_q + " AND BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.paramId + "|" +  BANCS.STDIN.contextBankId
+	print(BANCS.INPARAM.BINDVARS)
+
+	sv_z = urhk_dbSelectWithBind(sv_q)
+
+	IF ( sv_z == 0 ) THEN
+	#{
+		IF(CINT(BANCS.OUTPARAM.record) == 1) THEN
+		#{
+			#STDWFS.GLBDATA.messageField = "Record Already Exists"
+			STDWFS.GLBDATA.messageField = CREAM.MESG.M0560
+			STDWFS.GLBDATA.successFailure = "F"
+			GOTO endOfScript
+		#}
+		ENDIF
+	#}
+	ENDIF
+
+
+
+	STDWFS.GLBDATA.oldqueryId = ""
+
+
+		
+
+
+#-------------------------------------
+# Inserting into the table
+#------------------------------------
+
+	sv_q = "INSERT INTO C_CPMASTER (MODULE_NAME, PARAMETER_LEVEL, PARAMETER_ID, PARAMETER_DESC, PARAMETER_TYPE, QUERY_ID, LIST_TYPE, ENTITY_CRE_FLG, DEL_FLG, RCRE_USER_ID, RCRE_TIME, LCHG_USER_ID, LCHG_TIME, BANK_ID) VALUES(
+			?SVAR,?SVAR,
+			?SVAR,?SVAR,
+			?SVAR,?SVAR,
+			?SVAR,'N','N',?SVAR,
+			SYSDATE,
+			?SVAR,
+			SYSDATE,
+			?SVAR)"
+	
+	BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.modName + "|" + STDWFS.GLBDATA.paramLev + "|" + STDWFS.GLBDATA.paramId
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramDescr + "|" + STDWFS.GLBDATA.paramTyp
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.queryId + "|" + STDWFS.GLBDATA.listTyp
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.rcreUserId + "|" + STDWFS.GLBDATA.lchgUserId
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + BANCS.STDIN.contextBankId
+	print(BANCS.INPARAM.BINDVARS)
+
+	sv_a = urhk_dbSqlWithBind(sv_q)
+
+	STDWFS.GLBDATA.addflg1 = sv_a
+	STDWFS.GLBDATA.addflg2 = 0
+
+	IF((CINT(STDWFS.GLBDATA.addflg1) == 0) AND (CINT(STDWFS.GLBDATA.addflg2) == 0)) THEN
+	#{
+
+		#sv_d = urhk_dbSQL("COMMIT")
+		#STDWFS.GLBDATA.messageField= "CPARAM Record Added Successfully. Parameter Id :- " + STDWFS.GLBDATA.paramId
+		STDWFS.GLBDATA.messageField= CREAM.MESG.M0920 + STDWFS.GLBDATA.paramId
+		sv_u = urhk_SetOrbOut("RESULT_MSG|"+STDWFS.GLBDATA.messageField)
+		sv_u = urhk_SetOrbOut("SuccessOrFailure|Y")
+        
+	#}
+	ENDIF
+
+#}
+ENDIF
+
+#------------------------------------------------------------------------------------
+#For Verify mode
+#------------------------------------------------------------------------------------
+
+IF(STDWFS.GLBDATA.funcCode == "W") THEN
+#{
+	sv_z = "UPDATE C_CPMASTER SET ENTITY_CRE_FLG = 'Y',lchg_user_id = ?SVAR,lchg_time = SYSDATE WHERE PARAMETER_ID = ?SVAR "
+	sv_z = sv_z + " AND BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.lchgUserId + "|" +  STDWFS.GLBDATA.paramId + "|" +  BANCS.STDIN.contextBankId
+	print(BANCS.INPARAM.BINDVARS)
+
+	sv_y = urhk_dbSQLWithBind(sv_z)
+
+	STDWFS.GLBDATA.verifyrFlg1 = sv_y
+
+
+
+	IF ((CINT(STDWFS.GLBDATA.verifyrFlg1) == 0)) THEN
+	#{
+		#sv_d = urhk_dbSQL("COMMIT")
+		#STDWFS.GLBDATA.messageField="CPARAM Record Verified Successfully. Parameter Id :- " + STDWFS.GLBDATA.paramId
+		STDWFS.GLBDATA.messageField=CREAM.MESG.M0921 + STDWFS.GLBDATA.paramId
+		sv_u = urhk_SetOrbOut("SuccessOrFailure|Y")
+		sv_u = urhk_SetOrbOut( "RESULT_MSG|"+STDWFS.GLBDATA.messageField)
+
+	#}
+	ELSE
+	#{
+		#STDWFS.GLBDATA.messageField="Query Execution Failure"
+		STDWFS.GLBDATA.messageField=CREAM.MESG.M0887
+		STDWFS.GLBDATA.successFailure = "F"
+	#}
+	ENDIF
+#}
+ENDIF
+
+#------------------------------------------------------------------------------------
+#For Cancel mode
+#------------------------------------------------------------------------------------
+
+IF(STDWFS.GLBDATA.funcCode == "L") THEN
+#{
+	sv_z = "DELETE FROM C_CPMASTER"
+	sv_z = sv_z + " WHERE   PARAMETER_ID = ?SVAR "
+	sv_z = sv_z + " AND BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.paramId + "|" +  BANCS.STDIN.contextBankId
+	print(BANCS.INPARAM.BINDVARS)
+
+	sv_y = urhk_dbSQLWithBind(sv_z)
+
+	STDWFS.GLBDATA.DeleteFlg1 = sv_y
+
+
+
+	IF ((CINT(STDWFS.GLBDATA.DeleteFlg1) == 0)) THEN
+	#{
+		#sv_d = urhk_dbSQL("COMMIT")
+		#STDWFS.GLBDATA.messageField= "CPARAM Record Cancelled Successfully. Parameter Id :- " + STDWFS.GLBDATA.paramId
+		STDWFS.GLBDATA.messageField= CREAM.MESG.M0922 + STDWFS.GLBDATA.paramId
+		sv_u = urhk_SetOrbOut("SuccessOrFailure|Y")
+		sv_u = urhk_SetOrbOut( "RESULT_MSG|"+STDWFS.GLBDATA.messageField)
+	#}
+	ELSE
+	#{
+		#STDWFS.GLBDATA.messageField= "Query Execution Failure"
+		STDWFS.GLBDATA.messageField=CREAM.MESG.M0887
+		STDWFS.GLBDATA.successFailure = "F"
+	#}
+	ENDIF
+#}
+ENDIF
+
+
+endOfScript:
+
+if (STDWFS.GLBDATA.successFailure == "F") THEN
+#{
+	sv_z = STDWFS.GLBDATA.messageField
+	sv_z = urhk_SetOrbOut("Error_0|ERROR^" +STDWFS.GLBDATA.messageField + "^dummy")
+	sv_u = urhk_SetOrbOut("SuccessOrFailure|N")
+#}
+ENDIF
+EXITSCRIPT
+end-->
+
+

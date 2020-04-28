@@ -1,0 +1,167 @@
+######################################################################################W#########
+#    Name				: ormtrandet_cancel.scr
+#    Start Date			: 16-06-2018
+#    Description		: Cancel Script for additional 8 Fields added in Transaction Tab
+#    Input				:
+#    Output				:
+#    Author				: Surya Sneha Pulavarthy
+#    Called Script		: SRV_CancelInwRemittance_post_process_data.scr
+#    Calling Script		: 
+#    Reference			:
+#    Modification History:
+#    <Serial No.>	 <Date>			<Author Name>			<Description>
+#     001		16-06-2018		Surya Sneha Pulavarthy		Initial Draft
+################################################################################################
+
+<--START
+###################################################################################################
+#	Start-	Initialize variables 
+###################################################################################################
+HIRM.CUSTOM.successOrFailure	=	"S"
+HIRM.CUSTOM.tmpErrMessage	=	""
+HIRM.CUSTOM.noOfRecords		=	"0"
+HIRM.CUSTOM.slAcctId		=	""
+HIRM.CUSTOM.slAcctName		=	""
+HIRM.CUSTOM.slAcctBal		=	""
+HIRM.CUSTOM.slCrncy  		= 	""
+HIRM.CUSTOM.slAcctStatus	=	""
+HIRM.CUSTOM.slPurpOfTxn 	= 	""
+HIRM.CUSTOM.hslBillId		=	""
+HIRM.CUSTOM.hslSrlNum		=	""
+HIRM.CUSTOM.shlDelFlg		=	""
+HIRM.CUSTOM.hslTranId		=	""
+HIRM.CUSTOM.hslTranDate		=	""
+HIRM.CUSTOM.hslSolId		=	""
+HIRM.CUSTOM.hslTranType		=	""
+HIRM.CUSTOM.hslAcid			=	""
+HIRM.CUSTOM.hTranAmt		=	""
+HIRM.CUSTOM.hslFreeText		=	""
+HIRM.CUSTOM.entityFlg		=  "N"
+
+CALLSCRIPTIFEXIST("ormtrandet_fetch_mrh.scr")
+
+PRINT(HIRM.CUSTOM.noOfRecords)
+###################################################################################################
+#	STORE THE MULTIREC FIELDS IN CUSTOM REP
+###################################################################################################
+sv_m= 0
+
+WHILE(sv_m < CINT(HIRM.CUSTOM.noOfRecords))
+#{	
+	print(sv_m)
+	sv_b = FORMAT$(sv_m,"%d")
+	print(sv_b)
+	HIRM.CUSTOM.slAcctId			= ("HIRM").("CUSTOM").("slAcctId_"+sv_b)
+	HIRM.CUSTOM.slAcctName		= ("HIRM").("CUSTOM").("slAcctName_"+sv_b)
+	HIRM.CUSTOM.slAcctBal		= ("HIRM").("CUSTOM").("slAcctBal_"+sv_b)
+	HIRM.CUSTOM.slCrncy  		= ("HIRM").("CUSTOM").("slCrncy_"+sv_b)
+	HIRM.CUSTOM.slAcctStatus		= ("HIRM").("CUSTOM").("slAcctStatus_"+sv_b)
+	HIRM.CUSTOM.slPurpOfTxn 		= ("HIRM").("CUSTOM").("slPurpOfTxn_"+sv_b)
+	HIRM.CUSTOM.hslSrlNum 		= ("HIRM").("CUSTOM").("hslSrlNum_"+sv_b) 
+	HIRM.CUSTOM.hslTranId		= ("HIRM").("CUSTOM").("hslTranId_"+sv_b)
+	HIRM.CUSTOM.hslTranDate		= ("HIRM").("CUSTOM").("hslTranDate_"+sv_b)
+	HIRM.CUSTOM.hslTranDate		= ("HIRM").("CUSTOM").("hslTranDate_"+sv_b)
+	HIRM.CUSTOM.shlDelFlg		= ("HIRM").("CUSTOM").("shlDelFlg_"+sv_b)
+	
+	PRINT(HIRM.CUSTOM.slAcctId)
+	PRINT(HIRM.CUSTOM.slAcctName)
+	PRINT(HIRM.CUSTOM.slAcctBal)
+	PRINT(HIRM.CUSTOM.slCrncy)
+	PRINT(HIRM.CUSTOM.slAcctStatus)
+	PRINT(HIRM.CUSTOM.slPurpOfTxn)
+	PRINT(HIRM.CUSTOM.hslBillId)
+	PRINT(HIRM.CUSTOM.hslSrlNum)
+	PRINT(HIRM.CUSTOM.shlDelFlg)
+	PRINT(HIRM.CUSTOM.hslTranId)
+	PRINT(HIRM.CUSTOM.hslTranDate)
+	PRINT(HIRM.CUSTOM.hslSolId)
+	PRINT(HIRM.CUSTOM.hslTranType)
+	PRINT(HIRM.CUSTOM.hslAcid)
+	PRINT(HIRM.CUSTOM.hTranAmt)
+	#PRINT(HIRM.CUSTOM.hslFreeText)
+	
+	#-------------------------------------------
+	#Converting amount to standard format
+	#-------------------------------------------
+	print(HIRM.CUSTOM.slAcctBal)
+	BANCS.INPARAM.userFormatAmt = HIRM.CUSTOM.slAcctBal
+	sv_u = urhk_convertAmountToStdFormat("")
+	IF(sv_u == 0) THEN
+	#{
+		HIRM.CUSTOM.slAcctBal = BANCS.OUTPARAM.stdFormatAmt
+	#}
+	ENDIF
+	print(HIRM.CUSTOM.slAcctBal)
+	
+
+	HIRM.CUSTOM.sysDate = func_getSysDateTimeWithFormatB("DD-MM-YYYY hh24:mi:ss") 
+
+
+	sv_s = ""
+	sv_s = sv_s + " count|SELECT COUNT(1)"
+	sv_s = sv_s + " FROM CUSTOM.C_DTD_P_EXT C  "
+	sv_s = sv_s + " WHERE TRIM(C.TRAN_ID) = TRIM('"+HIRM.CUSTOM.tranId+"') "
+	sv_s = sv_s + " AND C.TRAN_DATE =TO_DATE('"+HIRM.CUSTOM.tranDate+"','DD-MM-YYYY HH24:MI:SS')"
+	sv_s = sv_s + " AND C.BANK_ID = '"+ BANCS.STDIN.contextBankId+ "' "
+	sv_s = sv_s + " AND C.ENTITY_CRE_FLG = '"+HIRM.CUSTOM.entityFlg+"' "
+	sv_s = sv_s + " AND TRIM(PART_TRAN_SRL_NUM) = TRIM('"+HIRM.CUSTOM.hslSrlNum+"')"
+	print(sv_s)
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	print(sv_d)
+	HIRM.CUSTOM.count = BANCS.OUTPARAM.count
+	print(HIRM.CUSTOM.count)
+	IF (sv_d != 0) THEN
+	#{
+		GOTO NEXTREC
+	#}
+	ELSE
+	#{	
+		HIRM.CUSTOM.count= BANCS.OUTPARAM.count
+		print(HIRM.CUSTOM.count)
+	#}
+	ENDIF
+	IF(CINT(HIRM.CUSTOM.count) == CINT("0"))THEN
+	#{
+		GOTO NEXTREC
+	#}
+	ELSE
+	#{
+		GOTO CANCEL
+	#}
+	ENDIF
+		
+	CANCEL:
+
+	#Deleting entries from  Table 
+
+	sv_s = "DELETE FROM CUSTOM.C_DTD_P_EXT WHERE "
+	sv_s = sv_s + "TRIM(TRAN_ID) =TRIM('"+HIRM.CUSTOM.hslTranId+"') AND TRAN_DATE = TO_DATE('"+HIRM.CUSTOM.hslTranDate+"','DD-MM-YYYY HH24:MI:SS') AND TRIM(PART_TRAN_SRL_NUM) = TRIM('"+HIRM.CUSTOM.hslSrlNum+"') AND BANK_ID ='"+BANCS.STDIN.contextBankId+"'"
+	print(sv_s)
+	sv_d = urhk_dbSQLWithBind(sv_s)
+
+	IF (sv_d == 0) THEN
+	#{
+		HIRM.CUSTOM.successOrFailure = "S"
+			
+	#}
+	ELSE
+	#{
+		HIRM.CUSTOM.tmpErrMessage = "Record deletion Failed in C_DTD_P_EXT"
+		HIRM.CUSTOM.successOrFailure = "F"
+		sv_z = "Error in deletion of entry in mod table. (ormtrandet_cancel.scr)."
+		sv_u = urhk_SRV_SetErr(sv_z)
+		sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+		BANCS.OUTPUT.successOrFailure = "F"
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF	
+	
+	NEXTREC:
+	sv_m = sv_m + 1
+	#print(sv_m)
+#}
+DO
+
+ENDOFSCRIPT:
+EXITSCRIPT
+END-->

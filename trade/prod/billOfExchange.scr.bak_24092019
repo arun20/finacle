@@ -1,0 +1,158 @@
+#############################################################################################################
+#    Name                   : billOfExchange.scr
+#    Date                   : 21-06-2018
+#    Description            : Bill Of Exchange Report for Usance Bill
+#    Author                 : Chaitanya Yandrapu
+#    Called Script          : none
+#    Calling Script         : none
+#    Modification History   :
+#    SNo         Date                   Author Name               Description
+#    1           20-06-2018             Chaitanya Yandrapu      Bill Of Exchange Repor
+###############################################################################################################
+<--START
+	TRACE ON
+	LIBNAME CUSTOMSO
+	#------------------------------------------
+	# Creating the repositories
+	#------------------------------------------
+	IF (REPEXISTS("CUST") == 0 ) THEN
+	#{
+		CREATEREP("CUST")
+	#}
+	ENDIF
+	IF (CLASSEXISTS("CUST","LHB") == 0) THEN
+	#{
+		CREATECLASS("CUST","LHB",5)
+	#}
+	ENDIF
+	CUST.LHB.list = ""
+	CUST.LHB.list2 = ""
+	CUST.LHB.list3 = ""
+	CUST.LHB.list4 = ""
+	sv_u = urhk_B2k_PID("")
+	CUST.LHB.pidNumber = BANCS.OUTPARAM.PID
+	sv_u = urhk_SRV_GetVal("billCritDtls.underDC")
+	CUST.LHB.underDC = BANCS.OUTPARAM.srvValue
+	print(CUST.LHB.underDC)
+	sv_u = urhk_SRV_GetVal("billCritDtls.billId")
+	CUST.LHB.billId = BANCS.OUTPARAM.srvValue
+	print(CUST.LHB.billId)
+	IF(CUST.LHB.underDC == "N") THEN
+	#{
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+	sv_s = "billTenor,lodgeDate,billAmt,billCrncy,dueDate,usanceDesc,billDate,billFunCode,lcNum,lcDate,lcIssBank,partyName,addr1,addr2,addr3|"
+	sv_s = sv_s + "SELECT BILL_TENOR,TO_CHAR(LODG_DATE,'DD-MM-YYYY'),BILL_AMT,BILL_CRNCY_CODE,TO_CHAR(DUE_DATE,'DD-MM-YYYY'),USANCE_DESC,TO_CHAR(SHPMNT_DATE,'DD-MM-YYYY'),"
+	sv_s = sv_s + "BILL_FUNC_CODE,LC_NUMBER,TO_CHAR(LC_DATE,'DD-MM-YYYY'),LC_ISSU_BANK,B.PARTY_NAME,B.PARTY_ADDR1,B.PARTY_ADDR2,B.PARTY_ADDR3"
+	sv_s = sv_s + " FROM TBAADM.FBM B, TBAADM.FEI E WHERE B.BILL_ID = E.BILL_ID AND B.BILL_ID = ?SVAR"
+	print(sv_s)
+	BANCS.INPARAM.BINDVARS = CUST.LHB.billId
+	print(BANCS.INPARAM.BINDVARS)
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	print(sv_d)
+	IF(sv_d == 0) THEN
+	#{
+		CUST.LHB.billTenor = BANCS.OUTPARAM.billTenor
+		CUST.LHB.lodgeDate = BANCS.OUTPARAM.lodgeDate
+		CUST.LHB.billAmt = BANCS.OUTPARAM.billAmt
+		CUST.LHB.billCrncy = BANCS.OUTPARAM.billCrncy
+		CUST.LHB.dueDate = BANCS.OUTPARAM.dueDate
+		CUST.LHB.usanceDesc = BANCS.OUTPARAM.usanceDesc
+		CUST.LHB.billDate = BANCS.OUTPARAM.billDate
+		CUST.LHB.billFunCode = BANCS.OUTPARAM.billFunCode
+		CUST.LHB.lcNum = BANCS.OUTPARAM.lcNum
+		CUST.LHB.lcDate = BANCS.OUTPARAM.lcDate
+		CUST.LHB.lcIssBank = BANCS.OUTPARAM.lcIssBank
+                CUST.LHB.partyName = BANCS.OUTPARAM.partyName
+		CUST.LHB.addr1 = BANCS.OUTPARAM.addr1
+		CUST.LHB.addr2 = BANCS.OUTPARAM.addr2
+		CUST.LHB.addr3 = BANCS.OUTPARAM.addr3
+		print(CUST.LHB.billTenor)
+		print(CUST.LHB.lodgeDate)
+		print(CUST.LHB.billAmt)
+		print(CUST.LHB.billCrncy)
+		print(CUST.LHB.dueDate)
+		print(CUST.LHB.usanceDesc)
+		print(CUST.LHB.billDate)
+		print(CUST.LHB.billFunCode)
+		print(CUST.LHB.lcNum)
+		print(CUST.LHB.lcDate)
+		print(CUST.LHB.lcIssBank)
+		print(CUST.LHB.partyName)
+		print(CUST.LHB.addr1)
+		print(CUST.LHB.addr2)
+		print(CUST.LHB.addr3)
+		IF((CUST.LHB.billTenor != "U") OR (CUST.LHB.billFunCode != "G")) THEN
+		#{
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+		BANCS.INPARAM.BINDVARS = CUST.LHB.lcIssBank	
+		sv_s = "issueBankDesc|SELECT BANK_NAME FROM TBAADM.BKC WHERE BANK_CODE = ?SVAR"
+		print(sv_s)
+		sv_d = urhk_dbSelectWithBind(sv_s)
+		print(sv_d)
+		IF(sv_d == 0) THEN
+		#{
+			CUST.LHB.issueBankDesc = BANCS.OUTPARAM.issueBankDesc
+			print(CUST.LHB.issueBankDesc)
+		#}
+		ENDIF
+		BANCS.INPARAM.BINDVARS = CUST.LHB.billAmt
+		sv_s = "amountInWords|SELECT upper(custom.cust_spell_number(abs(?SVAR))) FROM dual"
+		print(sv_s)
+		sv_d = urhk_dbSelectWithBind(sv_s)
+		print(sv_d)
+		IF(sv_d == 0) THEN
+		#{
+			CUST.LHB.amountInWords = BANCS.OUTPARAM.amountInWords
+			print(CUST.LHB.amountInWords)
+		#}
+		ENDIF
+		CUST.LHB.list = "|FIRST|SECOND|" + CUST.LHB.billId + "|" + CUST.LHB.lodgeDate + "|" + CUST.LHB.billAmt + "|" + CUST.LHB.dueDate + "|" + CUST.LHB.usanceDesc
+		CUST.LHB.list = CUST.LHB.list + "|" + CUST.LHB.billDate + "|" + CUST.LHB.billCrncy + "|" + CUST.LHB.amountInWords + "|" + CUST.LHB.lcNum
+		CUST.LHB.list = CUST.LHB.list + "|" + CUST.LHB.issueBankDesc + "|" + CUST.LHB.lcDate
+		CUST.LHB.list = CUST.LHB.list + "|" + CUST.LHB.partyName + "|" + CUST.LHB.addr1 + "|" + CUST.LHB.addr2 + "|" +  CUST.LHB.addr3
+		print(CUST.LHB.list)
+		CUST.LHB.list2 = "|SECOND|FIRST|" + CUST.LHB.billId + "|" + CUST.LHB.lodgeDate + "|" + CUST.LHB.billAmt + "|" + CUST.LHB.dueDate + "|" + CUST.LHB.usanceDesc
+		CUST.LHB.list2 = CUST.LHB.list2 + "|" + CUST.LHB.billDate + "|" + CUST.LHB.billCrncy + "|" + CUST.LHB.amountInWords + "|" + CUST.LHB.lcNum
+		CUST.LHB.list2 = CUST.LHB.list2 + "|" + CUST.LHB.issueBankDesc + "|" + CUST.LHB.lcDate
+		CUST.LHB.list2 = CUST.LHB.list2 + "|" + CUST.LHB.partyName + "|" + CUST.LHB.addr1 + "|" + CUST.LHB.addr2 + "|" +  CUST.LHB.addr3
+		print(CUST.LHB.list2)
+		CUST.LHB.list3 = "COPY|FIRST|SECOND|" + CUST.LHB.billId + "|" + CUST.LHB.lodgeDate + "|" + CUST.LHB.billAmt + "|" + CUST.LHB.dueDate + "|" + CUST.LHB.usanceDesc
+		CUST.LHB.list3 = CUST.LHB.list3 + "|" + CUST.LHB.billDate + "|" + CUST.LHB.billCrncy + "|" + CUST.LHB.amountInWords + "|" + CUST.LHB.lcNum
+		CUST.LHB.list3 = CUST.LHB.list3 + "|" + CUST.LHB.issueBankDesc + "|" + CUST.LHB.lcDate
+		CUST.LHB.list3 = CUST.LHB.list3 + "|" + CUST.LHB.partyName + "|" + CUST.LHB.addr1 + "|" + CUST.LHB.addr2 + "|" +  CUST.LHB.addr3
+		print(CUST.LHB.list3)
+		CUST.LHB.list4 = "COPY|SECOND|FIRST|" + CUST.LHB.billId + "|" + CUST.LHB.lodgeDate + "|" + CUST.LHB.billAmt + "|" + CUST.LHB.dueDate + "|" + CUST.LHB.usanceDesc
+		CUST.LHB.list4 = CUST.LHB.list4 + "|" + CUST.LHB.billDate + "|" + CUST.LHB.billCrncy + "|" + CUST.LHB.amountInWords + "|" + CUST.LHB.lcNum
+		CUST.LHB.list4 = CUST.LHB.list4 + "|" + CUST.LHB.issueBankDesc + "|" + CUST.LHB.lcDate
+		CUST.LHB.list4 = CUST.LHB.list4 + "|" + CUST.LHB.partyName + "|" + CUST.LHB.addr1 + "|" + CUST.LHB.addr2 + "|" +  CUST.LHB.addr3
+		print(CUST.LHB.list4)
+		CUST.LHB.listFile = "BillOfExchange_" + CUST.LHB.billId + ".lst"
+		print(CUST.LHB.listFile)
+		sv_p = SYSTEM("echo '" + CUST.LHB.list + "'> " + CUST.LHB.listFile)
+		print(sv_p)
+		sv_p = SYSTEM("echo '" + CUST.LHB.list2 + "'>> " + CUST.LHB.listFile)
+		print(sv_p)
+		sv_p = SYSTEM("echo '" + CUST.LHB.list3 + "'>> " + CUST.LHB.listFile)
+		print(sv_p)
+		sv_p = SYSTEM("echo '" + CUST.LHB.list4 + "'>> " + CUST.LHB.listFile)
+		print(sv_p)
+		sv_i = "BillOfExchange.jasper|" + CUST.LHB.listFile + "|billOfExchange_" + CUST.LHB.pidNumber + "||"
+		sv_o = urhk_B2k_GenRpt4004(sv_i)
+		PRINT(sv_o)
+		sv_a = "billOfExchange_" + CUST.LHB.pidNumber + ".PDF|" + "Bill Of Exchange " + CUST.LHB.billId + "|MANAGER|1"
+		sv_x =  urhk_B2k_Insert_PQT(sv_a)
+		PRINT(sv_x)
+		IF(sv_x != 0)THEN
+		#{
+			PRINT("Pushing The Report to Background Menu Failed !")
+		#}
+		ENDIF
+	#}
+	ENDIF
+	ENDOFSCRIPT:
+	TRACE OFF
+END-->

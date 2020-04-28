@@ -1,0 +1,120 @@
+#############################################################################################################
+#    Name                   : AMLRequest.scr
+#    Date                   : 22-09-2018
+#    Description            : Creating request file for AML screening
+#    Author                 : Chaitanya Yandrapu
+#    Called Script          : none
+#    Calling Script         : none
+#    Modification History   :
+#    SNo         Date                   Author Name               Description
+#    1           20-06-2018             Chaitanya Yandrapu      Creating request file
+###############################################################################################################
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+	TRACE ON
+	LIBNAME CUSTOMSO
+	#------------------------------------------
+	# Creating the repositories
+	#------------------------------------------
+	IF (REPEXISTS("PAYSYS") == 0 ) THEN
+	#{
+		CREATEREP("PAYSYS")
+	#}
+	ENDIF
+	IF (CLASSEXISTS("PAYSYS","GLBDATA") == 0) THEN
+	#{
+		CREATECLASS("PAYSYS","GLBDATA",5)
+	#}
+	ENDIF
+	#-------------------------------------
+        # Creating a File
+        #-------------------------------------
+        ##sv_a = urhk_B2k_printRepos("BANCS")
+        lv_a = urhk_B2k_PID("")
+        PAYSYS.GLBDATA.PID = BANCS.OUTPARAM.PID
+        sv_q = "sysDate|SELECT TO_CHAR(SYSDATE,'DD-MM-YYYY HH24:MI:SS') FROM DUAL"
+        sv_d = urhk_dbSelectWithBind(sv_q)
+        PAYSYS.GLBDATA.sysDate = BANCS.OUTPARAM.sysDate
+        PAYSYS.GLBDATA.time = MID$(PAYSYS.GLBDATA.sysDate,6,4) + MID$(PAYSYS.GLBDATA.sysDate,3,2) + LEFT$(PAYSYS.GLBDATA.sysDate,2) + MID$(PAYSYS.GLBDATA.sysDate,11,2) + MID$(PAYSYS.GLBDATA.sysDate,14,2)
+        print(PAYSYS.GLBDATA.time)
+        PAYSYS.GLBDATA.requestFiles = "TF"+PAYSYS.GLBDATA.time
+        PAYSYS.GLBDATA.requestFile1 = "TF"+PAYSYS.GLBDATA.time+"7XXReq.csv"
+        PAYSYS.GLBDATA.requestFile2 = "TF"+PAYSYS.GLBDATA.time+"ALLReq.csv"
+	PAYSYS.GLBDATA.outputFile1 = "outputFile1.csv"
+	PAYSYS.GLBDATA.outputFile2 = "outputFile2.csv"
+	PAYSYS.GLBDATA.failLog = "AMLRequest_" + PAYSYS.GLBDATA.time + ".log"
+	#--------------------------------------------------------------------------------
+        # Fetching CPARAM value for AML Batch Path
+        #--------------------------------------------------------------------------------
+        sv_s = func_getCPARAMValueB("AML_BATCH_PATH", "INTF" , BANCS.STDIN.contextBankId , BYREF PAYSYS.GLBDATA.AMLBatchPath)
+        IF(sv_s == 0) THEN
+        #{
+                PRINT(PAYSYS.GLBDATA.AMLBatchPath)
+        #}
+        ELSE
+        #{
+                PRINT("CPARAM not configured for AML Batch Path")
+                PAYSYS.GLBDATA.AMLBatchPath = "/FCUAT1/BE/Finacle/FC/app/CDCI_LOGS/"
+        #}
+        ENDIF
+        PAYSYS.GLBDATA.AMLBatchPath = PAYSYS.GLBDATA.AMLBatchPath + "AMLRQ/"
+        PRINT(PAYSYS.GLBDATA.AMLBatchPath)
+	#--------------------------------------------------------------------------------
+	# Executing AML Extract package
+	#--------------------------------------------------------------------------------
+	sv_s = "exebatch spbx4001 CUSTOM.AML_RQST_PACK1.AML_RQST_PROC1 > " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.outputFile1
+	print(sv_s)
+	sv_d= SYSTEM(sv_s)
+	print(sv_d)
+	IF(sv_d == 0) THEN
+	#{
+		PAYSYS.GLBDATA.outputFileTemp = PAYSYS.GLBDATA.outputFile1
+		PAYSYS.GLBDATA.outPutFile = PAYSYS.GLBDATA.requestFile1
+		print("calling file reading and processing")
+		CALL("AMLRequestdp001.scr")
+	#}
+	ENDIF
+	sv_s = "exebatch spbx4001 CUSTOM.AML_RQST_PACK2.AML_RQST_PROC2 > " + PAYSYS.GLBDATA.AMLBatchPath + PAYSYS.GLBDATA.outputFile2
+        print(sv_s)
+        sv_d= SYSTEM(sv_s)
+        print(sv_d)
+        IF(sv_d == 0) THEN
+        #{
+		PAYSYS.GLBDATA.outputFileTemp = PAYSYS.GLBDATA.outputFile2
+		PAYSYS.GLBDATA.outPutFile = PAYSYS.GLBDATA.outputFile2
+                print("calling file reading and processing")
+                CALL("AMLRequestdp001.scr")
+        #}
+        ENDIF
+	 #--------------------------------------------------------------------------------
+        # Copy to Finacle path
+        #--------------------------------------------------------------------------------
+        #sv_l = "cp " + PAYSYS.GLBDATA.requestFile1 + "  " + PAYSYS.GLBDATA.AMLBatchPath
+        #print(sv_l)
+        #sv_v = system(sv_l)
+        #print(sv_v)
+
+        #sv_l = "cp " + PAYSYS.GLBDATA.requestFile2 + "  " + PAYSYS.GLBDATA.AMLBatchPath
+        #print(sv_l)
+        #sv_v = system(sv_l)
+        #print(sv_v)
+
+        #------------------------------------------------------------------------------
+        # SFTP File Transfer
+        #------------------------------------------------------------------------------
+        sv_u = urhk_getFileLocation("COM|sftp_tf_putaml.com")
+        print(sv_u)
+        IF(sv_u == 0) THEN
+        #{
+                sv_m = BANCS.OUTPARAM.fileLocation
+                print(sv_m)
+                #Transfer of AML Request Files
+                sv_a = sv_m + "sftp_tf_putaml.com " + PAYSYS.GLBDATA.requestFiles + " /AML/TRADEFINANCE/TRANSACTIONAL/REQUEST " + PAYSYS.GLBDATA.AMLBatchPath + " > AMLReq_sftp_"+PAYSYS.GLBDATA.time+".txt"
+                print(sv_a)
+                sv_v = system(sv_a)
+                print(sv_v)
+        #}
+        ENDIF
+TRACE OFF
+END-->

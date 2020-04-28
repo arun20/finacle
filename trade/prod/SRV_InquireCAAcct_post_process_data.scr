@@ -1,0 +1,123 @@
+#------------------------------------------------------------------------
+#   File Name       :   ofac_all_init_var.scr
+#   Author          :   Julie
+#   Date            :   16-08-2004
+#   Description     :   This script initializes the repository variables
+#   needed for OFAC
+#                       black list check.
+#   Modification    :
+#------------------------------------------------------------------------
+<--START
+TRACE ON
+
+IF(BANCS.STDIN.userId == "FIVUSR")THEN
+#{
+	#sv_r = urhk_b2k_printrepos("BANCS")
+
+	#Creating Repository & Class
+	IF (REPEXISTS("CUST") == 0) THEN
+	#{
+		CREATEREP("CUST")
+	#}
+	ENDIF
+
+	IF (CLASSEXISTS("CUST", "LHB") == 0) THEN
+	#{
+		CREATECLASS("CUST", "LHB", 5)
+	#}
+	ENDIF
+
+	#Fetching Foracid from SRV
+
+	sv_u = urhk_SRV_GetVal("acctCommonInfo.acctGeneralInfo.acctBasic.foracid")
+	CUST.LHB.acctNum = BANCS.OUTPARAM.srvValue
+	print(CUST.LHB.acctNum)
+
+	#Fetching Account Closure Flag
+
+	sv_s = "acctClsFlag|"
+	sv_s = sv_s + "SELECT acct_cls_flg FROM TBAADM.GAM WHERE"
+	sv_s = sv_s + " FORACID = ?SVAR and BANK_ID = ?SVAR"
+
+	BANCS.INPARAM.BINDVARS = CUST.LHB.acctNum + "|" + BANCS.STDIN.contextBankId
+
+	print(sv_s)
+	print(BANCS.INPARAM.BINDVARS)
+	sv_h = urhk_dbSelectWithBind(sv_s)
+	print(sv_h)
+
+	IF(sv_h == 0)THEN
+	#{
+		CUST.LHB.acctClsFlag = BANCS.OUTPARAM.acctClsFlag
+		print(CUST.LHB.acctClsFlag)
+	#}
+	ELSE
+	#{
+		CUST.DATA.ERRORCODE = "INTF002"
+		CUST.DATA.SuccessOrFailure = "F"
+		CUST.DATA.ERRORMSG= "Internal Finacle Error.Select Query Failed"
+		print(CUST.DATA.ERRORMSG)
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+
+	#Single Or Joint Operation Flag
+
+	sv_s = "sinOrJoiCnt|"
+	sv_s = sv_s + "SELECT COUNT(*) "
+	sv_s = sv_s + "FROM TBAADM.GAM G, TBAADM.AAS A "
+	sv_s = sv_s + "WHERE G.ACID = A.ACID "
+	sv_s = sv_s + "AND G.FORACID = ?SVAR "
+	sv_s = sv_s + "AND A.ACCT_POA_AS_REC_TYPE != ?SVAR "
+	sv_s = sv_s + "AND G.BANK_ID = A.BANK_ID "
+	sv_s = sv_s + "AND A.BANK_ID = ?SVAR"
+
+	BANCS.INPARAM.BINDVARS = "M|" + CUST.LHB.acctNum + "|" + BANCS.STDIN.contextBankId
+
+	print(sv_s)
+	print(BANCS.INPARAM.BINDVARS)
+	sv_h = urhk_dbSelectWithBind(sv_s)
+	print(sv_h)
+
+	IF(sv_h == 0)THEN
+	#{
+		CUST.LHB.sinOrJoiCnt = BANCS.OUTPARAM.sinOrJoiCnt
+		print(CUST.LHB.sinOrJoiCnt)
+
+		sv_h = CINT(CUST.LHB.sinOrJoiCnt)
+		IF(sv_h == 0)THEN
+		#{
+			CUST.LHB.sinOrJoi = "S"
+		#}
+		ELSE
+		#{
+			CUST.LHB.sinOrJoi = "J"
+		#}
+		ENDIF
+	#}
+	ELSE
+	#{
+		CUST.DATA.ERRORCODE = "INTF002"
+		CUST.DATA.SuccessOrFailure = "F"
+		CUST.DATA.ERRORMSG= "Internal Finacle Error.Select Query Failed"
+		print(CUST.DATA.ERRORMSG)
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+
+	ONS.CUSTOM.custDataOut = "acctClosureFlg="+CUST.LHB.acctClsFlag+"|singleOrJoint="+CUST.LHB.sinOrJoi
+	print(ONS.CUSTOM.custDataOut)
+#}
+ENDIF
+
+
+#---------------------------------------------------------------------
+# Calling IN specific locale script
+#---------------------------------------------------------------------
+CALLSCRIPTIFEXIST("AccountLocaleField_fetchForInquire.scr")
+
+#Added for unclaimed deposits
+CALLSCRIPTIFEXIST("FetchUnclaimDetForAcctMaint.scr")
+
+TRACE OFF
+END-->

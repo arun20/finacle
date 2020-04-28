@@ -1,0 +1,31 @@
+#########################################################################################################################
+# Name of the file      : SRV_AddXferTranForPTranPost_post_process_data.scr
+# Start Date            : 21-May-2018
+# Description           : This script will call tmdet_insert.scr to insert data into custom table.
+# Design Id             : AOC07
+# Menu Option           : HTM,HXFER,HCASHDEP,HCASHWD
+# Input parameters      : NA
+# Output parameters     : NA
+# Author                : Isha Gupta
+# Called Script         : NA
+# Calling Script        : tmdet_insert.scr
+# Bank                  : LH Bank
+# Modification History:
+# <Serial No.>         <Date>         <Author Name>              <Description>
+#      0.1            21-May-2018     Isha Gupta               Initial Draft
+##############################################################################################################################
+<--START
+TRACE ON   
+libname CUSTOMSO
+IF (FIELDEXISTS(BANCS.STDIN.menuId)) THEN
+#{
+	IF ((BANCS.STDIN.menuId == "HTM")OR(BANCS.STDIN.menuId == "HXFER")OR(BANCS.STDIN.menuId == "HCASHDEP")OR(BANCS.STDIN.menuId == "HCASHWD")) THEN
+	#{
+		CALLSCRIPTIFEXIST("tmdet_insert.scr")
+	#}
+	ENDIF
+#}
+ENDIF
+ENDOFSCRIPT:
+EXITSCRIPT
+END-->

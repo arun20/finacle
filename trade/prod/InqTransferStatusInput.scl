@@ -1,0 +1,63 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Domain: Finacle Core
+# Library Name: InqTransferStatusInput.scl
+# Description:
+#============================================================
+
+#FUNCTION xmlBodyDetails()
+FUNCTION xmlInqTranBodyDetails()
+#{
+	#	IF (FIELDEXISTS(("BANCS").("INPUT").("tellerId")) == 1) THEN
+	#	#{
+	#		BANCS.INPUT.tellerId = BANCS.INPUT.tellerId
+	#		#}
+	#	ELSE
+	#		#{
+	#		BANCS.INPUT.tellerId  = ""
+	#	#}
+	#	ENDIF
+	#	IF (FIELDEXISTS(("BANCS").("INPUT").("txnSeq")) == 1) THEN
+	#	#{
+	#		BANCS.INPUT.txnSeq = BANCS.INPUT.txnSeq
+	#		#}
+	#	ELSE
+	#		#{
+	#		BANCS.INPUT.txnSeq  = ""
+	#	#}
+	#	ENDIF
+	#	IF (FIELDEXISTS(("BANCS").("INPUT").("chkTxnDate")) == 1) THEN
+	#	#{
+	#		BANCS.INPUT.chkTxnDate = BANCS.INPUT.chkTxnDate
+	#		#}
+	#	ELSE
+	#		#{
+	#		BANCS.INPUT.chkTxnDate  = ""
+	#	#}
+	#	ENDIF
+	#
+	#	IF (FIELDEXISTS(("BANCS").("INPUT").("chkTxnSeq")) == 1) THEN
+	#	#{
+	#		BANCS.INPUT.chkTxnSeq = BANCS.INPUT.chkTxnSeq
+	#		#}
+	#	ELSE
+	#		#{
+	#		BANCS.INPUT.chkTxnSeq  = ""
+	#	#}
+	#	ENDIF
+	
+	#Hard Coding for testing purpose. Remove once done.
+	#BANCS.INPUT.tellerId = "P0102"
+	sv_v = ""
+	sv_v = sv_v + "<transferParam>"
+	sv_v = sv_v + "<tellerId>"+BANCS.INPUT.tellerId+"</tellerId>"
+	sv_v = sv_v + "<txnSeq>"+BANCS.INPUT.txnSeq+"</txnSeq>"
+	sv_v = sv_v + "<chkTxnDate>"+BANCS.INPUT.chkTxnDate+"</chkTxnDate>"
+	sv_v = sv_v + "<chkTxnSeq>"+BANCS.INPUT.chkTxnSeq+"</chkTxnSeq>"
+	sv_v = sv_v + "</transferParam>"
+	PRINT(sv_v)
+	RETURN sv_v
+#}
+ENDFUNCTION
+<--START
+END-->

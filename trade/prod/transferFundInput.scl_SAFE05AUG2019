@@ -1,0 +1,216 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Domain: Finacle Core
+# Library Name: transferFundInput.scl
+# Description: transferFundInput.scl
+#============================================================
+FUNCTION xmlTransferBodyDetails()
+#{
+
+	IF(TRIM(BANCS.INPUT.reversalFlag) == "")THEN
+	#{
+		BANCS.INPUT.reversalFlag = "N"
+	#}
+	ENDIF
+
+	IF (FIELDEXISTS(("BANCS").("INPUT").("remark")) == 1) THEN
+	#{
+		BANCS.INPUT.remark = BANCS.INPUT.remark
+	#}
+	ELSE
+	#{
+		BANCS.INPUT.remark  = ""
+	#}
+	ENDIF
+	
+	IF (FIELDEXISTS(("BANCS").("INPUT").("accNum2")) == 1) THEN
+	#{
+		BANCS.INPUT.accNum2 = BANCS.INPUT.accNum2
+	#}
+	ELSE
+	#{
+		BANCS.INPUT.accNum2  = ""
+	#}
+	ENDIF
+	
+	IF (FIELDEXISTS(("BANCS").("INPUT").("txnAmount2")) == 1) THEN
+	#{
+		BANCS.INPUT.txnAmount2 = BANCS.INPUT.txnAmount2
+		PRINT(BANCS.INPUT.txnAmount2)
+		BANCS.INPUT.txnAmount2 = FORMAT$(CDOUBLE(BANCS.INPUT.txnAmount2),"%0.2f")	
+		PRINT(BANCS.INPUT.txnAmount2)
+	#}
+	ELSE
+	#{
+		BANCS.INPUT.txnAmount2  = ""
+	#}
+	ENDIF
+	PRINT(BANCS.INPUT.txnAmount2)
+	
+	IF (FIELDEXISTS(("BANCS").("INPUT").("accNum3")) == 1) THEN
+	#{
+		BANCS.INPUT.accNum3 = BANCS.INPUT.accNum3
+	#}
+	ELSE
+	#{
+		BANCS.INPUT.accNum3  = ""
+	#}
+	ENDIF
+	
+	
+	IF (FIELDEXISTS(("BANCS").("INPUT").("txnAmount3")) == 1) THEN
+	#{
+		BANCS.INPUT.txnAmount3 = BANCS.INPUT.txnAmount3
+		BANCS.INPUT.txnAmount3 = FORMAT$(CDOUBLE(BANCS.INPUT.txnAmount3),"%0.2f")
+                PRINT(BANCS.INPUT.txnAmount3)
+	#}
+	ELSE
+	#{
+		BANCS.INPUT.txnAmount3  = ""
+	#}
+	ENDIF
+	PRINT(BANCS.INPUT.txnAmount3)
+	
+	IF (FIELDEXISTS(("BANCS").("INPUT").("accNum4")) == 1) THEN
+	#{
+		BANCS.INPUT.accNum4 = BANCS.INPUT.accNum4
+	#}
+	ELSE
+	#{
+		BANCS.INPUT.accNum4  = ""
+	#}
+	ENDIF
+	
+	
+	IF (FIELDEXISTS(("BANCS").("INPUT").("txnAmount4")) == 1) THEN
+	#{
+		BANCS.INPUT.txnAmount4 = BANCS.INPUT.txnAmount4
+		BANCS.INPUT.txnAmount4 = FORMAT$(CDOUBLE(BANCS.INPUT.txnAmount4),"%0.2f")
+		PRINT(BANCS.INPUT.txnAmount4)
+	#}
+	ELSE
+	#{
+		BANCS.INPUT.txnAmount4 = ""
+	#}
+	ENDIF
+	PRINT(BANCS.INPUT.txnAmount4)
+	
+	IF (FIELDEXISTS(("BANCS").("INPUT").("accNum5")) == 1) THEN
+	#{
+		BANCS.INPUT.accNum5 = BANCS.INPUT.accNum5
+	#}
+	ELSE
+	#{
+		BANCS.INPUT.accNum5  = ""
+	#}
+	ENDIF
+	
+	IF (FIELDEXISTS(("BANCS").("INPUT").("txnAmount5")) == 1) THEN
+	#{
+		BANCS.INPUT.txnAmount5 = BANCS.INPUT.txnAmount5
+		BANCS.INPUT.txnAmount5 = FORMAT$(CDOUBLE(BANCS.INPUT.txnAmount5),"%0.2f")
+                PRINT(BANCS.INPUT.txnAmount4)
+	#}
+	ELSE
+	#{
+		BANCS.INPUT.txnAmount5 = ""
+	#}
+	ENDIF
+	PRINT(BANCS.INPUT.txnAmount5)
+	
+	PRINT(BANCS.INPUT.direction)
+	IF(FIELDEXISTS(("BANCS").("INPUT").("direction")) == 1)THEN
+	#{
+		IF(BANCS.INPUT.direction == "T")THEN
+		#{
+			BANCS.INPUT.direction = "C"
+		#}
+		ELSE
+		#{
+			IF(BANCS.INPUT.direction == "F")THEN
+			#{
+				BANCS.INPUT.direction = "D"
+			#}
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ENDIF
+
+	IF(FIELDEXISTS(("BANCS").("INPUT").("ValueDate")) == 1)THEN
+	#{
+		INTF.DATA.ValueDate = MID$(BANCS.INPUT.ValueDate,6,4)+"-"+MID$(BANCS.INPUT.ValueDate,3,2)+"-"+MID$(BANCS.INPUT.ValueDate,0,2)
+		print(INTF.DATA.ValueDate)
+	#}
+	ELSE
+	#{
+		INTF.DATA.ValueDate = MID$(BANCS.STDIN.BODDate,6,4)+"-"+MID$(BANCS.STDIN.BODDate,3,2)+"-"+MID$(BANCS.STDIN.BODDate,0,2)
+		print(INTF.DATA.ValueDate)
+	#}
+	ENDIF
+
+	sv_v = ""
+	sv_v = sv_v + "<fundTransferParam>"
+	sv_v = sv_v + "<direction>"+BANCS.INPUT.direction+"</direction>"
+	sv_v = sv_v + "<fundTransferOrderList>"
+	IF((TRIM(BANCS.INPUT.accNum1) != "") AND (TRIM(BANCS.INPUT.txnAmount1) != ""))THEN
+	#{
+		BANCS.INPUT.txnAmount1 = FORMAT$(CDOUBLE(BANCS.INPUT.txnAmount1),"%0.2f")
+		sv_v = sv_v + "<fundTransferOrder>"
+		sv_v = sv_v + "<accNum>"+BANCS.INPUT.accNum1+"</accNum>"
+		sv_v = sv_v + "<txnAmount>"+BANCS.INPUT.txnAmount1+"</txnAmount>"
+		sv_v = sv_v + "</fundTransferOrder>"
+	#}
+	ENDIF
+	IF((TRIM(BANCS.INPUT.accNum2) != "") AND (TRIM(BANCS.INPUT.txnAmount2) != ""))THEN
+	#{
+		sv_v = sv_v + "<fundTransferOrder>"
+		sv_v = sv_v + "<accNum>"+BANCS.INPUT.accNum2+"</accNum>"
+		sv_v = sv_v + "<txnAmount>"+BANCS.INPUT.txnAmount2+"</txnAmount>"
+		sv_v = sv_v + "</fundTransferOrder>"
+	#}
+	ENDIF
+	IF((TRIM(BANCS.INPUT.accNum3) != "") AND (TRIM(BANCS.INPUT.txnAmount3) != ""))THEN
+	#{
+		sv_v = sv_v + "<fundTransferOrder>"
+		sv_v = sv_v + "<accNum>"+BANCS.INPUT.accNum3+"</accNum>"
+		sv_v = sv_v + "<txnAmount>"+BANCS.INPUT.txnAmount3+"</txnAmount>"
+		sv_v = sv_v + "</fundTransferOrder>"
+	#}
+	ENDIF
+	IF((TRIM(BANCS.INPUT.accNum4) != "") AND (TRIM(BANCS.INPUT.txnAmount4) != ""))THEN
+	#{
+		sv_v = sv_v + "<fundTransferOrder>"
+		sv_v = sv_v + "<accNum>"+BANCS.INPUT.accNum4+"</accNum>"
+		sv_v = sv_v + "<txnAmount>"+BANCS.INPUT.txnAmount4+"</txnAmount>"
+		sv_v = sv_v + "</fundTransferOrder>"
+	#}
+	ENDIF
+	IF((TRIM(BANCS.INPUT.accNum5) != "") AND (TRIM(BANCS.INPUT.txnAmount5) != ""))THEN
+	#{
+		sv_v = sv_v + "<fundTransferOrder>"
+		sv_v = sv_v + "<accNum>"+BANCS.INPUT.accNum5+"</accNum>"
+		sv_v = sv_v + "<txnAmount>"+BANCS.INPUT.txnAmount5+"</txnAmount>"
+		sv_v = sv_v + "</fundTransferOrder>"
+	#}
+	ENDIF
+	sv_v = sv_v + "</fundTransferOrderList>"
+	sv_v = sv_v + "<remark>"+BANCS.INPUT.remark+"</remark>"
+	#Hard Coding For testing purpose
+	#BANCS.INPUT.tellerId = "P0102"
+	sv_v = sv_v + "<tellerId>"+BANCS.INPUT.tellerId+"</tellerId>"
+	sv_v = sv_v + "<txnSeq>"+BANCS.INPUT.txnSeq+"</txnSeq>"
+	sv_v = sv_v + "<reversalFlag>"+BANCS.INPUT.reversalFlag+"</reversalFlag>"
+	sv_v = sv_v + "<reversalTxnSeq>"+BANCS.INPUT.reversalTxnSeq+"</reversalTxnSeq>"
+	IF (FIELDEXISTS(("INTF").("DATA").("ValueDate")) == 1) THEN
+	#{
+		sv_v = sv_v + "<valueDate>"+INTF.DATA.ValueDate+"</valueDate>"
+	#}
+	ENDIF
+	sv_v = sv_v + "</fundTransferParam>"
+	PRINT(sv_v)
+	RETURN sv_v
+#}
+ENDFUNCTION
+<--START
+END-->

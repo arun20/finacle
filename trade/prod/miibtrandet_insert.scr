@@ -1,0 +1,223 @@
+###############################################################################################
+#    Name				: miibtrandet_insert.scr
+#    Start Date			: 24-07-2018
+#    Description			: Lodge Script for additional 8 Fields added in Transaction Tab
+#    Author				: Surya Sneha Pulavarthy
+#    Modification History:
+#    <Serial No.>	 <Date>			<Author Name>			<Description>
+#     001		24-07-2018		Surya Sneha Pulavarthy		Initial Draft
+################################################################################################
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+
+###################################################################################################
+#	Start-	Initialize variables 
+###################################################################################################
+MIIB.CUSTOM.successOrFailure	=	"S"
+MIIB.CUSTOM.tmpErrMessage		=	""
+MIIB.CUSTOM.noOfRecords			=	"0"
+MIIB.CUSTOM.slAcctId			=	""
+MIIB.CUSTOM.slAcctName			=	""
+MIIB.CUSTOM.slAcctBal			=	""
+MIIB.CUSTOM.slCrncy  			= 	""
+MIIB.CUSTOM.slAcctStatus		=	""
+MIIB.CUSTOM.slPurpOfTxn 		= 	""
+MIIB.CUSTOM.hslBillId			=	""
+MIIB.CUSTOM.hslSrlNum			=	""
+MIIB.CUSTOM.shlDelFlg			=	""
+MIIB.CUSTOM.hslTranId			=	""
+MIIB.CUSTOM.hslTranDate			=	""
+MIIB.CUSTOM.hslSolId			=	""
+MIIB.CUSTOM.hslTranType			=	""
+MIIB.CUSTOM.hslAcid				=	""
+MIIB.CUSTOM.hTranAmt			=	""
+MIIB.CUSTOM.hslFreeText			=	""
+MIIB.CUSTOM.slTranRemarks		=	""
+
+CALLSCRIPTIFEXIST("miibtrandet_fetch_mrh.scr")
+
+PRINT(MIIB.CUSTOM.noOfRecords)
+###################################################################################################
+#	STORE THE MULTIREC FIELDS IN CUSTOM REP
+###################################################################################################
+sv_m= 0
+sv_c = 1
+WHILE(sv_m < CINT(MIIB.CUSTOM.noOfRecords))
+#{	
+	print(sv_m)
+	sv_b = FORMAT$(sv_m,"%d")
+	print(sv_b)
+	MIIB.CUSTOM.slAcctId				= ("MIIB").("CUSTOM").("slAcctId_"+sv_b)
+	MIIB.CUSTOM.slAcctName			= ("MIIB").("CUSTOM").("slAcctName_"+sv_b)
+	MIIB.CUSTOM.slAcctBal			= ("MIIB").("CUSTOM").("slAcctBal_"+sv_b)
+	MIIB.CUSTOM.slCrncy  			= ("MIIB").("CUSTOM").("slCrncy_"+sv_b)
+	MIIB.CUSTOM.slAcctStatus			= ("MIIB").("CUSTOM").("slAcctStatus_"+sv_b)
+	MIIB.CUSTOM.slPurpOfTxn			= ("MIIB").("CUSTOM").("slPurpOfTxn_"+sv_b)
+	MIIB.CUSTOM.slTranRemarks			= ("MIIB").("CUSTOM").("slTranRemarks_"+sv_b)
+	MIIB.CUSTOM.hslSrlNum			= ("MIIB").("CUSTOM").("hslSrlNum_"+sv_b)
+	MIIB.CUSTOM.shlDelFlg			= ("MIIB").("CUSTOM").("shlDelFlg_"+sv_b)
+	MIIB.CUSTOM.hslTranId			= ("MIIB").("CUSTOM").("hslTranId_"+sv_b)
+	MIIB.CUSTOM.hslTranDate			= ("MIIB").("CUSTOM").("hslTranDate_"+sv_b)
+	MIIB.CUSTOM.hslTranType			= ("MIIB").("CUSTOM").("hslTranType_"+sv_b)
+	MIIB.CUSTOM.hslAcid				= ("MIIB").("CUSTOM").("hslAcid_"+sv_b)
+	MIIB.CUSTOM.hTranAmt				= ("MIIB").("CUSTOM").("hTranAmt_"+sv_b)
+	
+	#MIIB.CUSTOM.hslFreeText			= ("MIIB").("CUSTOM").("hslFreeText_"+sv_b)	
+	
+	PRINT(MIIB.CUSTOM.slAcctId)
+	PRINT(MIIB.CUSTOM.slAcctName)
+	PRINT(MIIB.CUSTOM.slAcctBal)
+	PRINT(MIIB.CUSTOM.slCrncy)
+	PRINT(MIIB.CUSTOM.slAcctStatus)
+	PRINT(MIIB.CUSTOM.slPurpOfTxn)
+	PRINT(MIIB.CUSTOM.slTranRemarks)
+	PRINT(MIIB.CUSTOM.hslBillId)
+	PRINT(MIIB.CUSTOM.hslSrlNum)
+	PRINT(MIIB.CUSTOM.shlDelFlg)
+	PRINT(MIIB.CUSTOM.hslTranId)
+	PRINT(MIIB.CUSTOM.hslTranDate)
+	PRINT(MIIB.CUSTOM.hslTranType)
+	PRINT(MIIB.CUSTOM.hslAcid)
+	PRINT(MIIB.CUSTOM.hTranAmt)
+	#PRINT(MIIB.CUSTOM.hslFreeText)
+	
+	#-------------------------------------------
+	#Converting amount to standard format
+	#-------------------------------------------
+	print(MIIB.CUSTOM.slAcctBal)
+	BANCS.INPARAM.userFormatAmt = MIIB.CUSTOM.slAcctBal
+	sv_u = urhk_convertAmountToStdFormat("")
+	IF(sv_u == 0) THEN
+	#{
+		MIIB.CUSTOM.slAcctBal = BANCS.OUTPARAM.stdFormatAmt
+	#}
+	ENDIF
+	print(MIIB.CUSTOM.slAcctBal)
+	
+
+	MIIB.CUSTOM.sysDate = func_getSysDateTimeWithFormatB("DD-MM-YYYY hh24:mi:ss") 
+
+	
+	#Check whether same tranid transrl num eixsts if so modify
+	#-----------------------------------------------------------------------------------------------------------------------		
+	#COUNT_RECORDS:
+	#-----------------------------------------------------------------------------------------------------------------------
+	sv_s = ""
+	sv_s = sv_s + " count|SELECT COUNT(1)"
+	sv_s = sv_s + " FROM CUSTOM.C_DTD_P_EXT "
+	sv_s = sv_s + " WHERE  TRAN_ID = '" + MIIB.CUSTOM.hslTranId + "'"
+	sv_s = sv_s + " AND TRAN_DATE = TO_DATE('" + MIIB.CUSTOM.hslTranDate + "','DD-MM-YYYY HH24:MI:SS')"
+	sv_s = sv_s + " AND PART_TRAN_SRL_NUM = '"+ MIIB.CUSTOM.hslSrlNum+ "' "
+	sv_s = sv_s + " AND BANK_ID = '"+ BANCS.STDIN.contextBankId+ "' "
+	print(sv_s)
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	print(sv_d)
+	MIIB.CUSTOM.count = BANCS.OUTPARAM.count
+	print(MIIB.CUSTOM.count)
+	IF (sv_d != 0) THEN
+	#{
+		GOTO INSERT
+	#}
+	ELSE
+	#{	
+		MIIB.CUSTOM.count= BANCS.OUTPARAM.count
+		print(MIIB.CUSTOM.count)
+	#}
+	ENDIF
+	IF(CINT(MIIB.CUSTOM.count) == CINT("0"))THEN
+	#{
+		GOTO INSERT
+	#}
+	ELSE
+	#{
+		GOTO MODIFY
+	#}
+	ENDIF
+	
+	INSERT:
+	#----------------------------------------------
+	#Inserting values into the custom table
+	#----------------------------------------------
+	#Insert data into mod table only if delete flag =N
+	IF(MIIB.CUSTOM.hslAcid != "")THEN
+	#{
+	IF(MIIB.CUSTOM.shlDelFlg != "Y")THEN
+	#{
+
+		sv_s = "INSERT INTO CUSTOM.C_DTD_P_EXT ("
+		sv_s = sv_s +"ACID,TRAN_ID,TRAN_DATE,TRAN_AMT,PART_TRAN_SRL_NUM,PART_TRAN_TYPE,PSTD_FLG,PURPOSE_CODE,FREE_TEXT_1,FREE_TEXT_2,FREE_TEXT_3,FREE_TEXT_4,"
+		sv_s = sv_s + "FREE_TEXT_5,ENTITY_CRE_FLG,DEL_FLG,LCHG_TIME,LCHG_USER_ID,RCRE_USER_ID,RCRE_TIME,BANK_ID,SL_REMARKS) VALUES ("
+		sv_s = sv_s + "'"+MIIB.CUSTOM.hslAcid+"','" +MIIB.CUSTOM.hslTranId +"',TO_DATE('"+MIIB.CUSTOM.hslTranDate+"','DD-MM-YYYY HH24:MI:SS'),'"+MIIB.CUSTOM.hTranAmt +"','"+ MIIB.CUSTOM.hslSrlNum+"','"+ MIIB.CUSTOM.hslTranType + "','" +"N"+"','" + MIIB.CUSTOM.slPurpOfTxn + "','" + MIIB.CUSTOM.slAcctId + "','" +  MIIB.CUSTOM.slAcctName + "','" +  MIIB.CUSTOM.slAcctStatus + "','" + MIIB.CUSTOM.slCrncy +"|"+ MIIB.CUSTOM.slAcctBal + "','',"
+		sv_s = sv_s  + "'N','N',TO_DATE('"+MIIB.CUSTOM.sysDate+"','DD-MM-YYYY HH24:MI:SS'),'"+ BANCS.STDIN.userId +"','"+ BANCS.STDIN.userId +"',TO_DATE('"+MIIB.CUSTOM.sysDate+"','DD-MM-YYYY HH24:MI:SS'),'" + BANCS.STDIN.contextBankId +"','"+MIIB.CUSTOM.slTranRemarks+"')"  
+		print(sv_s)
+		sv_a = urhk_dbSQLWithBind(sv_s)
+		print(sv_a)
+		if(sv_a == 0) then
+		#{
+			PRINT("SUCCESS")
+		#}
+		ELSE
+		#{
+			sv_z = "Custom Fields : Insertion Failed in C_DTD_P_EXT(miibtrandet_insert.scr)."
+			sv_u = urhk_SRV_SetErr(sv_z)
+			sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+			BANCS.OUTPUT.successOrFailure = "F"
+			GOTO ENDOFSCRIPT
+
+		#}
+		ENDIF
+		sv_c = sv_c +1
+		print(sv_c)
+		GOTO NEXTREC
+	#}
+	ENDIF
+	
+	#Mofify id exists
+	MODIFY:
+	
+	IF(MIIB.CUSTOM.shlDelFlg != "Y")THEN
+	#{
+
+		sv_s = "UPDATE CUSTOM.C_DTD_P_EXT SET "
+		sv_s = sv_s +" ACID='"+MIIB.CUSTOM.hslAcid+"',TRAN_AMT='"+MIIB.CUSTOM.hTranAmt+"',PART_TRAN_TYPE='"+MIIB.CUSTOM.hslTranType+"',PSTD_FLG='N',PURPOSE_CODE='"+MIIB.CUSTOM.slPurpOfTxn+"',FREE_TEXT_1='"+MIIB.CUSTOM.slAcctId+"',FREE_TEXT_2='"+MIIB.CUSTOM.slAcctName+"',"
+		sv_s = sv_s + "FREE_TEXT_3='"+ MIIB.CUSTOM.slAcctStatus+"',FREE_TEXT_4='"+MIIB.CUSTOM.slCrncy +"|"+ MIIB.CUSTOM.slAcctBal+"',"
+		sv_s = sv_s + "FREE_TEXT_5='',ENTITY_CRE_FLG='N',DEL_FLG='N',LCHG_TIME=TO_DATE('"+MIIB.CUSTOM.sysDate+"','DD-MM-YYYY HH24:MI:SS'),LCHG_USER_ID='"+BANCS.STDIN.userId+"',SL_REMARKS='"+MIIB.CUSTOM.slTranRemarks+"'"
+		sv_s = sv_s + "WHERE "
+		sv_s = sv_s + "TRAN_ID='"+MIIB.CUSTOM.hslTranId+"' AND TRAN_DATE = TO_DATE('"+MIIB.CUSTOM.hslTranDate+"','DD-MM-YYYY HH24:MI:SS') AND PART_TRAN_SRL_NUM = '"+MIIB.CUSTOM.hslSrlNum+"' AND BANK_ID ='"+BANCS.STDIN.contextBankId+"'"
+		print(sv_s)
+		sv_a = urhk_dbSQLWithBind(sv_s)
+		print(sv_a)
+		if(sv_a == 0) then
+		#{
+			PRINT("SUCCESS")
+		#}
+		ELSE
+		#{
+			sv_z = "Custom Fields : UPdation  Failed in C_DTD_P_EXT(miibtrandet_insert.scr)."
+			sv_u = urhk_SRV_SetErr(sv_z)
+			sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+                        BANCS.OUTPUT.successOrFailure = "F"
+			GOTO ENDOFSCRIPT
+
+		#}
+		ENDIF
+		sv_c = sv_c +1
+		print(sv_c)
+		GOTO NEXTREC
+	#}
+	ENDIF
+	
+	
+	#}
+	ENDIF
+	
+	NEXTREC:
+	sv_m = sv_m + 1
+	#print(sv_m)
+#}
+DO
+
+ENDOFSCRIPT:
+EXITSCRIPT
+END-->

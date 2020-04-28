@@ -1,0 +1,455 @@
+<--START
+trace on
+#sv_r = urhk_B2k_PrintRepos("BANCS")
+
+IF (((BANCS.INPUT.source_id == "FWB") OR (BANCS.INPUT.source_id == "FWX") OR (BANCS.INPUT.source_id == "FWE") OR (BANCS.INPUT.source_id == "FXB")) AND (BANCS.TRDATA.fwc_ref_num!="")) THEN
+        #{
+                BANCS.TRDATA.reference_num=""
+        #}
+        ENDIF
+
+print(BANCS.TRDATA.fwc_ref_num)
+
+        # FWB to create an new FX Plus Time Options deal.
+        IF ((BANCS.INPUT.source_id == "FWB") AND (BANCS.TRDATA.fwc_ref_num!="")) THEN
+        #{
+                sv_q = "startdt,enddt|select to_char(VALID_FROM_DATE,'DD-MM-YYYY') ,to_char(VALID_TO_DATE,'DD-MM-YYYY') from tbaadm.FWD_CNTRCT_MAST_TABLE where "
+                sv_q = sv_q + " FRWRD_CNTRCT_NUM = '" + BANCS.TRDATA.fwc_ref_num + "' "
+                print(sv_q)
+                sv_z = urhk_dbSelectWithBind(sv_q)
+                print(BANCS.OUTPARAM.startdt)
+                print(BANCS.OUTPARAM.enddt)
+                BANCS.TRDATA.start_date = BANCS.OUTPARAM.startdt
+                BANCS.TRDATA.end_date = BANCS.OUTPARAM.enddt
+                BANCS.TRDATA.host_deal_category="FWCBOOK"
+                print(BANCS.TRDATA.host_deal_category)
+        #}
+        ENDIF
+
+        # FWX to create an new FX Plus Time Options deal.
+        IF ((BANCS.INPUT.source_id == "FWX") AND (BANCS.TRDATA.fwc_ref_num!="")) THEN
+        #{
+                sv_q = "startdt,enddt|select to_char(VALID_FROM_DATE,'DD-MM-YYYY') ,to_char(VALID_TO_DATE,'DD-MM-YYYY') from tbaadm.FWD_CNTRCT_MAST_TABLE where "
+                sv_q = sv_q + " FRWRD_CNTRCT_NUM = '" + BANCS.TRDATA.fwc_ref_num + "' "
+                print(sv_q)
+                sv_z = urhk_dbSelectWithBind(sv_q)
+                print(BANCS.OUTPARAM.startdt)
+                print(BANCS.OUTPARAM.enddt)
+                BANCS.TRDATA.start_date = BANCS.OUTPARAM.startdt
+                BANCS.TRDATA.end_date = BANCS.OUTPARAM.enddt
+                BANCS.TRDATA.host_deal_category="FWCCANCEL"
+                print(BANCS.TRDATA.host_deal_category)
+        #}
+        ENDIF
+
+
+        # FWE to create an new FX Plus Time Options deal.
+        IF ((BANCS.INPUT.source_id == "FWE") AND (BANCS.TRDATA.fwc_ref_num!="")) THEN
+        #{
+                sv_q = "startdt,enddt|select to_char(VALID_FROM_DATE,'DD-MM-YYYY') ,to_char(VALID_TO_DATE,'DD-MM-YYYY') from tbaadm.FWD_CNTRCT_MAST_TABLE where "
+                sv_q = sv_q + " FRWRD_CNTRCT_NUM = '" + BANCS.TRDATA.fwc_ref_num + "' "
+                print(sv_q)
+                sv_z = urhk_dbSelectWithBind(sv_q)
+                print(BANCS.OUTPARAM.startdt)
+                print(BANCS.OUTPARAM.enddt)
+                BANCS.TRDATA.start_date = BANCS.OUTPARAM.startdt
+                BANCS.TRDATA.end_date = BANCS.OUTPARAM.enddt
+                BANCS.TRDATA.host_deal_category="FWCEXTEND"
+                print(BANCS.TRDATA.host_deal_category)
+        #}
+        ENDIF
+
+        # Full Utilization to create an new FX Plus Time Options deal.
+        IF ((BANCS.INPUT.source_id == "FXB") AND (BANCS.TRDATA.fwc_ref_num!="")) THEN
+        #{
+                sv_q = "startdt,enddt|select to_char(VALID_FROM_DATE,'DD-MM-YYYY') , to_char(VALID_TO_DATE,'DD-MM-YYYY') from tbaadm.FWD_CNTRCT_MAST_TABLE where "
+                sv_q = sv_q + " FRWRD_CNTRCT_NUM = '" + BANCS.TRDATA.fwc_ref_num + "' "
+                print(sv_q)
+                sv_z = urhk_dbSelectWithBind(sv_q)
+                print(BANCS.OUTPARAM.startdt)
+                print(BANCS.OUTPARAM.enddt)
+                BANCS.TRDATA.start_date = BANCS.OUTPARAM.startdt
+                BANCS.TRDATA.end_date = BANCS.OUTPARAM.enddt
+                BANCS.TRDATA.host_deal_category="FWCUTIL"
+                print(BANCS.TRDATA.host_deal_category)
+                sv_a = BANCS.TRDATA.buy_amount_ccy
+                sv_b = BANCS.TRDATA.buy_amount
+                BANCS.TRDATA.buy_amount_ccy = BANCS.TRDATA.sell_amount_ccy
+                BANCS.TRDATA.buy_amount = BANCS.TRDATA.sell_amount
+                BANCS.TRDATA.sell_amount_ccy = sv_a
+                BANCS.TRDATA.sell_amount = sv_b
+        #}
+        ENDIF
+
+############################################################################################################################
+# Logic to Match the incoming FX Buy Sell transaction with the FX Rate Request. The following parameters are checked here       #
+# 1. Treasury Reference Number                                                                                                                                          #
+# 2. Value Date                                                                                                                                                                 #
+# 3. Buy Currency                                                                                                                                                               #
+# 4. Buy Amount                                                                                                                                                                 #
+# 5. Sell Currency                                                                                                                                                              #
+# 6. Sell Amount                                                                                                                                                                #
+# 7. Sol ID                                                                                                                                                                     #
+# 8. Forward Contract Rate                                                                                                                                                      #
+# 9. Host Deal Category - Should be always FXRATE which stands for FX Rate Request                                                              #
+############################################################################################################################
+
+BANCS.TRDATA.record_status="ACCEPTED"
+
+print(BANCS.TRDATA.reference_num)
+if (BANCS.TRDATA.reference_num != "") then
+#{
+        sv_a = "Count|select count(*) from HOST_DEAL_DATA "
+        sv_a = sv_a + "where reference_num = '" + BANCS.TRDATA.reference_num + "'"
+        print(sv_a)
+        sv_r = urhk_dbSelectWithBind(sv_a)
+        if(sv_r == 0) then
+        #{
+                print(CINT(BANCS.OUTPARAM.Count))
+                if (CINT(BANCS.OUTPARAM.Count) < 1) then
+                #{
+#                       BANCS.TRDATA.record_status="UNMATCHED"
+                        BANCS.TRDATA.additional_text_4 = "No match found for reference"
+                #}
+                else
+                #{
+                        if (CINT(BANCS.OUTPARAM.Count) > 1) then
+                        #{
+#                               BANCS.TRDATA.record_status="UNMATCHED"
+                                BANCS.TRDATA.additional_text_4 = "Many records found for reference"
+                        #}
+                        else
+                        #{
+                                sv_a = "NewCount|select count(*) from HOST_DEAL_DATA "
+                                sv_a = sv_a + " where reference_num = '" +BANCS.TRDATA.reference_num + "'"
+                                sv_a = sv_a + " and trunc(value_date) = to_date('" + BANCS.TRDATA.value_date + "', 'DD-MM-YYYY HH24:MI:SS')"
+                                sv_a = sv_a + " and buy_amount_ccy = '" + BANCS.TRDATA.buy_amount_ccy + "'"
+                                sv_a = sv_a + " and buy_amount = " + BANCS.TRDATA.buy_amount
+                                sv_a = sv_a + " and sell_amount_ccy = '" + BANCS.TRDATA.sell_amount_ccy + "'"
+                                sv_a = sv_a + " and sell_amount = " + BANCS.TRDATA.sell_amount
+                                sv_a = sv_a + " and sol_id = '" + BANCS.TRDATA.sol_id + "'"
+                                sv_a = sv_a + " and fwd_contract_rate = " + BANCS.TRDATA.fwd_contract_rate
+                                sv_a = sv_a + " and host_deal_category = 'FXRATE' "
+
+                                print(sv_a)
+                                sv_r = urhk_dbSelectWithBind(sv_a)
+                                if(sv_r == 0) then
+                                #{
+                                        print(CINT(BANCS.OUTPARAM.NewCount))
+                                        if (CINT(BANCS.OUTPARAM.NewCount) == 1) then
+                                        #{
+                                                BANCS.TRDATA.record_status = "MATCHED"
+                                        #}
+                                        else
+                                        #{
+                                                BANCS.TRDATA.record_status = "UNMATCHED"
+                                                BANCS.TRDATA.additional_text_4 = "Details does not match"
+                                        #}
+                                        endif
+                                #}
+                                endif
+                        #}
+                        endif
+                #}
+                endif
+        #}
+        endif
+#}
+endif
+
+####For setting the deal status to DELETED for CR 301################
+#####IF  TREA_REF_NUM  START with FT, then mark the status as delted
+IF(FIELDEXISTS(BANCS.INPUT.tran_id))THEN
+#{
+	sv_s = "trRefNum|SELECT SL_REMARKS FROM CUSTOM.C_DTD_P_EXT WHERE TRIM(TRAN_ID) = TRIM(?SVAR)"
+	sv_s = sv_s + " AND TRAN_DATE = to_date(?SVAR,'DD-MM-YYYY') AND TRIM(PART_TRAN_SRL_NUM) = TRIM(?SVAR)"
+	PRINT(sv_s)
+	BANCS.INPARAM.BINDVARS = BANCS.INPUT.tran_id + "|" + MID$(BANCS.INPUT.tran_date,0,10) + "|" + BANCS.INPUT.part_tran_srl_num
+	PRINT(BANCS.INPARAM.BINDVARS)
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	IF (sv_d == 0) THEN
+	#{
+		sv_k = BANCS.OUTPARAM.trRefNum
+		PRINT(sv_k)
+		IF((sv_k !="") AND ((LEFT$(sv_k,2) == "FT") OR (LEFT$(sv_k,2) == "FW"))) THEN
+		#{
+			BANCS.TRDATA.record_status="DELETED"
+		#}
+		ENDIF
+	#}
+	ENDIF
+	## marking status as deleted when passing HTM transaction
+	sv_s = "trRefNum|SELECT TRAN_RMKS FROM TBAADM.DTD WHERE TRIM(TRAN_ID) = TRIM(?SVAR)"
+	sv_s = sv_s + " AND TRAN_DATE = to_date(?SVAR,'DD-MM-YYYY') AND TRIM(PART_TRAN_SRL_NUM) = TRIM(?SVAR)"
+	PRINT(sv_s)
+	BANCS.INPARAM.BINDVARS = BANCS.INPUT.tran_id + "|" + MID$(BANCS.INPUT.tran_date,0,10) + "|" + BANCS.INPUT.part_tran_srl_num
+	PRINT(BANCS.INPARAM.BINDVARS)
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	IF (sv_d == 0) THEN
+	#{
+		sv_k = BANCS.OUTPARAM.trRefNum
+		PRINT(sv_k)
+		IF((sv_k !="") AND ((LEFT$(sv_k,2) == "FT") OR (LEFT$(sv_k,2) == "FW"))) THEN
+		#{
+			BANCS.TRDATA.record_status="DELETED"
+		#}
+		ENDIF
+	#}
+	ENDIF
+#}
+ENDIF
+#BANCS.TRDATA.record_status="DELETED"
+
+#####################################################################
+
+# - additional_text_2 is being populaated with cif Id of the customer in case of FCY transaction
+IF(FIELDEXISTS(BANCS.INPUT.tran_id))THEN
+        PRINT(BANCS.INPUT.tran_id)
+        PRINT(BANCS.INPUT.tran_date)
+        PRINT(BANCS.TRDATA.buy_or_sell)
+
+        IF (BANCS.TRDATA.buy_or_sell == "B") THEN
+                sv_a = "C"
+        ELSE
+                sv_a = "D"
+        ENDIF
+ IF(FIELDEXISTS(BANCS.STDIN.menuId))THEN
+#{
+        IF((BANCS.STDIN.menuId == "MEOB") OR (BANCS.STDIN.menuId == "MIIB") OR (BANCS.STDIN.menuId == "HIRM") OR (BANCS.STDIN.menuId == "HORM"))THEN
+        #{
+
+  sv_s = "pstCount|"
+  sv_s = sv_s + "SELECT   COUNT(1) FROM TBAADM.PST"
+  sv_s = sv_s + " WHERE    TRAN_ID         =   LPAD(?SVAR,9,' ') "
+  sv_s = sv_s + " AND      TRAN_DATE       =   to_date(?SVAR,'DD-MM-YYYY')"
+  sv_s = sv_s + " AND      ROWNUM          <   2"
+  PRINT(sv_s)
+  BANCS.INPARAM.BINDVARS = BANCS.INPUT.tran_id + "|" + MID$(BANCS.INPUT.tran_date,0,10)
+  PRINT(BANCS.INPARAM.BINDVARS)
+
+  sv_d = urhk_dbSelectWithBind(sv_s)
+  IF (sv_d == 0) THEN
+  #{
+      sv_y = BANCS.OUTPARAM.pstCount
+      PRINT(BANCS.OUTPARAM.pstCount)
+  #}
+  ENDIF
+        IF(sv_y > 0)THEN
+        #{
+                sv_s = "partyCode,crncyPurchsd,crncySold,rateCode|"
+                sv_s = sv_s + "SELECT   PARTY_CODE,CRNCY_PURCHSD,CRNCY_SOLD,RATECODE FROM TBAADM.PST"
+                sv_s = sv_s + " WHERE    TRAN_ID         =   LPAD(?SVAR,9,' ') "
+                sv_s = sv_s + " AND      TRAN_DATE       =   to_date(?SVAR,'DD-MM-YYYY')"
+                sv_s = sv_s + " AND      ROWNUM          <   2"
+                PRINT(sv_s)
+                BANCS.INPARAM.BINDVARS = BANCS.INPUT.tran_id + "|" + MID$(BANCS.INPUT.tran_date,0,10)
+                PRINT(BANCS.INPARAM.BINDVARS)
+
+                sv_d = urhk_dbSelectWithBind(sv_s)
+                IF (sv_d == 0) THEN
+                #{
+                        BANCS.TRDATA.additional_text_2 = BANCS.OUTPARAM.partyCode
+                        PRINT(BANCS.TRDATA.additional_text_2)
+                        sv_x = BANCS.TRDATA.additional_text_2
+                #}
+                ENDIF
+
+                IF((BANCS.OUTPARAM.crncyPurchsd!="") AND (BANCS.OUTPARAM.crncySold!="") AND (BANCS.OUTPARAM.rateCode!=""))THEN
+        #{
+            sv_i = BANCS.OUTPARAM.rateCode
+            sv_j = BANCS.OUTPARAM.crncyPurchsd
+            sv_l = BANCS.OUTPARAM.crncySold
+            IF(BANCS.OUTPARAM.crncyPurchsd != BANCS.OUTPARAM.crncySold)THEN
+            #{
+                    PRINT(BANCS.OUTPARAM.crncySold)
+                    PRINT(BANCS.OUTPARAM.crncyPurchsd)
+                    #PRINT(BANCS.OUTPARAM.trnAmt)
+                    PRINT(BANCS.OUTPARAM.rateCode)
+                    sv_s = "rate|Select var_crncy_units from rtl"
+                    sv_s = sv_s+ " where ratecode =?SVAR"
+                    sv_s = sv_s+ " and bank_id=?SVAR"
+                    sv_s = sv_s+ " AND fxd_crncy_code =?SVAR"
+                    sv_s = sv_s+ " AND var_crncy_code = ?SVAR"
+                    sv_s = sv_s+ " and del_flg =?SVAR"
+                    sv_s = sv_s + " and entity_cre_flg =?SVAR"
+                    print(sv_s)
+                    BANCS.INPARAM.BINDVARS = BANCS.OUTPARAM.rateCode +"|"+BANCS.STDIN.contextBankId+"|"+BANCS.OUTPARAM.crncySold+"|"+BANCS.OUTPARAM.crncyPurchsd+"|N|Y"
+                    sv_u = urhk_dbSelectWithBind(sv_s)
+                    IF(sv_u ==0) THEN
+                    #{
+                       PRINT(BANCS.OUTPARAM.rate)
+                        IF(FIELDEXISTS(BANCS.TRDATA.additional_text_3))THEN
+                        #{
+                            BANCS.TRDATA.additional_text_3 = BANCS.OUTPARAM.rate
+                            PRINT(BANCS.TRDATA.additional_text_3)
+                        #}
+                        ENDIF
+                    #}
+                    ELSE
+                    #{
+                        sv_s = "rate|Select var_crncy_units from rtl"
+                        sv_s = sv_s+ " where ratecode =?SVAR"
+                        sv_s = sv_s+ " and bank_id=?SVAR"
+                        sv_s = sv_s+ " AND fxd_crncy_code =?SVAR"
+                        sv_s = sv_s+ " AND var_crncy_code = ?SVAR"
+                        sv_s = sv_s+ " and del_flg =?SVAR"
+                        sv_s = sv_s + " and entity_cre_flg =?SVAR"
+                        print(sv_s)
+                        BANCS.INPARAM.BINDVARS = sv_i +"|"+BANCS.STDIN.contextBankId+"|"+sv_j+"|"+sv_l+"|N|Y"
+                        PRINT(BANCS.INPARAM.BINDVARS)
+                        sv_u = urhk_dbSelectWithBind(sv_s)
+                        IF(sv_u ==0) THEN
+                        #{
+                                                        PRINT(BANCS.OUTPARAM.rate)
+                            IF(FIELDEXISTS(BANCS.TRDATA.additional_text_3))THEN
+                            #{
+                                BANCS.TRDATA.additional_text_3 = BANCS.OUTPARAM.rate
+                                PRINT(BANCS.TRDATA.additional_text_3)
+                            #}
+                            ENDIF
+                        #}
+                        ENDIF
+                    #}
+                    ENDIF
+                #}
+                ELSE
+                #{
+                   PRINT("No Rate details fetched")
+                #}
+                ENDIF
+            #}
+            ELSE
+            #{
+                    PRINT("No Rate details fetched")
+            #}
+            ENDIF
+
+                sv_s = "acctName|"
+        sv_s = sv_s + " SELECT CUST_NAME FROM TBAADM.CMG"
+        sv_s = sv_s + " WHERE CIF_ID=?SVAR"
+        sv_s = sv_s + " AND BANK_ID = ?SVAR"
+        BANCS.INPARAM.BINDVARS = sv_x + "|" + BANCS.STDIN.contextBankId
+        sv_d = urhk_dbSelectWithBind(sv_s)
+        IF (sv_d == 0) THEN
+        #{
+            BANCS.TRDATA.additional_text_1 = BANCS.OUTPARAM.acctName
+        #}
+        ENDIF
+        #}
+        ENDIF
+        #}
+        ENDIF
+        IF((BANCS.STDIN.menuId == "HDDXMI") AND (BANCS.INPUT.br_pur_sale == ""))THEN
+    #{
+        BANCS.TRDATA.host_deal_category = ""
+    #}
+    ENDIF
+#}
+ENDIF
+
+        sv_s = "cifId,acctName,tranCcy,refCcy,rateCode|"
+        sv_s = sv_s + "SELECT   cif_id,acct_name,tran_crncy_code,ref_crncy_code,rate_code FROM  TBAADM.GAM, TBAADM.DTD "
+        sv_s = sv_s + "WHERE    GAM.acid                =       DTD.acid        "
+        sv_s = sv_s + "AND              TRAN_ID                 =       LPAD(?SVAR,9,' ') "
+        sv_s = sv_s + "AND              TRAN_DATE               =       to_date(?SVAR,'DD-MM-YYYY')"
+        sv_s = sv_s + "AND              PART_TRAN_TYPE  =       ?SVAR "
+#       sv_s = sv_s + "AND              DTD.CUST_ID             IS NOT NULL "
+        sv_s = sv_s + "AND              PSTD_FLG                =       'Y' "
+        sv_s = sv_s + "AND              ROWNUM                  <       2"
+
+        PRINT(sv_s)
+
+        BANCS.INPARAM.BINDVARS = BANCS.INPUT.tran_id + "|" + MID$(BANCS.INPUT.tran_date,0,10) + "|" + sv_a
+        PRINT(BANCS.INPARAM.BINDVARS)
+
+        sv_d = urhk_dbSelectWithBind(sv_s)
+        IF (sv_d == 0) THEN
+                BANCS.TRDATA.additional_text_2 = BANCS.OUTPARAM.cifId
+                BANCS.TRDATA.additional_text_1 = BANCS.OUTPARAM.acctName
+                PRINT(BANCS.TRDATA.additional_text_2)
+                PRINT(BANCS.TRDATA.additional_text_1)
+                PRINT(BANCS.TRDATA.additional_text_3)
+
+                #######################################################
+                #Changes   for rate code
+                ########################################################
+                IF((BANCS.OUTPARAM.tranCcy!="") AND (BANCS.OUTPARAM.refCcy!="") AND (BANCS.OUTPARAM.rateCode!=""))THEN
+        #{
+                                sv_i = BANCS.OUTPARAM.rateCode
+                                sv_j = BANCS.OUTPARAM.tranCcy
+                                sv_l = BANCS.OUTPARAM.refCcy
+                IF(BANCS.OUTPARAM.tranCcy != BANCS.OUTPARAM.refCcy)THEN
+                #{
+                        PRINT(BANCS.OUTPARAM.refCcy)
+                        PRINT(BANCS.OUTPARAM.tranCcy)
+                        #PRINT(BANCS.OUTPARAM.trnAmt)
+                        PRINT(BANCS.OUTPARAM.rateCode)
+                                                sv_a = "rate|Select var_crncy_units from rtl"
+                        sv_a = sv_a+ " where ratecode =?SVAR"
+                                                sv_a = sv_a+ " and bank_id=?SVAR"
+                        sv_a = sv_a+ " AND fxd_crncy_code =?SVAR"
+                        sv_a = sv_a+ " AND var_crncy_code = ?SVAR"
+                        sv_a = sv_a+ " and del_flg =?SVAR"
+                        sv_a = sv_a + " and entity_cre_flg =?SVAR"
+                        print(sv_a)
+                        BANCS.INPARAM.BINDVARS = BANCS.OUTPARAM.rateCode +"|"+BANCS.STDIN.contextBankId+"|"+BANCS.OUTPARAM.refCcy+"|"+BANCS.OUTPARAM.tranCcy+"|N|Y"
+                        sv_u = urhk_dbSelectWithBind(sv_a)
+                        IF(sv_u ==0) THEN
+                        #{
+                           PRINT(BANCS.OUTPARAM.rate)
+                                                        IF(FIELDEXISTS(BANCS.TRDATA.additional_text_3))THEN
+                                                        #{
+                                                                BANCS.TRDATA.additional_text_3 = BANCS.OUTPARAM.rate
+                                    PRINT(BANCS.TRDATA.additional_text_3)
+                                                        #}
+                                                        ENDIF
+                        #}
+                        ELSE
+                                                #{
+                                                        sv_a = "rate|Select var_crncy_units from rtl"
+                                                        sv_a = sv_a+ " where ratecode =?SVAR"
+                                                        sv_a = sv_a+ " and bank_id=?SVAR"
+                                                        sv_a = sv_a+ " AND fxd_crncy_code =?SVAR"
+                                                        sv_a = sv_a+ " AND var_crncy_code = ?SVAR"
+                                                        sv_a = sv_a+ " and del_flg =?SVAR"
+                                                        sv_a = sv_a + " and entity_cre_flg =?SVAR"
+                                                        print(sv_a)
+                                                        BANCS.INPARAM.BINDVARS = sv_i +"|"+BANCS.STDIN.contextBankId+"|"+sv_j+"|"+sv_l+"|N|Y"
+                                                        PRINT(BANCS.INPARAM.BINDVARS)
+                                                        sv_u = urhk_dbSelectWithBind(sv_a)
+                                                        IF(sv_u ==0) THEN
+                                                        #{
+                                                           PRINT(BANCS.OUTPARAM.rate)
+                                                                IF(FIELDEXISTS(BANCS.TRDATA.additional_text_3))THEN
+                                                                #{
+                                                                        BANCS.TRDATA.additional_text_3 = BANCS.OUTPARAM.rate
+                                                                        PRINT(BANCS.TRDATA.additional_text_3)
+                                                                #}
+                                                                ENDIF
+                                                        #}
+                                                        ENDIF
+                                                #}
+                                                ENDIF
+                                        #}
+                                        ELSE
+                                        #{
+                       PRINT("No Rate details fetched")
+                                        #}
+                                        ENDIF
+                #}
+                ELSE
+                #{
+                        PRINT("No Rate details fetched")
+                #}
+                ENDIF
+        ENDIF
+ENDIF
+
+
+
+BANCS.TRDATA.additional_text_4 = "FTPurSale.scr Script Used"
+BANCS.TRDATA.host_deal_action="COMPLETE"
+
+END-->
+
+

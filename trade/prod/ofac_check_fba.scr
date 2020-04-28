@@ -1,0 +1,229 @@
+#------------------------------------------------------------------------
+#	File Name		:	ofac_check_fba.scr	
+#	Author			:	Rupa Dantuluri 
+#	Date			:	16-11-2012
+#	Input			:
+#	Output			:
+#	Modification	:
+#------------------------------------------------------------------------
+
+<--start
+trace on
+	sv_b = ""
+	BANCS.INPARAM.funCode = OFAC.STRDATA.func_code	
+	#Check if script is called from validate or post process script
+	if (OFAC.STRDATA.call_mode == "E") then
+	#{
+		call("ofac_all_init_var.scr")
+		GOTO STEP1
+	#}
+	else
+		GOTO STEP2
+	endif
+	#Check if script is called from validate or post process script
+	GOTO ENDSCRIPT
+#When called from validate script
+STEP1:
+CIF_ID:
+	if(BANCS.STDIN.menuOption == "HOAACBP") then
+	#{
+		sv_a = urhk_SRV_GetVal("acctCommonInfo.acctGeneralInfo.acctCustInfo.custId.cifId")
+		if(BANCS.OUTPARAM.srvValue == "") then
+			GOTO PERM_ACCT
+		endif
+		sv_b = "acctCommonInfo_acctGeneralInfo_cifId~" + BANCS.OUTPARAM.srvValue +"~"
+		OFAC.STRDATA.inp_msg = OFAC.STRDATA.inp_msg + sv_b
+	#}
+	endif
+	GOTO PERM_ACCT
+
+PERM_ACCT:
+
+	if((BANCS.STDIN.menuOption == "HOAACMBP") or (BANCS.STDIN.menuOption == "HOAACVBP"))then
+	#{
+		sv_a	=	urhk_SRV_GetVal("acctCommonInfo.acctGeneralInfo.acctBasic.foracid")
+		if(trim(BANCS.OUTPARAM.srvValue) == "") then
+			GOTO TEMP_ACCT 
+		endif
+		sv_b = "acctCommonInfo_acctGeneralInfo_acctBasic_permAcct~" + BANCS.OUTPARAM.srvValue +"~"
+        	OFAC.STRDATA.inp_msg = OFAC.STRDATA.inp_msg + sv_b
+	#}
+	endif
+	GOTO TEMP_ACCT
+TEMP_ACCT:	
+	if((BANCS.STDIN.menuOption == "HACMBP"))then
+	#{
+		sv_a    = urhk_SRV_GetVal("acctCommonInfo.acctGeneralInfo.acctBasic.acid")
+                if(trim(BANCS.OUTPARAM.srvValue) == "") then
+                        GOTO ACCT
+                endif
+                sv_b = "acctCommonInfo_acctGeneralInfo_acctBasic_permAcct~" + BANCS.OUTPARAM.srvValue +"~"
+                OFAC.STRDATA.inp_msg = OFAC.STRDATA.inp_msg + sv_b
+        #}
+        endif
+	GOTO ACCT
+ACCT:
+
+	sv_a    =       urhk_SRV_GetVal("fbSchemeDetails.eciPremDrAcid.foracid")
+	if(trim(BANCS.OUTPARAM.srvValue) == "") then
+	#{
+		GOTO DEFAULT_OPER_CR
+	#}
+	endif
+	sv_b = "fbSchemeDetails_eciPremDrAcid~" + BANCS.OUTPARAM.srvValue +"~"
+	OFAC.STRDATA.inp_msg = OFAC.STRDATA.inp_msg + sv_b
+
+DEFAULT_OPER_CR: 
+
+	sv_a    =       urhk_SRV_GetVal("fbSchemeDetails.dfltOperCrAcid.foracid")
+	if(trim(BANCS.OUTPARAM.srvValue) == "") then
+	#{
+		GOTO DEFAULT_OPER_DR
+	#}
+	endif
+	sv_b = "fbSchemeDetails_dfltOperCrAcid~" + BANCS.OUTPARAM.srvValue +"~"
+	OFAC.STRDATA.inp_msg = OFAC.STRDATA.inp_msg + sv_b
+	
+DEFAULT_OPER_DR:
+	
+	sv_a    =       urhk_SRV_GetVal("fbSchemeDetails.dfltOperDrAcid.foracid")
+	if(trim(BANCS.OUTPARAM.srvValue) == "") then
+	#{
+		GOTO DEFAULT_MARGIN_ACCT
+	#}
+	endif
+	sv_b = "fbSchemeDetails_dfltOperDrAcid~" + BANCS.OUTPARAM.srvValue +"~"
+	OFAC.STRDATA.inp_msg = OFAC.STRDATA.inp_msg + sv_b
+	
+DEFAULT_MARGIN_ACCT:
+
+	sv_a    =       urhk_SRV_GetVal("fbSchemeDetails.dfltMarginAcid.foracid")
+	if(trim(BANCS.OUTPARAM.srvValue) == "") then
+	#{
+		GOTO OFAC_CALL
+	#}
+	endif
+	sv_b = "fbSchemeDetails_dfltMarginAcid~" + BANCS.OUTPARAM.srvValue +"~"
+	OFAC.STRDATA.inp_msg = OFAC.STRDATA.inp_msg + sv_b
+	
+
+
+OFAC_CALL:
+
+	if ((OFAC.STRDATA.func_code == "C") or (OFAC.STRDATA.func_code == "O")) then
+		OFAC.STRDATA.func_code = "A"
+	endif
+
+	BANCS.INPARAM.func_code = OFAC.STRDATA.func_code
+	if (OFAC.STRDATA.func_code == "V") then
+	#{
+		sv_a = urhk_SRV_GetVal("acctCommonInfo.acctGeneralInfo.acctBasic.foracid")
+		sv_f= trim(BANCS.OUTPARAM.srvValue)
+		sv_b = "acctCommonInfo_acctGeneralInfo_acctBasic_permAcct~" + BANCS.OUTPARAM.srvValue +"~"
+        	OFAC.STRDATA.inp_msg = OFAC.STRDATA.inp_msg + sv_b
+
+		sv_s = "ACID | select ACID from TBAADM.GAM where  "
+		sv_s = sv_s + " GAM.BANK_ID = ?SVAR AND " 
+		sv_s = sv_s + "FORACID = ?SVAR"
+		BANCS.INPARAM.BINDVARS=BANCS.STDIN.contextBankId + "|" +sv_f
+		sv_u = urhk_dbSelectWithBind(sv_s)
+		if (sv_u != 0) then
+		#{
+			OFAC.STRDATA.error_msg="Unable to get record from GAM for the following query["+sv_s+"]"
+			OFAC.STRDATA.successOrFailure="F"
+			OFAC.STRDATA.error_code="006"
+			OFAC.STRDATA.error_type="F"
+			GOTO ERROR
+		#}
+		endif
+		OFAC.STRDATA.event_key		=	BANCS.OUTPARAM.ACID
+		sv_b = sv_b +"acctGeneralInfo_acctBasic_acid~" + trim(BANCS.OUTPARAM.ACID) +"~"
+	
+	#}
+	else
+        #{
+                sv_a =  urhk_SRV_GetVal("acctCommonInfo.acctGeneralInfo.acctBasic.acid")
+                OFAC.STRDATA.event_key = trim(BANCS.OUTPARAM.srvValue)
+                sv_b =  "acctGeneralInfo_acctBasic_acid~" + trim(BANCS.OUTPARAM.srvValue) +"~"
+        #}
+	endif
+	OFAC.STRDATA.inp_msg = OFAC.STRDATA.inp_msg + sv_b
+	BANCS.OUTPARAM.inp_msg = OFAC.STRDATA.inp_msg
+OFAC.STRDATA.module_id			=	"TFIN"
+	OFAC.STRDATA.event_type                 =               "ACCNT"
+	OFAC.STRDATA.call_mode			=	"E"	
+	call("ofac_pre_check.scr")
+	OFAC.STRDATA.func_code = BANCS.INPARAM.funCode
+	if(OFAC.STRDATA.successOrFailure=="F") then
+	#{
+		GOTO ERROR
+	#}
+	endif
+	GOTO  ENDSCRIPT
+
+
+STEP2:
+	OFAC.STRDATA.module_id                 =       "TFIN"
+	OFAC.STRDATA.event_type                 =               "ACCNT"
+	#OFAC.STRDATA.func_code= BANCS.INPARAM.func_code
+
+	if (OFAC.STRDATA.func_code == "V") then
+        #{
+		sv_a	=	 urhk_SRV_GetVal("acctCommonInfo.acctGeneralInfo.acctBasic.foracid")
+		print(sv_a)
+		OFAC.STRDATA.Tran_Identifier    =	  	 BANCS.OUTPARAM.srvValue
+       		print(BANCS.OUTPARAM.srvValue) 
+		sv_s = "ACID | select ACID from TBAADM.GAM where  "
+		sv_s = sv_s + " GAM.BANK_ID = ?SVAR AND " 
+		sv_s = sv_s + "FORACID = ?SVAR"
+		print(sv_s)
+		BANCS.INPARAM.BINDVARS=BANCS.STDIN.contextBankId + "|"+	OFAC.STRDATA.Tran_Identifier
+		print(BANCS.INPARAM.BINDVARS)
+		sv_u		=	 urhk_dbSelectWithBind(sv_s)
+		print(BANCS.OUTPARAM.ACID)
+		if (sv_u != 0 ) then
+		#{
+			OFAC.STRDATA.error_msg="Unable to get record from GAM for the following query["+sv_s+"]"
+			OFAC.STRDATA.successOrFailure="F"
+			OFAC.STRDATA.error_code="006"
+			OFAC.STRDATA.error_type="F"
+			GOTO ERROR
+		#}
+		endif
+		OFAC.STRDATA.event_key		=		BANCS.OUTPARAM.ACID
+		print(sv_b)
+		sv_b = sv_b +"acctGeneralInfo_acctBasic_acid~" + trim(BANCS.OUTPARAM.ACID) +"~"
+		print(sv_b)	
+	#}
+	else
+        #{
+                sv_a =  urhk_SRV_GetVal("acctCommonInfo.acctGeneralInfo.acctBasic.acid")
+                OFAC.STRDATA.event_key = trim(BANCS.OUTPARAM.srvValue)
+                sv_b =  "acctGeneralInfo_acctBasic_acid~" + trim(BANCS.OUTPARAM.srvValue) +"~"
+        #}
+	endif
+	print(OFAC.STRDATA.inp_msg)
+	OFAC.STRDATA.inp_msg = OFAC.STRDATA.inp_msg + sv_b
+	OFAC.STRDATA.module_id			=		"TFIN"
+	OFAC.STRDATA.event_type                 =               "ACCNT"
+	OFAC.STRDATA.call_mode			=		"U"
+	call("ofac_pre_check.scr")
+	OFAC.STRDATA.func_code = BANCS.INPARAM.funCode
+	if(OFAC.STRDATA.successOrFailure=="F") then
+	#{
+	    GOTO ERROR
+	#}
+	else
+	   sv_u = urhk_dbSQLWithBind("commit")
+	endif
+	GOTO ENDSCRIPT
+
+
+ERROR:
+	call("ofac_handle_onsError.scr")
+	GOTO ENDSCRIPT
+
+ENDSCRIPT:
+	exitscript
+trace off
+end-->

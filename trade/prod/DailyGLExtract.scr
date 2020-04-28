@@ -1,0 +1,105 @@
+#############################################################################################################
+#    Name                   : DailyGLExtract.scr
+#    Date                   : 30-06-2018
+#    Description            : Daily GL Extract
+#    Author                 : Chaitanya Yandrapu
+#    Called Script          : none
+#    Calling Script         : none
+#    Modification History   :
+#    SNo         Date                   Author Name               Description
+#    1           30-06-2018             Chaitanya Yandrapu      Daily GL Extract
+###############################################################################################################
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+TRACE ON
+IF(REPEXISTS("CUST")==0) THEN
+#{
+	CREATEREP("CUST")
+#}
+ENDIF
+IF(CLASSEXISTS("CUST","LHB")==0) THEN
+#{
+	CREATECLASS("CUST","LHB",5)
+#}
+ENDIF
+CUST.LHB.GLFile = "GLXFIND.TXT"
+CUST.LHB.GLSumFile = "GLXFIN.TXT"
+CUST.LHB.GLFilebkp = "GLXFIND_" + MID$(BANCS.STDIN.sysDate,0,10) + ".TXT"
+CUST.LHB.GLSumFilebkp = "GLXFIN_" + MID$(BANCS.STDIN.sysDate,0,10) + ".TXT"
+#--------------------------------------------------------------------------------
+# Fetching CPARAM value for GL Batch Path
+#--------------------------------------------------------------------------------
+sv_s = func_getCPARAMValueB("GL_BATCH_PATH", "INTF" , BANCS.STDIN.contextBankId , BYREF CUST.LHB.GLBatchPath)
+IF(sv_s == 0) THEN
+#{
+	PRINT(CUST.LHB.GLBatchPath)
+#}
+ELSE
+#{
+	PRINT("CPARAM not configured for GL Batch Path")
+	CUST.LHB.GLBatchPath = "$TBA_PROD_ROOT/CDCI_LOGS/"
+#}
+ENDIF
+#--------------------------------------------------------------------------------
+# Executing GL Extract package
+#--------------------------------------------------------------------------------
+sv_s = "exebatch spbx4001 CUSTOM.FIN_GL_EXTRACT_PACK.FIN_GL_EXTRACT_PROC > " + CUST.LHB.GLFile
+print(sv_s)
+sv_d= SYSTEM(sv_s)
+print(sv_d)
+#--------------------------------------------------------------------------------
+# Copy to required path
+#--------------------------------------------------------------------------------
+sv_l = "cp " + CUST.LHB.GLFile + "  " + CUST.LHB.GLBatchPath
+print(sv_l)
+sv_v = system(sv_l)
+print(sv_v)
+sv_l = "cp " + CUST.LHB.GLFile + "  " + CUST.LHB.GLBatchPath + CUST.LHB.GLFilebkp
+print(sv_l)
+sv_v = system(sv_l)
+print(sv_v)
+#--------------------------------------------------------------------------------
+# Executing GL Summary package
+#--------------------------------------------------------------------------------
+sv_s = "exebatch spbx4001 CUSTOM.FIN_GL_SUMMARY_PACK.FIN_GL_SUMMARY_PROC > " + CUST.LHB.GLSumFile 
+print(sv_s)
+sv_d= SYSTEM(sv_s)
+print(sv_d)
+#--------------------------------------------------------------------------------
+# Copy to required path
+#--------------------------------------------------------------------------------
+sv_l = "cp " + CUST.LHB.GLSumFile + "  " + CUST.LHB.GLBatchPath
+print(sv_l)
+sv_v = system(sv_l)
+print(sv_v)
+sv_l = "cp " + CUST.LHB.GLSumFile + "  " + CUST.LHB.GLBatchPath + CUST.LHB.GLSumFilebkp
+print(sv_l)
+sv_v = system(sv_l)
+print(sv_v)
+#--------------------------------------------------------------------------------
+# SFTP File Transfer
+#--------------------------------------------------------------------------------
+sv_u = urhk_getFileLocation("COM|sftp_tf_put.com")
+print(sv_u)
+IF(sv_u == 0) THEN
+#{
+        sv_m = BANCS.OUTPARAM.fileLocation
+        print(sv_m)
+
+	#Transfer of GL Details File
+        sv_a = sv_m + "sftp_tf_put.com " + CUST.LHB.GLFile + " /FTP_DATA/FIN/EXPORT " + CUST.LHB.GLBatchPath + " > "+CUST.LHB.GLBatchPath+"/GLExtractLog.txt"
+        print(sv_a)
+        sv_v = system(sv_a)
+        print(sv_v)
+
+	#Transfer of GL Summary File
+	sv_a = sv_m + "sftp_tf_put.com " + CUST.LHB.GLSumFile + " /FTP_DATA/FIN/EXPORT " + CUST.LHB.GLBatchPath + " >> "+CUST.LHB.GLBatchPath+"/GLExtractLog.txt"
+	print(sv_a)
+	sv_v = system(sv_a)
+	print(sv_v)
+#}
+ENDIF
+
+TRACE OFF
+END-->

@@ -1,0 +1,261 @@
+============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: fttran.scr
+# Type: NA|default
+# Description: recon
+# Author:
+# Date:
+# Modification Log:
+#============================================================
+
+<--START
+#CHECKSUM="db5bff43775c5cc1b60c6ecfdf1d04043510fbd60d90ede352a180629122bac9"
+                ######################################################################
+                # MTT script to upload Finacle Treasury Transactions in Finacle Core #
+                # This mtt script can be run with help of babx4071                   #
+                #                                                                   #
+                ######################################################################
+                TRACE ON
+
+                sv_d = ""
+
+                BANCS.INPARAM.BINDVARS = "MIGRATION_DATE" + "|" + BANCS.STDIN.contextBankId
+
+                sv_q = " migDate | SELECT PARAMETER_VALUE FROM CUSTOM.C_CPARAM_VALUE_TABLE WHERE PARAMETER_ID = ?SVAR AND BANK_ID = ?SVAR "
+
+                PRINT(BANCS.INPARAM.BINDVARS)
+                PRINT(sv_q)
+
+                sv_s = urhk_dbSelectWithBind(sv_q)
+                PRINT (sv_s)
+
+                IF ( sv_s == 0 ) THEN
+                #{
+                                sv_d = BANCS.OUTPARAM.migDate
+                #}
+                ENDIF
+                PRINT(sv_d)
+
+
+                MTT.TranDetails.TranDate="0"
+		print(MTT.TranDetails.TranDate)
+                MTT.TranDetails.TranType="T"
+                MTT.TranDetails.TranSubType="BI"
+
+                BANCS.INPUT.whereClause="upload_type in ('FTSYS','FTUSER','FTUSR') "
+
+                B2KTEMP.TEMPSTD.NewTransaction = "Y"
+
+                # ft_gl_trans is synonym to gl_trans table in Finacle Treasury Schema/DB
+                sv_a = ""
+                sv_a = sv_a + "insert into TBA_TRAN_UPLD_TBL "
+                sv_a = sv_a + "(upload_type, upload_ref_no, srl_num, "
+                sv_a = sv_a + "foracid, crncy_code, amount, "
+                sv_a = sv_a + "part_tran_type, value_date, tran_particular, tran_rmks, "
+                sv_a = sv_a + "addnl_data_1, addnl_data_2, addnl_data_3, "
+                sv_a = sv_a + "addnl_data_4,addnl_data_5,deal_number, deal_type, deal_sub_type, "
+                sv_a = sv_a + "pending_upload, upload_time, Bank_Id) "
+                sv_a = sv_a + "(select 'FT'||a.jnlsource, a.jnlref, LPAD(a.jnlline,4,' '),"
+                sv_a = sv_a + "a.lbs_account_id, a.ccycde, abs(a.amount), "
+                sv_a = sv_a + "decode(sign(a.amount),1,'D','C'), a.valuedate, a.narrative, a.dealnumber,"
+                sv_a = sv_a + "a.ledger,a.method,a.accnum,"
+		sv_a = sv_a + " (select lbs_1 from sd_subtype@FCFTADM ss where a.DEALSUBTYPE=ss.name),"
+		sv_a = sv_a + " (select distinct LBS_7 FROM ( (SELECT LBS_7   "
+                sv_a = sv_a + " FROM TT_SEC_BS  b , sd_cpty  where b.CPTY_FBO_ID_NUM = sd_cpty.FBO_ID_NUM and  b.DEAL_NUM =   a.dealnumber"              
+                sv_a = sv_a + " UNION "
+                sv_a = sv_a + " SELECT LBS_7 FROM TT_SEC_HDG  b  , sd_cpty  where  b.CPTY_FBO_ID_NUM = sd_cpty.FBO_ID_NUM and  b.DEAL_NUM =  a.dealnumber "
+                sv_a = sv_a + " UNION "
+                sv_a = sv_a + " SELECT LBS_7 FROM TT_COM_LOAN  b  , sd_cpty  where  b.CPTY_FBO_ID_NUM = sd_cpty.FBO_ID_NUM and  b.DEAL_NUM =  a.dealnumber"
+                sv_a = sv_a + " UNION "
+                sv_a = sv_a + " SELECT LBS_7 FROM TT_FXP_DEAL   b  , sd_cpty  where  b.CPTY_FBO_ID_NUM = sd_cpty.FBO_ID_NUM and  b.DEAL_NUM =  a.dealnumber))) ,"		
+		sv_a = sv_a + " a.dealnumber, a.dealtype,a.dealsubtype,"
+                sv_a = sv_a + "'Y', sysdate, ?SVAR "
+                sv_a = sv_a + "from gl_trans@FCFTADM  a "
+                sv_a = sv_a + "where  "
+                sv_a = sv_a + "a.lbs_account_branch IN ( '790') "
+                sv_a = sv_a + "AND a.LBS_ACCOUNT_ID not in ('SUSPENSE','0000000000','000000000000','NONE') "
+                #####  Comment the below line to enable Bond acounting from Treasury to silverlake #######
+                sv_a = sv_a + "AND a.dealtype not in ('SECBS','SECHDG') "
+                ##########################################################################################
+		sv_a = sv_a + "AND a.amount != 0 "
+                sv_a = sv_a + "AND a.entity_id = 'LHB' "
+                #sv_a = sv_a + "AND a.VALUEDATE > '20-APR-2017' "
+                sv_a = sv_a + "AND a.VALUEDATE > TO_DATE(?SVAR, 'DD-MM-YYYY') "
+                sv_a = sv_a + "AND a.dealsubtype not in ('BOOTH', 'FCORE') "
+                sv_a = sv_a + "AND a.lbs_account_id != 'NONE' "
+                # For performance you can add condition to select only last few days records
+                # sv_a = sv_a + "and trantime > sysdate - 7"
+                # and then add a index on trantime in gl_trans
+                sv_a = sv_a + "AND not exists (select 1 from TBA_TRAN_UPLD_TBL b "
+                sv_a = sv_a + "where b.BANK_ID = ?SVAR AND "
+                sv_a = sv_a + "b.upload_ref_no = a.jnlref "
+                sv_a = sv_a + "AND   b.upload_type = 'FT'||a.jnlsource "
+                sv_a = sv_a + "AND   b.srl_num = LPAD(a.jnlline,4,' '))) "
+               print(sv_a) 
+		BANCS.INPARAM.BINDVARS = BANCS.STDIN.contextBankId+ "|" + sv_d + "|" + BANCS.STDIN.contextBankId
+                sv_r = urhk_dbSqlWithBind(sv_a)
+		print(sv_r)
+                sv_r = urhk_dbSqlWithBind("commit")
+		print(sv_r)
+                # use sv_c only for storing return value of MTTS_PopulateInputDetails
+
+                sv_c = urhk_MTTS_PopulateInputDetails("")
+                print(sv_c)
+
+                WHILE(sv_c == 0)
+                #{
+                                #-----------------------------
+                                # Populate Transaction details
+                                #-----------------------------
+                                IF (B2KTEMP.TEMPSTD.NewTransaction == "Y") THEN
+                                #{
+                                                MTT.TranDetails.TranDate="0"
+                                                MTT.TranDetails.TranType="T"
+                                                MTT.TranDetails.TranSubType="BI"
+                                                MTT.TranDetails.IgnoreExcp="I"
+                                                MTT.TranDetails.Consolidate = "Y"
+                                                MTT.TranDetails.ReversalFlg = "N"
+                                                MTT.TranDetails.ReversalDate="0"
+                                                MTT.TranDetails.Remarks="FT Journal Ref" + "-" + MTT.InputDetails.UploadRefNo
+
+                                                sv_r = urhk_MTTS_DefineTransaction("FTTR")
+                                                IF(0 != sv_r)THEN
+                                                #{
+                                                                BANCS.OUTPUT.fatalErrorFlg="Y"
+                                                                BANCS.OUTPUT.fatalErrorMsg="urhk_MTTS_DefineTransaction failed"
+                                                                EXITSCRIPT
+                                                #}
+                                                ENDIF
+
+                                                B2KTEMP.TEMPSTD.NewTransaction = "N"
+                                #}
+                                ENDIF
+
+                                sv_y = ""
+                                sv_p = ""
+                                sv_z = MTT.InputDetails.AdditionalData1
+                                sv_a = MTT.InputDetails.InputAccount
+                                PRINT(sv_a)
+                                IF (MTT.InputDetails.Account == "") THEN
+                                #{
+                                                IF (MTT.InputDetails.InputAccount == "") THEN
+                                                #{
+                                                                sv_p = "Account not mapped in FT "
+                                                                PRINT(sv_p)
+                                                #}
+                                                ELSE
+                                                #{
+                                                                sv_p = "Invalid Account mapped in FT [" + MTT.InputDetails.InputAccount + "]"
+                                                                PRINT(sv_p)
+                                                #}
+                                                ENDIF
+                                #}
+                                ELSE
+                                #{
+                                                sv_s = urhk_getAcctDetailsInRepository(sv_a)
+                                                IF (sv_s ==1) THEN
+                                                #{
+                                                                EXITSCRIPT
+                                                #}
+                                                ENDIF
+                                                # Account must be in amount currency except for P&L in LCY
+                                                IF (MTT.InputDetails.TranCurrency != MTT.InputDetails.RefCurrency) THEN
+                                                #{
+                                                                sv_p = "Wrong Account mapping: FT Account currency [" + MTT.InputDetails.RefCurrency + "] AND GL Account currency is [" + MTT.InputDetails.TranCurrency + "]"
+                                                                PRINT(sv_p)
+                                                #}
+                                                ENDIF
+
+                                                # Account must belong to my sol
+                                #             IF (MTT.InputDetails.AccountSol != BANCS.STDIN.mySolId) THEN
+                                                #{
+                                #                             sv_p = "Wrong Account mapping: FT Account sol [" + MTT.InputDetails.AccountSol + "] AND  context sol is [" + BANCS.STDIN.mySolId + "]"  + " FT Account number is [" + MTT.InputDetails.InputAccount + "]"
+                                #                             PRINT(sv_p)
+                                                #}
+                                #             ENDIF
+                                #}
+                                ENDIF
+
+                                IF (sv_p != "") THEN
+                                #{
+                                                MTT.Error.Description = sv_p
+                                                sv_r=urhk_MTTS_ReportErrorCondition("")
+                                                GOTO NextRecord
+                                #}
+                                ENDIF
+
+
+                                MTT.PartTranDetails.Account=MTT.InputDetails.Account
+                                MTT.PartTranDetails.RefAmount=MTT.InputDetails.RefAmount
+                                MTT.PartTranDetails.RefCurrency=MTT.InputDetails.RefCurrency
+                                MTT.PartTranDetails.Particulars=MTT.InputDetails.Particulars
+
+                                MTT.PartTranDetails.ValueDate=MTT.InputDetails.ValueDate
+
+                                IF ( sv_y != "") THEN
+                                #{
+                                                MTT.PartTranDetails.RateCode = "REV"
+                                                MTT.PartTranDetails.Rate = "0"
+                                #}
+                                ENDIF
+
+                                MTT.PartTranDetails.Consolidate="N"
+
+                                MTT.PartTranDetails.Refnum=MTT.InputDetails.Remarks
+                                MTT.PartTranDetails.Remarks=MTT.InputDetails.UploadSrlNum
+                                MTT.PartTranDetails.TranIdentifier="FTTR"
+                                MTT.PartTranDetails.RefInputKey=MTT.InputDetails.RefInputKey
+                                MTT.PartTranDetails.PTranBusinessType="FT"
+
+                                sv_r = urhk_MTTS_DefinePartTran(MTT.InputDetails.UploadSrlNum)
+                              # sv_z= urhk_b2k_printrepos("MTT")
+
+                                NextRecord:
+                                                B2KTEMP.TEMPSTD.PrevUploadRefNo = MTT.InputDetails.UploadRefNo
+                                                B2KTEMP.TEMPSTD.PrevUploadType  = MTT.InputDetails.UploadType
+                                                # use sv_c only for storing return value of MTTS_PopulateInputDetails
+                                                sv_c = urhk_MTTS_PopulateInputDetails("")
+                                                PRINT(sv_c)
+                                                IF (sv_c == 0) THEN
+                                                #{
+                                                                IF (B2KTEMP.TEMPSTD.PrevUploadType != MTT.InputDetails.UploadType) THEN
+                                                                #{
+                                                                                B2KTEMP.TEMPSTD.NewTransaction = "Y"
+                                                                #}
+                                                                ENDIF
+
+                                                                IF (B2KTEMP.TEMPSTD.PrevUploadRefNo != MTT.InputDetails.UploadRefNo) THEN
+                                                                #{
+                                                                                B2KTEMP.TEMPSTD.NewTransaction = "Y"
+                                                                #}
+                                                                ENDIF
+                                                #}
+                                                ELSE
+                                                #{
+                                                                B2KTEMP.TEMPSTD.NewTransaction = "Y"
+                                                #}
+                                                ENDIF
+
+
+                                                IF ( B2KTEMP.TEMPSTD.NewTransaction == "Y" ) THEN
+                                                #{
+                                                                sv_r = urhk_MTTS_EndDefinition("")
+                                                                PRINT("Printing the status of MTTS_EndDefinition")
+                                                                PRINT(sv_r)
+                                                #}
+                                                ENDIF
+
+                                #}
+                                DO
+
+                                BANCS.OUTPUT.mrtName="fttran.mrt"
+                                BANCS.OUTPUT.ReportTitle="Treasury Transaction Upload"
+
+
+
+
+END-->
+
+

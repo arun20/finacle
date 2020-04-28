@@ -1,0 +1,248 @@
+############################################################################################
+# Name				: miibtrandet_fetch.scr
+# Description			: This script is used for handling MRH custom fields in the menuMIIB
+# Author			: Surya Sneha.P
+# Date   			: 21/07/18
+# Version			: 0.10
+############################################################################################
+
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+
+IF (REPEXISTS("MIIB") == 0) THEN
+#{
+	CREATEREP("MIIB")
+#}
+ENDIF
+
+IF (CLASSEXISTS("MIIB","CUSTOM") == 0) THEN
+#{
+	CREATECLASS("MIIB","CUSTOM",5)
+#}
+ENDIF
+
+sub_getFieldValuesfromSRVStructB("1","MIIB","CUSTOM","billCritDtls.billId","billId")
+sub_getFieldValuesfromSRVStructB("1","MIIB","CUSTOM","billTranDtls.tranId.tranId","tranId")
+sub_getFieldValuesfromSRVStructB("1","MIIB","CUSTOM","billTranDtls.tranDate","tranDate")
+sub_getFieldValuesfromSRVStructB("1","MIIB","CUSTOM","billCritDtls.billSolId.solId","solId")
+
+
+
+sv_f =urhk_SRV_NumOfRecs("billTranDtls.tranDetails.tranLL")
+IF(sv_f != 0)THEN
+#{
+	GOTO ENDOFSCRIPT
+#}
+ENDIF
+sub_copyOutparamFieldB("srvValue","MIIB","CUSTOM","totRec","")
+print(MIIB.CUSTOM.totRec)
+
+sv_c = CINT(MIIB.CUSTOM.totRec)
+sv_n = 0
+WHILE(sv_n < MIIB.CUSTOM.totRec)
+#{
+	sv_f = FORMAT$(sv_n,"%d")
+	sub_getFieldValuesfromSRVStructB("1","MIIB","CUSTOM","billTranDtls.tranDetails.tranLL.<rec_"+sv_f+">.key.serial_num","srlNo")
+	
+	#-----------------------------------------------------------------------------------------------------------------------		
+	#COUNT_RECORDS:
+	#-----------------------------------------------------------------------------------------------------------------------
+	sv_s = ""
+	sv_s = sv_s + " count|SELECT COUNT(1)"
+	sv_s = sv_s + " FROM CUSTOM.C_DTD_P_EXT C  "
+	sv_s = sv_s + " WHERE TRIM(C.TRAN_ID) = TRIM('"+MIIB.CUSTOM.tranId+"') "
+	sv_s = sv_s + " AND C.TRAN_DATE =TO_DATE('"+MIIB.CUSTOM.tranDate+"','DD-MM-YYYY HH24:MI:SS')"
+	sv_s = sv_s + " AND C.BANK_ID = '"+ BANCS.STDIN.contextBankId+ "' "
+	sv_s = sv_s + " AND TRIM(C.PART_TRAN_SRL_NUM) = TRIM('"+ MIIB.CUSTOM.srlNo+ "') "
+	sv_s = sv_s + " AND DEL_FLG='N'"
+	
+	print(sv_s)
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	print(sv_d)
+	MIIB.CUSTOM.count = BANCS.OUTPARAM.count
+	print(MIIB.CUSTOM.count)
+	IF (sv_d != 0) THEN
+	#{
+		("MIIB").("CUSTOM").("slAcctId_"+ sv_f) 			= ""
+		("MIIB").("CUSTOM").("slAcctName_"+ sv_f) 		= ""
+		("MIIB").("CUSTOM").("slAcctStatus_"+ sv_f) 		= ""
+		("MIIB").("CUSTOM").("AcctBalCrncy") 			= ""
+		("MIIB").("CUSTOM").("slCrncy_"+ sv_f) 			= ""
+		("MIIB").("CUSTOM").("slAcctBal_"+ sv_f)			= ""
+		("MIIB").("CUSTOM").("slPurpOfTxn_"+ sv_f) 		= ""
+		("MIIB").("CUSTOM").("slTranRemarks_"+ sv_f) 		= ""
+	#}
+	ELSE
+	#{	
+		MIIB.CUSTOM.count= BANCS.OUTPARAM.count
+		print(MIIB.CUSTOM.count)
+	#}
+	ENDIF
+	IF(CINT(MIIB.CUSTOM.count) == CINT("0"))THEN
+	#{
+		("MIIB").("CUSTOM").("slAcctId_"+ sv_f) 			= ""
+		("MIIB").("CUSTOM").("slAcctName_"+ sv_f) 		= ""
+		("MIIB").("CUSTOM").("slAcctStatus_"+ sv_f) 		= ""
+		("MIIB").("CUSTOM").("AcctBalCrncy") 			= ""
+		("MIIB").("CUSTOM").("slCrncy_"+ sv_f) 			= ""
+		("MIIB").("CUSTOM").("slAcctBal_"+ sv_f)			= ""
+		("MIIB").("CUSTOM").("slPurpOfTxn_"+ sv_f) 		= ""
+		("MIIB").("CUSTOM").("slTranRemarks_"+ sv_f) 		= ""
+	#}
+	ENDIF
+
+	sv_s = ""
+	sv_s = sv_s + " slAcctId,slAcctName,slAcctStatus,slAcctBal,slPurpOfTxn,slTranRemarks|SELECT FREE_TEXT_1,FREE_TEXT_2,FREE_TEXT_3,FREE_TEXT_4,PURPOSE_CODE,SL_REMARKS"
+	sv_s = sv_s + " FROM CUSTOM.C_DTD_P_EXT C  "
+	sv_s = sv_s + " WHERE TRIM(C.TRAN_ID) = TRIM('"+MIIB.CUSTOM.tranId+"') "
+	sv_s = sv_s + " AND C.TRAN_DATE =TO_DATE('"+MIIB.CUSTOM.tranDate+"','DD-MM-YYYY HH24:MI:SS')"
+	sv_s = sv_s + " AND C.BANK_ID = '"+ BANCS.STDIN.contextBankId+ "' "
+	sv_s = sv_s + " AND C.DEL_FLG='N' "
+	sv_s = sv_s + " AND TRIM(C.PART_TRAN_SRL_NUM) = TRIM('"+ MIIB.CUSTOM.srlNo+ "') "
+	print(sv_s)
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	IF( sv_d == "0" ) THEN
+	#{
+			#print(sv_a)
+			
+			("MIIB").("CUSTOM").("slAcctId_"+ sv_f) 			= BANCS.OUTPARAM.slAcctId
+			("MIIB").("CUSTOM").("slAcctName_"+ sv_f) 			=  BANCS.OUTPARAM.slAcctName
+			("MIIB").("CUSTOM").("slAcctStatus_"+ sv_f) 		= BANCS.OUTPARAM.slAcctStatus
+			("MIIB").("CUSTOM").("AcctBalCrncy") 				= BANCS.OUTPARAM.slAcctBal
+			IF(("MIIB").("CUSTOM").("AcctBalCrncy") != "")THEN
+			#{
+				sv_i = ("MIIB").("CUSTOM").("AcctBalCrncy")
+				sv_l = strlen(sv_i)
+				# Tokenization starts here:
+				sv_i = ("MIIB").("CUSTOM").("AcctBalCrncy")
+				sv_p=GETPOSITION(sv_i,"|")
+				PRINT(sv_p)
+				IF(sv_p != 0) THEN
+				#{
+					("MIIB").("CUSTOM").("slCrncy_"+ sv_f) =MID$(sv_i,0,sv_p-1)
+					("MIIB").("CUSTOM").("slAcctBal_"+ sv_f)=MID$(sv_i,sv_p,sv_l-sv_p)
+				#}
+				ELSE
+				#{
+					("MIIB").("CUSTOM").("slCrncy_"+ sv_f) =""
+					("MIIB").("CUSTOM").("slAcctBal_"+ sv_f)=""
+
+				#}
+				ENDIF
+
+			#}
+			ENDIF
+			("MIIB").("CUSTOM").("slPurpOfTxn_"+ sv_f) 		= BANCS.OUTPARAM.slPurpOfTxn
+			("MIIB").("CUSTOM").("slTranRemarks_"+ sv_f) 		= BANCS.OUTPARAM.slTranRemarks
+			print(("MIIB").("CUSTOM").("slTranRemarks_"+ sv_f))
+			sv_a = sv_a + 1
+			
+	#}
+	ELSE
+	#{
+		MIIB.CUSTOM.slAcctId 		= ""
+		MIIB.CUSTOM.slAcctId 		= ""
+		MIIB.CUSTOM.slAcctName 		= ""
+		MIIB.CUSTOM.slAcctBal 		= ""
+		MIIB.CUSTOM.slCrncy 			= ""
+		MIIB.CUSTOM.slAcctStatus 		= ""
+		MIIB.CUSTOM.slPurpOfTxn 		= ""
+		MIIB.CUSTOM.slTranRemarks		= ""
+		MIIB.CUSTOM.totRec			= "0"
+	#}
+	ENDIF
+	
+	sv_n = sv_n +1
+#}
+DO
+
+
+FETCH:
+
+# The number of records in custom table should available in MIIB.CUSTOM.count
+# After fetching from the custom table the data should be available in
+# MIIB.CUSTOM.field1_0,MIIB.CUSTOM.field1_1,MIIB.CUSTOM.field1_2 etc.
+sv_o = ""
+sv_o = "~fbmtrandet|intFlag1|"
+sv_o = sv_o + MIIB.CUSTOM.totRec
+sv_o = sv_o + "|7|"
+sv_n = 0
+sv_f = FORMAT$(sv_n,"%d")
+
+
+WHILE(sv_n < MIIB.CUSTOM.totRec)
+#{
+	MIIB.CUSTOM.slAcctId = ("MIIB").("CUSTOM").("slAcctId_"+ sv_f)
+	MIIB.CUSTOM.slAcctName = ("MIIB").("CUSTOM").("slAcctName_"+ sv_f)
+	MIIB.CUSTOM.slAcctBal = ("MIIB").("CUSTOM").("slAcctBal_"+ sv_f)
+	MIIB.CUSTOM.slCrncy = ("MIIB").("CUSTOM").("slCrncy_"+ sv_f)
+	MIIB.CUSTOM.slAcctStatus = ("MIIB").("CUSTOM").("slAcctStatus_"+ sv_f)
+	MIIB.CUSTOM.slPurpOfTxn = ("MIIB").("CUSTOM").("slPurpOfTxn_"+ sv_f)
+	MIIB.CUSTOM.slTranRemarks = ("MIIB").("CUSTOM").("slTranRemarks_"+ sv_f)
+
+	# If the field is blank defaulting it to NULL so that Null Pointer exception is not thrown
+
+	IF(MIIB.CUSTOM.slAcctId == "") THEN
+	#{
+		MIIB.CUSTOM.slAcctId = "NULL"
+	#}
+	ENDIF
+
+	IF(MIIB.CUSTOM.slAcctName == "") THEN
+	#{
+		MIIB.CUSTOM.slAcctName = "NULL"
+	#}
+	ENDIF
+
+	IF(MIIB.CUSTOM.slAcctBal == "") THEN
+	#{
+		MIIB.CUSTOM.slAcctBal = "NULL"
+	#}
+	ENDIF
+
+	IF(MIIB.CUSTOM.slCrncy == "") THEN
+	#{
+		MIIB.CUSTOM.slCrncy = "NULL"
+	#}
+	ENDIF
+
+	IF(MIIB.CUSTOM.slAcctStatus == "") THEN
+	#{
+		MIIB.CUSTOM.slAcctStatus = "NULL"
+	#}
+	ENDIF
+
+	IF(MIIB.CUSTOM.slPurpOfTxn == "") THEN
+	#{
+		MIIB.CUSTOM.slPurpOfTxn = "NULL"
+	#}
+	ENDIF
+
+	IF(MIIB.CUSTOM.slTranRemarks == "") THEN
+	#{
+		MIIB.CUSTOM.slTranRemarks = "NULL"
+	#}
+	ENDIF
+
+	# Concatenating the fields to send the data in the frontend.
+	sv_o = sv_o + MIIB.CUSTOM.slAcctId + "|"
+	sv_o = sv_o + MIIB.CUSTOM.slAcctName + "|"
+	sv_o = sv_o + MIIB.CUSTOM.slAcctBal + "|"
+	sv_o = sv_o + MIIB.CUSTOM.slCrncy + "|"
+	sv_o = sv_o + MIIB.CUSTOM.slAcctStatus + "|"
+	sv_o = sv_o + MIIB.CUSTOM.slPurpOfTxn + "|"
+	sv_o = sv_o + MIIB.CUSTOM.slTranRemarks + "|"
+
+	sv_n = sv_n + 1
+	sv_f = FORMAT$(sv_n,"%d")
+#}
+DO
+
+ONS.CUSTOM.custDataOut = sv_o
+
+ENDOFSCRIPT:
+#{
+#}
+
+END-->

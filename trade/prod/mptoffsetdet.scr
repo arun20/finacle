@@ -1,0 +1,17 @@
+################################################################################
+# This file is generated through PMM menu.
+# Manual changes will be overridden when this file is regenerated from menu.
+################################################################################
+
+IMPORT mptoffsetdet
+
+<--START
+	# Script body goes here
+	TRACE ON
+
+	sub_mptoffsetdetCustomFields()
+
+	EXITSCRIPT
+
+END-->
+

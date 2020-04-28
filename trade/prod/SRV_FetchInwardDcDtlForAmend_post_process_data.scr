@@ -1,0 +1,16 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: SRV_FetchInwardDcDtlForAmend_post_process_data.scr
+# Type: NA|default
+# Description: SRV_FetchInwardDcDtlForAmend_post_process_data.scr
+# Author: Saisomasekhar_N
+# Date: 8/1/18 6:27 PM
+# Modification Log:
+#============================================================
+
+<--START
+	# Script body goes here
+	CALL("SLAcctChrgDtls_Fetch.scr")
+END-->

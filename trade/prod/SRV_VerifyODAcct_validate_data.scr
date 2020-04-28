@@ -1,0 +1,27 @@
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT customFields
+<--START
+        # Script body goes here
+        TRACE ON
+        sub_createRepClassB("CUST","DATA")
+	CALLSCRIPTIFEXIST("invoiceCheck.scr")
+	IF (BANCS.STDIN.menuId == "HOAACVOD") THEN
+	#{
+		sv_u = urhk_SRV_GetVal("acctCommonInfo.acctClassMISC.freeText15")
+		CUST.DATA.AMLNameScreen = BANCS.OUTPARAM.srvValue
+		PRINT(CUST.DATA.AMLNameScreen)	
+		#CUST.DATA.APPRes = MID$(CUST.DATA.AMLNameScreen,4,1)
+		CUST.DATA.BenRes = MID$(CUST.DATA.AMLNameScreen,4,1)
+		IF(CUST.DATA.BenRes== "1") then
+                #{
+			sv_a = urhk_B2k_PutUserException("AN2")
+                        print(sv_a)
+                #}
+                ENDIF
+	#}
+	ENDIF
+
+#TRACE OFF
+END-->
+

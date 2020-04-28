@@ -1,0 +1,162 @@
+############################################################################################
+# Name				: miib_countOfPartTrans.scr
+# Description			: Count of Part Trans
+# Author			: Surya Sneha P
+# Date   			: 21/06/18
+# Version			: 0.10
+############################################################################################
+
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+ TRACE ON
+IF (FIELDEXISTS(ONS.CUSTOM.custDataIn) == 0) THEN
+#{
+	GOTO ENDOFSCRIPT
+#}
+ENDIF
+
+IF (TRIM(ONS.CUSTOM.custDataIn) == "") THEN
+#{
+	GOTO ENDOFSCRIPT
+#}
+ENDIF
+
+#sv_a = urhk_B2k_printRepos("ONS")
+sv_a = ONS.CUSTOM.custDataIn
+print(sv_a)
+sv_u = urhk_ParseONSCustData(sv_a)
+
+###################################################################################################
+#	Initialise
+###################################################################################################
+sub_createRepClassB("MIIB","CUSTOM")
+
+MIIB.CUSTOM.pageName = "fbmtrandet"
+MIIB.CUSTOM.totalDebits = "0"
+MIIB.CUSTOM.totalCredits = "0"
+MIIB.CUSTOM.drCrFlg = ""
+MIIB.CUSTOM.tranId = ""
+MIIB.CUSTOM.tranDate =""
+MIIB.CUSTOM.noOfRecords = "0" 
+MIIB.CUSTOM.delFlg = ""
+MIIB.CUSTOM.slAcctId = ""
+###########################~fbmtrandet|intFlag|2|5|
+#--------------------------------------------------------------------------------------------------#
+#  FIELD DESCRIPTION                                                                               #
+#--------------------------------------------------------------------------------------------------#
+#  ~fbmtrandet-                                                                                     #
+#     FIELD_1 - intFlag                                                                            #
+#     FIELD_2 - No.of multirecs                                                                    #
+#     FIELD_3 - No.of fields in one record                                                         #
+#--------------------------------------------------------------------------------------------------#
+
+sub_getFieldValuesfromSRVStructB("1","MIIB","CUSTOM","billCritDtls.billId","billId")
+sub_getFieldValuesfromSRVStructB("1","MIIB","CUSTOM","billTranDtls.tranId.tranId","tranId")
+sub_getFieldValuesfromSRVStructB("1","MIIB","CUSTOM","billTranDtls.tranDate","tranDate")
+sub_getFieldValuesfromSRVStructB("1","MIIB","CUSTOM","billCritDtls.billSolId.solId","solId")
+
+
+PRINT(MIIB.CUSTOM.tranId)
+PRINT(MIIB.CUSTOM.tranDate)
+PRINT(MIIB.CUSTOM.solId)
+
+
+IF(FIELDEXISTS(("BANCS").("INPUT").(MIIB.CUSTOM.pageName+"_FIELD_2"))) THEN
+#{
+	MIIB.CUSTOM.noOfRecords = ("BANCS").("INPUT").(MIIB.CUSTOM.pageName+"_FIELD_2")
+#}
+ENDIF
+print(MIIB.CUSTOM.noOfRecords)
+
+sv_c = MIIB.CUSTOM.noOfRecords
+IF (sv_c > 0) THEN
+#{
+	sv_d = 3
+	sv_n = 0
+#--------------------------------------------------------------------------------------------------#
+#  Getting multirec inputs
+#--------------------------------------------------------------------------------------------------#
+	WHILE (sv_n < sv_c)
+	#{		
+		sv_z = sv_n
+		sv_g = FORMAT$(sv_z,"%d")
+		##################################
+		sv_d = sv_d + 1
+		sv_f = FORMAT$(sv_d,"%d")
+		IF (("BANCS").("INPUT").(MIIB.CUSTOM.pageName+"_FIELD_"+sv_f) == "NULL") THEN
+		#{
+			("BANCS").("INPUT").(MIIB.CUSTOM.pageName+"_FIELD_"+sv_f) = ""
+		#}
+		ENDIF
+
+		MIIB.CUSTOM.slAcctId = ("BANCS").("INPUT").(MIIB.CUSTOM.pageName+"_FIELD_"+sv_f)
+	
+		##################################
+		#Number of Fields Skipped 
+		sv_d = sv_d + 5
+		##################################
+		sub_getFieldValuesfromSRVStructB("1","MIIB","CUSTOM","billTranDtls.tranDetails.tranLL.<rec_"+FORMAT$(sv_n,"%d")+">.delFlg","delFlg")
+		print(MIIB.CUSTOM.delFlg)
+
+		##################################
+		sub_getFieldValuesfromSRVStructB("1","MIIB","CUSTOM","billTranDtls.tranDetails.tranLL.<rec_"+FORMAT$(sv_n,"%d")+">.drCrFlg","drCrFlg")
+		print(MIIB.CUSTOM.drCrFlg)
+
+		##################################
+		
+			
+		IF((MIIB.CUSTOM.delFlg !="Y") AND (MIIB.CUSTOM.drCrFlg == "D") AND (MIIB.CUSTOM.slAcctId != ""))THEN
+		#{
+			MIIB.CUSTOM.totalDebits = CINT(MIIB.CUSTOM.totalDebits) + CINT("1")
+		#}
+		ENDIF
+	
+		IF((MIIB.CUSTOM.delFlg !="Y") AND (MIIB.CUSTOM.drCrFlg == "C") AND (MIIB.CUSTOM.slAcctId != ""))THEN
+		#{
+			MIIB.CUSTOM.totalCredits = CINT(MIIB.CUSTOM.totalCredits) + CINT("1")
+		#}
+		ENDIF
+
+		MIIB.CUSTOM.parId = "PART_TRAN_LMT"
+		MIIB.CUSTOM.modName = "BNKL"
+		MIIB.CUSTOM.parLevel = "CMP"
+		MIIB.CUSTOM.paramValue = ""
+		sv_e= func_getCPARAMValueB(MIIB.CUSTOM.parId,MIIB.CUSTOM.modName,BANCS.STDIN.contextBankId,BYREF MIIB.CUSTOM.paramValue)
+		print(sv_e)
+		IF(sv_e == 0) THEN
+		#{
+			MIIB.CUSTOM.totalCount =  MIIB.CUSTOM.paramValue
+		#}
+		ELSE
+		#{
+			MIIB.CUSTOM.succOrFail = "F"
+			MIIB.CUSTOM.errMsg =" CPARAM Fetch Failed."
+			sv_u = urhk_SRV_SetErr(MIIB.CUSTOM.errMsg)
+			sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+			BANCS.OUTPUT.successOrFailure = "F"
+			GOTO ENDOFSCRIPT
+
+		#}
+		ENDIF
+		
+		IF((CINT(MIIB.CUSTOM.totalDebits) > CINT(MIIB.CUSTOM.totalCount)) OR  (CINT(MIIB.CUSTOM.totalCredits) > CINT(MIIB.CUSTOM.totalCount)))THEN
+		#{
+			MIIB.CUSTOM.succOrFail = "F"
+			MIIB.CUSTOM.errMsg = "Total Credits/Debits Crossed 5."
+			sv_u = urhk_SRV_SetErr(MIIB.CUSTOM.errMsg)
+			sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+                        BANCS.OUTPUT.successOrFailure = "F"
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+		sv_n = sv_n + 1
+	#}
+	DO
+#}
+ENDIF
+
+ENDOFSCRIPT:
+EXITSCRIPT
+
+END-->

@@ -1,0 +1,127 @@
+############################################################################################
+# Name				: orm_inqTransferStatus.scr
+# Description			: Script to Call inqTransferStatus API
+# Author			: Surya Sneha P
+# Date   			: 22/06/18
+# Version			: 0.10
+############################################################################################
+
+IMPORT LibslTranSeq
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+	# Script body goes here
+	TRACE ON
+	sv_t = func_getslTranSeq(BYREF sv_a)
+	PRINT(sv_t)
+	PRINT(sv_a)
+	IF(sv_t != 0)THEN
+	#{
+		HIRM.CUSTOM.errMsg = "Generation of Transaction Sequence Failed."
+		HIRM.CUSTOM.succOrFail = "F"
+		EXITSCRIPT
+	#}
+	ENDIF
+	
+	#In case of Success 
+	BANCS.INPUT.tellerId = BANCS.STDIN.userId
+	BANCS.INPUT.txnSeq = sv_a
+	PRINT(BANCS.INPUT.txnSeq)
+	#BANCS.INPUT.chkTxnDate = BANCS.STDIN.BODDate
+	sv_s = "boddt|SELECT TO_CHAR(TO_DATE(?SVAR,'DD-MM-YYYY HH24:MI:SS'),'YYYY-MM-DD') FROM DUAL"
+	PRINT(sv_s)
+	BANCS.INPARAM.BINDVARS = BANCS.STDIN.BODDate
+	PRINT(BANCS.INPARAM.BINDVARS)
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	PRINT(sv_d)
+
+	IF (sv_d != 0) THEN
+	#{
+		PRINT("DB Error")
+		EXITSCRIPT
+	#}
+	ENDIF
+	sub_copyOutparamFieldB("boddt","HIRM","CUSTOM","boddt","")
+	BANCS.INPUT.chkTxnDate = HIRM.CUSTOM.boddt
+	PRINT(BANCS.INPUT.chkTxnDate)
+	
+	sv_t = func_getslTranSeq(BYREF sv_a)
+	PRINT(sv_t)
+	PRINT(sv_a)
+	IF(sv_t != 0)THEN
+	#{
+		HIRM.CUSTOM.errMsg = "Generation of Transaction Sequence Failed."
+		HIRM.CUSTOM.succOrFail = "F"
+		EXITSCRIPT
+	#}
+	ENDIF
+	BANCS.INPUT.chkTxnSeq = sv_a
+	PRINT(BANCS.INPUT.chkTxnSeq)
+	HIRM.CUSTOM.txnSeq = BANCS.INPUT.chkTxnSeq
+	CALLSCRIPTIFEXIST("InqTransferStatus.scr")
+	PRINT(INTF.DATA.orgCode)
+	IF(INTF.DATA.orgCode == "000")THEN
+	#{
+		#Checking For Error Description
+		HIRM.CUSTOM.errDesc = func_getNthFieldFromStringB(INTF.DATA.outputString,"!",5) 
+		PRINT(HIRM.CUSTOM.errDesc)
+		IF(HIRM.CUSTOM.errDesc != "")THEN
+		#{
+			# Call API for Fund Transfer
+			BANCS.INPUT.txnSeq = HIRM.CUSTOM.txnSeq
+			CALLSCRIPTIFEXIST("orm_inqTransferFund.scr")
+			IF(HIRM.CUSTOM.succOrFail == "F")THEN
+			#{
+				HIRM.CUSTOM.errMsg = INTF.DATA.orgCode +"-"+INTF.DATA.ErrorDesc
+				HIRM.CUSTOM.succOrFail = "F"
+				EXITSCRIPT
+			#}
+			ELSE
+			#{
+				sub_getFieldValuesfromSRVStructB("1","HIRM","CUSTOM","remTranDtls.tranId.tranId","tranId")
+				sub_getFieldValuesfromSRVStructB("1","HIRM","CUSTOM","remTranDtls.tranDate","tranDate")
+				HIRM.CUSTOM.sysDate = func_getSysDateTimeWithFormatB("DD-MM-YYYY hh24:mi:ss") 
+				sv_s = "UPDATE CUSTOM.C_DTD_P_EXT SET "
+				sv_s = sv_s +" SEQ_TRAN_ID_SL = '"+HIRM.CUSTOM.txnSeq+"',LCHG_TIME=TO_DATE('"+HIRM.CUSTOM.sysDate+"','DD-MM-YYYY HH24:MI:SS'),LCHG_USER_ID='"+BANCS.STDIN.userId+"'"
+				sv_s = sv_s + "WHERE "
+				sv_s = sv_s + "TRIM(TRAN_ID)=TRIM('"+HIRM.CUSTOM.tranId+"') AND TRAN_DATE = TO_DATE('"+HIRM.CUSTOM.tranDate+"','DD-MM-YYYY HH24:MI:SS') AND BANK_ID ='"+BANCS.STDIN.contextBankId+"'"
+				print(sv_s)
+				sv_a = urhk_dbSQLWithBind(sv_s)
+				print(sv_a)
+				if(sv_a == 0) then
+				#{
+					PRINT("SUCCESS")
+				#}
+				ELSE
+				#{
+					HIRM.CUSTOM.errMsg =  "Transaction Details : Updation Failed in C_DTD_P_EXT."
+					HIRM.CUSTOM.succOrFail = "F"
+					GOTO ENDOFSCRIPT
+
+				#}
+				ENDIF
+
+			#}
+			ENDIF
+			
+		#}
+		ELSE
+		#{
+			PRINT("API Transfer fund Not Required.")
+			HIRM.CUSTOM.succOrFail = "S"
+			HIRM.CUSTOM.errMsg = ""
+		#}
+		ENDIF
+
+	#}
+	ELSE
+	#{
+		#Error 
+		HIRM.CUSTOM.errMsg = INTF.DATA.orgCode +"-"+INTF.DATA.ErrorDesc
+		HIRM.CUSTOM.succOrFail = "F"
+		EXITSCRIPT
+	#}
+	ENDIF
+	
+	TRACE OFF
+END-->

@@ -1,0 +1,316 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: inqCustDetail.scr
+# Type: NA|default
+# Description: inqCustDetail.scr
+# Author: Jyoti Prakash Dutta
+# Date: 04-06-2018
+# Modification Log:
+#============================================================
+IMPORT LibCommonB001
+IMPORT common_business_XMLFunctions
+
+<--START
+	# Script body goes here
+	TRACE ON
+	
+	##################Creating repository and classes###################
+	sub_createRepClassB("INTF","DATA")
+	sub_createRepClassB("CUST","TBL")
+	
+	##################Initializing Variables###################
+	INTF.DATA.srvReqId	= "InqCustDetail"
+	BANCS.OUTPUT.successOrFailure = "S"
+	BANCS.OUTPUT.ErrorDesc = ""
+	INTF.DATA.errorMsg	= ""
+	INTF.DATA.bankId 	= BANCS.STDIN.contextBankId
+	INTF.DATA.userId	= BANCS.STDIN.userId
+	INTF.DATA.fmtRequestXml = ""
+	INTF.DATA.fmtResponseXml = ""
+	
+	################## Gettting the request details ##############################
+	sub_copyOptionalFieldB("slCifId","INTF","DATA","slCifId","")
+	PRINT(INTF.DATA.slCifId)
+	
+	BANCS.INPARAM.srvReqId = INTF.DATA.srvReqId
+	
+	#----------------------------
+	#Getting the Header Details
+	#------------------------------
+	CALLSCRIPTIFEXIST("cif_common_business_XMLHeader.scr")
+	PRINT(INTF.DATA.XMLHeader)
+	
+	#------------------------------
+	#Getting the Footer Details
+	#------------------------------
+	sv_c = func_xmlFooterDetails()
+	INTF.DATA.XMLFooter = sv_c
+	PRINT(INTF.DATA.XMLFooter)
+
+	#-----------------------------
+	#Soap Header Request Uid
+	#2017-05-03T09:00:00-08:00
+	#-----------------------------
+	sv_q = "soapReqId,soapReqDate|SELECT to_char(systimestamp,'YYYYMMDDHH24MISSFF3'),to_char(systimestamp,'yyyy-mm-ddhh:mi:ssxff') from dual"
+	sv_z = urhk_dbSelectWithBind(sv_q)
+	print(sv_z)
+	IF(sv_z == 0)THEN
+	#{
+		INTF.DATA.soapReqId = BANCS.OUTPARAM.soapReqId+"02"
+		INTF.DATA.soapReqDate = BANCS.OUTPARAM.soapReqDate
+                INTF.DATA.soapReqDate = MID$(INTF.DATA.soapReqDate,0,10)+"T"+MID$(INTF.DATA.soapReqDate,10,12)
+
+		print(INTF.DATA.soapReqId)
+	#}
+	ELSE
+	#{
+		INTF.DATA.soapReqId = ""	
+		INTF.DATA.soapReqDate = ""
+	#}
+	ENDIF	
+	
+	#------------------------------
+	#Forming the body xml tags
+	#------------------------------
+	lv_v = ""
+	lv_v = lv_v + "<Body>"
+	lv_v = lv_v + "<MSG>"
+	lv_v = lv_v + "<soapenv:Envelope xmlns:soapenv='http://schemas.xmlsoap.org/soap/envelope/' xmlns:esb='http://esb.lhb.co.th'>"
+	lv_v = lv_v + "<soapenv:Header>"
+	lv_v = lv_v + "<esb:rqHeader>"
+	lv_v = lv_v + "<rqAppId>8001</rqAppId>"
+	lv_v = lv_v + "<rqUserId>98001FinCore</rqUserId>"
+	lv_v = lv_v + "<rqToken>98001FinCore</rqToken>"
+	lv_v = lv_v + "<rqDateTime>"+INTF.DATA.soapReqDate+"</rqDateTime>"
+	lv_v = lv_v + "<rqIPAddr>172.20.0.66</rqIPAddr>"
+	lv_v = lv_v + "</esb:rqHeader>"
+	lv_v = lv_v + "</soapenv:Header>"
+	lv_v = lv_v + "<soapenv:Body>"
+	lv_v = lv_v + "<esb:"+INTF.DATA.srvReqId+">"
+	lv_v = lv_v + "<rqHeader>"
+	lv_v = lv_v + "<rqUID>"+INTF.DATA.soapReqId+"</rqUID>"
+	lv_v = lv_v + "<rqTxnCode>ESB100001</rqTxnCode>"
+	lv_v = lv_v + "<rqTerminalId>1</rqTerminalId>"
+	lv_v = lv_v + "<rqTerminalTypeCode>10</rqTerminalTypeCode>"
+	lv_v = lv_v + "<rqLangPref>en</rqLangPref>"
+	lv_v = lv_v + "</rqHeader>"
+	lv_v = lv_v + "<rqBody>"
+	lv_v = lv_v + "<inqParam>"
+	lv_v = lv_v + "<cifNum>"+INTF.DATA.slCifId+"</cifNum>"
+	lv_v = lv_v + "</inqParam>"
+	PRINT(lv_v)
+	
+	#------------------------------------------------
+	#Appending the Header, Body and Footer tags
+	#------------------------------------------------
+	INTF.DATA.XMLBody = lv_v
+	lv_s = INTF.DATA.XMLHeader + INTF.DATA.XMLBody + INTF.DATA.XMLFooter
+	PRINT(lv_s)
+	INTF.DATA.requestXml = lv_s
+	
+	#-----------------------------------------------------
+	#Sending the request xml to FI service provider
+	#-----------------------------------------------------
+	BANCS.INPARAM.SERVICE_NAME = "FIJCA"
+	BANCS.INPARAM.SEND_RECV_FLG = "Y"
+	BANCS.INPARAM.inputXmlMsg = lv_s
+	
+	#Custom Table Insertion & variable definition
+	CUST.TBL.apiName = "InqCustDetail"
+	CUST.TBL.menuName = BANCS.STDIN.menuId
+	CUST.TBL.invDate = BANCS.STDIN.BODDate
+	CUST.TBL.reqId = INTF.DATA.requestuuid
+	CUST.TBL.soapReqId = INTF.DATA.soapReqId
+	CUST.TBL.reqXML = INTF.DATA.requestXml
+	CUST.TBL.userId = INTF.DATA.userId
+
+	CALLSCRIPTIFEXIST("insertInterfaceRecord.scr")
+
+	lv_a = func_ConnectToFIAndSendMsg("INTF","DATA",lv_s,BYREF INTF.DATA.responseXml,BYREF INTF.DATA.msgDescription,BYREF INTF.DATA.successFailure)
+	
+	PRINT(INTF.DATA.responseXml)
+	PRINT(INTF.DATA.msgDescription)
+	PRINT(INTF.DATA.successFailure)
+	
+	#-----------------------------------------------------
+	#When request is triggered successfully from Finacle
+	#-----------------------------------------------------
+	IF(INTF.DATA.successFailure == "Success") THEN
+	#{
+		sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<Status>","</Status>",BYREF INTF.DATA.FIStatus)
+		PRINT(sv_e)
+		sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<rsCode>","</rsCode>",BYREF INTF.DATA.orgCode)
+		PRINT(sv_e)
+		
+		#--------------------------------------------------------------------------------------------------------------------------------
+		#Request triggered successfully and processed by host system successfully - Can be a valid account (or) invalid account response.
+		#--------------------------------------------------------------------------------------------------------------------------------
+		IF((INTF.DATA.FIStatus == "processed") OR (INTF.DATA.FIStatus == "SUCCESS")) THEN
+		#{	
+			lv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<rsCode>","</rsCode>",BYREF INTF.DATA.responseCode)
+			print(INTF.DATA.responseCode)
+			lv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<orgDesc>","</orgDesc>",BYREF INTF.DATA.responseDesc)
+			print(INTF.DATA.responseDesc)
+			
+			INTF.DATA.msgDescription = INTF.DATA.responseDesc
+			
+			lv_e = func_xmlParseFunc(INTF.DATA.requestXml,"<soapenv:Body>","</soapenv:Body>",BYREF INTF.DATA.fmtRequestXml)
+			print(INTF.DATA.fmtRequestXml)
+			#-----------------------------------------------------------------------
+			#When response from host is positive i.e. the customer id is valid
+			#-----------------------------------------------------------------------
+			IF(INTF.DATA.responseCode == "000") THEN
+			#{
+				INTF.DATA.status = "S"
+				
+				lv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<custDetail>","</custDetail>",BYREF INTF.DATA.fmtResponseXml)
+				print(INTF.DATA.fmtResponseXml)
+				lv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<custType>","</custType>",BYREF INTF.DATA.slCifType)
+				print(INTF.DATA.slCifType)
+				
+				IF(TRIM(INTF.DATA.slCifType) == "") THEN
+				#{
+					INTF.DATA.status = "F"
+					INTF.DATA.msgDescription = "Customer Type not received."
+				#}
+				ELSE
+				#{
+					IF(TOUPPER(INTF.DATA.slCifType) == "RETAIL") THEN
+					#{
+						lv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<firstNameEn>","</firstNameEn>",BYREF INTF.DATA.firstName)
+						print(INTF.DATA.firstName)
+						lv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<lastNameEn>","</lastNameEn>",BYREF INTF.DATA.lastName)
+						print(INTF.DATA.lastName)
+					
+						INTF.DATA.slCustName = INTF.DATA.firstName + " " + INTF.DATA.lastName
+					#}
+					ELSE
+					#{
+						lv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<aliasName>","</aliasName>",BYREF INTF.DATA.slCustName)
+						print(INTF.DATA.slCustName)
+						IF(TRIM(INTF.DATA.slCustName) == "")THEN
+						#{
+							lv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<corpName>","</corpName>",BYREF INTF.DATA.slCustName)
+							print(INTF.DATA.slCustName)
+						#}
+						ENDIF
+						print(INTF.DATA.slCustName)
+					#}
+					ENDIF
+					print(INTF.DATA.slCustName)
+				#}
+				ENDIF
+			#}
+			#-----------------------------------------------------------------------------
+			#In case of invalid cif id (or) any other negative response from host system
+			#-----------------------------------------------------------------------------
+			ELSE
+			#{
+				INTF.DATA.status = "F"
+				lv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<rsHeader>","</rsHeader>",BYREF INTF.DATA.fmtResponseXml)
+				print(INTF.DATA.fmtResponseXml)
+				INTF.DATA.msgDescription = INTF.DATA.responseCode + " : " + INTF.DATA.responseDesc
+			#}
+			ENDIF
+		#}
+		#---------------------------------------------------------
+		# When request to host times out/when host system is down
+		#---------------------------------------------------------
+		ELSE
+		#{
+			sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<ErrorCode>","</ErrorCode>",BYREF INTF.DATA.orgCode)
+			PRINT(sv_e)
+            sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<ErrorDesc>","</ErrorDesc>",BYREF INTF.DATA.ErrorDesc)
+			PRINT(sv_e)
+		
+			INTF.DATA.status = "F"
+			lv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<rsHeader>","</rsHeader>",BYREF INTF.DATA.fmtResponseXml)
+			print(INTF.DATA.fmtResponseXml)
+			INTF.DATA.msgDescription = INTF.DATA.orgCode + " : " + INTF.DATA.ErrorDesc
+		#}
+		ENDIF
+	#}
+	#--------------------------------------------------------
+	#When request is not triggered successfully from Finacle
+	#--------------------------------------------------------
+	ELSE
+	#{
+		BANCS.OUTPUT.successOrFailure = "F"
+		BANCS.OUTPUT.ErrorDesc = INTF.DATA.msgDescription
+		sv_u = urhk_setOrbOut("outputString|"+INTF.DATA.msgDescription)
+	#}
+	ENDIF
+	
+	#Interface Table Update - Response XML, INTF.DATA.status
+
+	print(INTF.DATA.responseXml)
+	print(INTF.DATA.status)
+	print(INTF.DATA.requestuuid)
+	BANCS.INPARAM.BINDVARS = INTF.DATA.responseXml + "|" + INTF.DATA.status + "|" + INTF.DATA.requestuuid 
+	sv_s = "UPDATE CUSTOM.C_ICIT "
+	sv_s = sv_s + "SET RESPONSE_XML = TO_CLOB(?SVAR), STATUS = ?SVAR "
+	sv_s = sv_s + "WHERE REQUEST_ID = ?SVAR "
+	print(sv_s)
+	#sv_a = urhk_dbSQLWithBind(sv_s)
+	#print(sv_a)
+
+	lv_b = func_selectFromCustTableB("srlNum","MAX(SRL_NUM)","CUSTOM.C_CCIFCR","SL_CIF_ID|BANK_ID",INTF.DATA.slCifId+"|"+INTF.DATA.bankId)
+	PRINT(lv_b)
+	sub_copyOutparamFieldB("srlNum","INTF","DATA","srlNum","0")
+	PRINT(INTF.DATA.srlNum)
+	
+	INTF.DATA.srlNum = CINT(INTF.DATA.srlNum) + 1
+	print(INTF.DATA.srlNum)
+	
+	lv_s = "INSERT INTO CUSTOM.C_CCIFCR "
+	lv_s = lv_s + "(SRL_NUM, SL_CIF_ID, STATUS, XML_REQUEST, XML_RESPONSE, ERROR_MESSAGE, DEL_FLG, ENTITY_CRE_FLG, RCRE_USER_ID, "
+	lv_s = lv_s + " RCRE_TIME, LCHG_USER_ID, LCHG_TIME, BANK_ID)"
+	lv_s = lv_s + " VALUES ( "
+	lv_s = lv_s + " ?SVAR,"
+	lv_s = lv_s + " ?SVAR,"
+	lv_s = lv_s + " ?SVAR,"
+	lv_s = lv_s + " TO_CLOB(?SVAR),"
+	lv_s = lv_s + " TO_CLOB(?SVAR),"
+	lv_s = lv_s + " ?SVAR,"
+	lv_s = lv_s + " ?SVAR,"
+	lv_s = lv_s + " ?SVAR,"
+	lv_s = lv_s + " ?SVAR,"
+	lv_s = lv_s + " TO_DATE(SYSDATE,'DD-MM-YYYY'),"
+	lv_s = lv_s + " ?SVAR,"
+	lv_s = lv_s + " TO_DATE(SYSDATE,'DD-MM-YYYY'),"
+	lv_s = lv_s + " ?SVAR)"
+	
+	BANCS.INPARAM.BINDVARS = INTF.DATA.srlNum + "|" + INTF.DATA.slCifId +"|"+ INTF.DATA.status + "|" + INTF.DATA.fmtRequestXml +"|"+ INTF.DATA.fmtResponseXml
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS +"|"+ INTF.DATA.msgDescription +"|N|Y|"+ INTF.DATA.userId
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS +"|"+ INTF.DATA.userId +"|"+ INTF.DATA.bankId
+	PRINT(BANCS.INPARAM.BINDVARS)
+	
+	lv_u = urhk_dbSqlWithBind(lv_s)
+	PRINT(lv_u)
+	IF(lv_u != 0) THEN
+	#{
+		INTF.DATA.msgDescription = "Database operation failed. Please contact administrator."
+		GOTO SENDERROR
+	#}
+	ENDIF
+
+	IF(INTF.DATA.status == "F") THEN
+	#{
+		GOTO SENDERROR
+	#}
+	ENDIF
+	
+	lv_a = func_setOrbOutWithDefValueB("","INTF","DATA","slCustName","slCustName"," ")
+	lv_a = func_setOrbOutWithDefValueB("","INTF","DATA","slCifType","slCifType"," ")
+	lv_u = urhk_SetOrbOut("SuccessOrFailure|Y")
+	GOTO ENDOFSCRIPT
+	SENDERROR:
+		BANCS.OUTPUT.successOrFailure = "F"
+		lv_u = urhk_SetOrbOut("SuccessOrFailure|N")
+		lv_u = urhk_SetOrbOut("Error_1|Error ^"+INTF.DATA.msgDescription+"^dummy")
+
+	ENDOFSCRIPT:
+	EXITSCRIPT
+END-->

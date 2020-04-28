@@ -1,0 +1,8 @@
+<--START
+TRACE ON
+
+	CALL("fetchPartyKeyForAmlNameScreen.scr")
+
+TRACE OFF
+END-->
+

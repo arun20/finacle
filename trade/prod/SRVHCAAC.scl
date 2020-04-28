@@ -1,0 +1,593 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Domain: Finacle Core
+# Library Name: SRVHCAAC.scl
+# Description: Function for Closure And Verify of Oper Accounts
+#============================================================
+IMPORT LibCommonB001
+
+FUNCTION closeTxnAccount(fv_inpRepos,fv_inpClass)
+#{
+	# Validation for the Account Id .
+	fv_r = fv_inpRepos
+	fv_c = fv_inpClass
+	
+	########################################################################################
+	# DEFAULT FIELDS INITIALIZATION
+	########################################################################################
+	(fv_r).(fv_c).("errorFlg") = "N"
+	(fv_r).(fv_c).("errorMsg") = " "
+	(fv_r).(fv_c).("errorCode")  = " "
+	fv_cashTranDate = ""
+	fv_tranDate = ""
+	(fv_r).(fv_c).("tranId") =""
+	(fv_r).(fv_c).("cashTranId") = ""
+	########################################################################################
+	# MANDATORY FIELDS CHECK
+	########################################################################################
+	fv_m = "foracid|xferBalFlg"
+	fv_e = " "
+	fv_f = func_chkMandatorySRVInputsB(fv_r,fv_c,fv_m,BYREF fv_e)
+	#PRINT(fv_f)
+	
+	IF(fv_f != 0)THEN
+	#{
+		(fv_r).(fv_c).("errorFlg") = "Y"
+		fv_e = func_replaceCharB(fv_e,"|","")
+		(fv_r).(fv_c).("errorMsg")  = fv_e
+		RETURN 1
+	#}
+	ENDIF
+	
+	fv_a = urhk_B2k_ForacidToAcid((fv_r).(fv_c).("foracid"))
+	IF(fv_a == 0) THEN
+	#{
+		sub_copyOutparamFieldB("Acid",(fv_r),(fv_c),("Acid"),"")
+		#print((fv_r).(fv_c).("Acid"))
+		IF((fv_r).(fv_c).("Acid") == "")THEN
+		#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			(fv_r).(fv_c).("errorMsg") = "Invalid Account Id."
+			RETURN 1
+		#}
+		ENDIF
+		#}
+	ELSE
+		#{
+		(fv_r).(fv_c).("errorFlg") = "Y"
+		(fv_r).(fv_c).("errorMsg") =  "Invalid Account Id."
+		RETURN 1
+	#}
+	ENDIF
+	PRINT((fv_r).(fv_c).("foracid"))
+	
+	#--------------------------------------------------------------------------------------------------------------------------
+	# NON-MANDATORY FIELDS CHECK
+	#--------------------------------------------------------------------------------------------------------------------------
+	fv_m = "tranType|transferForacid|xferAmt|cashCrncyCode|cashAmt|rptCode|cashTranRate|cashTranRateCode|cashTranTreaRate|cashTranTreaRefNum|xferTranRate|xferTranTreaRate|xferTranRateCode|xferTranTreaRefNum|closureReasonCode|closureReasonDesc|clsrNotes|clsPenaltyAmt"
+	fv_f = func_chkNonMandatorySRVInputsB(fv_r,fv_c,fv_m)
+	PRINT(fv_f)
+	
+	fv_outFields 	= "acctCurrencyCode"
+	fv_selectFields = "ACCT_CRNCY_CODE"
+	fv_tableName	= "TBAADM.GAM"
+	fv_keyFields 	= "FORACID|BANK_ID"
+	fv_bindVars 	= (fv_r).(fv_c).("foracid") + "|" + BANCS.STDIN.contextBankId
+	
+	fv_sv_s = func_selectFromCustTableB(fv_outFields,fv_selectFields,fv_tableName,fv_keyFields,fv_bindVars)
+	PRINT(fv_sv_s)
+	
+	fv_acctCurrencyCode = BANCS.OUTPARAM.acctCurrencyCode
+	
+	# If Account currency Code is not given It will be taken from gam table
+	IF((fv_r).(fv_c).("cashCrncyCode") == "")THEN
+	#{
+		(fv_r).(fv_c).("cashCrncyCode") =  fv_acctCurrencyCode
+	#}
+	ENDIF
+	#print(fv_acctCurrencyCode)
+	#print((fv_r).(fv_c).("cashCrncyCode"))
+	IF((fv_r).(fv_c).("xferBalFlg") == "N")THEN
+	#{
+		GOTO SRVHCAACFETCH
+	#}
+	ENDIF
+	
+	IF((fv_r).(fv_c).("xferBalFlg") == "Y")THEN
+	#{
+		IF((fv_r).(fv_c).("tranType") == "") THEN
+		#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			fv_e = "Enter Tran Type."
+			(fv_r).(fv_c).("errorMsg")  = fv_e
+			RETURN 1
+		#}
+		ENDIF
+	#}
+	ENDIF
+	
+	IF((fv_r).(fv_c).("tranType") == "T")THEN
+	#{
+		IF((fv_r).(fv_c).("transferForacid")=="")THEN
+		#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			fv_e = "Enter Transfer Account Id."
+			(fv_r).(fv_c).("errorMsg")  = fv_e
+			RETURN 1
+		#}
+		ENDIF
+		
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.xferAcct.foracid|"+(fv_r).(fv_c).("transferForacid"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.xferTranRateCode.refCode|" + (fv_r).(fv_c).("xferTranRateCode"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.xferTranRate|" + (fv_r).(fv_c).("xferTranRate"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.xferTranTreaRate|" + (fv_r).(fv_c).("xferTranTreaRate"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.xferTranTreaRefNum|"+(fv_r).(fv_c).("xferTranTreaRefNum"))
+		
+	#}
+	ENDIF
+	
+	IF((fv_r).(fv_c).("tranType") == "C")THEN
+	#{
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.cashTranRateCode.refCode|" + (fv_r).(fv_c).("cashTranRateCode"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.cashTranRate|" + (fv_r).(fv_c).("cashTranRate"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.cashTranTreaRate|" + (fv_r).(fv_c).("cashTranTreaRate"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.cashTranTreaRefNum|"+(fv_r).(fv_c).("cashTranTreaRefNum"))
+	#}
+	ENDIF
+	
+	IF((fv_r).(fv_c).("tranType") == "B")THEN
+	#{
+		IF(((fv_r).(fv_c).("transferForacid")== "") AND ((fv_r).(fv_c).("xferAmt") == ""))THEN
+		#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			fv_e = "Enter Transfer Account Id AND Transfer amount."
+			(fv_r).(fv_c).("errorMsg")  = fv_e
+			RETURN 1
+		#}
+		ENDIF
+		
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.xferAcct.foracid|"+(fv_r).(fv_c).("transferForacid"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.xferTranRateCode.refRecType|" + (fv_r).(fv_c).("xferTranRateCode"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.xferTranRate|" + (fv_r).(fv_c).("xferTranRate"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.xferAmt|"+(fv_r).(fv_c).("xferAmt") + "|" + (fv_r).(fv_c).("cashCrncyCode"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.xferTranTreaRate|" + (fv_r).(fv_c).("xferTranTreaRate"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.cashTranRateCode.refCode|" + (fv_r).(fv_c).("cashTranRateCode"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.cashTranRate|" + (fv_r).(fv_c).("cashTranRate"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.cashTranTreaRate|" + (fv_r).(fv_c).("cashTranTreaRate"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.cashTranTreaRefNum|"+(fv_r).(fv_c).("cashTranTreaRefNum"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.xferTranTreaRefNum|"+(fv_r).(fv_c).("xferTranTreaRefNum"))
+	#}
+	ENDIF
+	
+	#Comes here directly when the transfer flag is N
+	
+	SRVHCAACFETCH :
+		########################################################################################
+		# SRV EXECUTION
+		########################################################################################
+		
+		fv_f = urhk_SetUrhkInp("acctBasic.foracid|"+(fv_r).(fv_c).("foracid"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.xferBalFlg|"+ (fv_r).(fv_c).("xferBalFlg"))
+		fv_f = urhk_SetUrhkInp("intCalcReqd|Y")
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.cashCrncy.crncyCode|"+(fv_r).(fv_c).("cashCrncyCode"))
+		fv_f = urhk_SetUrhkInp("clsrProcCrit.cashAmt|"+(fv_r).(fv_c).("cashAmt"))
+		
+		IF((fv_r).(fv_c).("xferBalFlg") =="Y")THEN
+		#{
+			fv_f = urhk_SetUrhkInp("clsrProcCrit.tranType.tranType|"+(fv_r).(fv_c).("tranType"))
+		#}
+		ENDIF
+		IF((fv_r).(fv_c).("rptCode") !="")THEN
+		#{
+			fv_f = urhk_SetUrhkInp("clsrProcCrit.rptCode.refCode|" + (fv_r).(fv_c).("rptCode"))
+		#}
+		ENDIF
+		
+		fv_f = urhk_ExecSrvNoCommit("SRV_FetchOperAcctDtlForClosure|retain_all_output = Y")
+		#print(fv_f)
+		IF(fv_f != 0)THEN
+		#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			fv_e = func_handleSrvErrorB("Y","Y","Y","Y")
+			fv_e = func_replaceCharB(fv_e,"|","")
+			(fv_r).(fv_c).("errorMsg") = fv_e
+			RETURN 1
+		#}
+		ENDIF
+		
+		fv_u = urhk_CopyOutToIn("")
+		#print(fv_u)
+		
+		fv_f = urhk_SetUrhkInp("acctGenDtl.acctClosureReason.refCode|" + (fv_r).(fv_c).("closureReasonCode"))
+		fv_f = urhk_SetUrhkInp("acctGenDtl.acctClosureReason.refDesc|" + (fv_r).(fv_c).("closureReasonDesc"))
+		fv_f = urhk_SetUrhkInp("clsrRmks|" + (fv_r).(fv_c).("clsrNotes"))
+		fv_f = urhk_SetUrhkInp("dsaPenaltyDtls.entPenaltyAmt|" +(fv_r).(fv_c).("clsPenaltyAmt") + "|" + (fv_r).(fv_c).("cashCrncyCode"))
+		
+		#Set the outputs from the SRV
+		IF((fv_r).(fv_c).("xferBalFlg") == "Y")THEN
+		#{
+			IF ((fv_r).(fv_c).("tranType") == "T") THEN
+			#{
+				fv_f = urhk_SetUrhkOut("xferTranObj.tranDetail.tranIdentifier.tranId|tranId")
+				#print(fv_f)
+				fv_f= urhk_SetUrhkOut("xferTranObj.tranDetail.tranIdentifier.tranDate|tranDate")
+				#print(fv_f)
+			#}
+			ENDIF
+			IF((fv_r).(fv_c).("tranType") == "C") THEN
+			#{
+				fv_f = urhk_SetUrhkOut("cashTranObj.tranDetail.tranIdentifier.tranId|tranId")
+				#print(fv_f)
+				fv_f = urhk_SetUrhkOut("cashTranObj.tranDetail.tranIdentifier.tranDate|tranDate")
+				#print(fv_f)
+			#}
+			ENDIF
+			IF((fv_r).(fv_c).("tranType") == "B")THEN
+			#{
+				fv_f = urhk_SetUrhkOut("xferTranObj.tranDetail.tranIdentifier.tranId|tranId")
+				#print(fv_f)
+				fv_f= urhk_SetUrhkOut("xferTranObj.tranDetail.tranIdentifier.tranDate|tranDate")
+				#print(fv_f)
+				fv_f = urhk_SetUrhkOut("cashTranObj.tranDetail.tranIdentifier.tranId|cashTranId")
+				#print(fv_f)
+				fv_f = urhk_SetUrhkOut("cashTranObj.tranDetail.tranIdentifier.tranDate|cashTranDate")
+				#print(fv_f)
+				
+			#}
+			ENDIF
+		#}
+		ENDIF
+		fv_f = urhk_ExecSrvNoCommit("SRV_CloseOperAcct|same_user_verify = Y|retain_all_output = Y")
+		#print(fv_f)
+		IF(fv_f != 0)THEN
+		#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			fv_e = func_handleSrvErrorB("Y","Y","Y","Y")
+			fv_e = func_replaceCharB(fv_e,"|","")
+			(fv_r).(fv_c).("errorMsg") = fv_e
+			RETURN 1
+			#}
+		ELSE
+			#{
+			IF((fv_r).(fv_c).("xferBalFlg") == "N")THEN
+			#{
+				RETURN 0
+			#}
+			ENDIF
+		#}
+		ENDIF
+		
+		IF (((fv_r).(fv_c).("tranType") == "T") OR ((fv_r).(fv_c).("tranType")  == "C")) THEN
+		#{
+			
+			(fv_r).(fv_c).("tranId") =  BANCS.OUTPARAM.tranId
+			#fv_tranId = BANCS.OUTPARAM.tranId
+			fv_tranDate = BANCS.OUTPARAM.tranDate
+			PRINT(fv_tranDate)
+		#}
+		ENDIF
+		
+		IF((fv_r).(fv_c).("tranType")  == "B")THEN
+		#{
+			(fv_r).(fv_c).("tranId") =  BANCS.OUTPARAM.tranId
+			PRINT((fv_r).(fv_c).("tranId"))
+			fv_tranDate = BANCS.OUTPARAM.tranDate
+			PRINT(fv_tranDate)
+			(fv_r).(fv_c).("cashTranId") = BANCS.OUTPARAM.cashTranId
+			fv_cashTranDate= BANCS.OUTPARAM.cashTranDate
+			PRINT(fv_cashTranDate)
+		#}
+		ENDIF
+		
+		IF(((fv_r).(fv_c).("tranId") != "") AND (fv_tranDate != "")) THEN
+		#{
+			fv_f = urhk_SetUrhkInp("tranDetail.tranIdentifier.tranId|" + (fv_r).(fv_c).("tranId"))
+			#print(fv_f)
+			fv_f = urhk_SetUrhkInp("tranDetail.tranIdentifier.tranDate|" + fv_tranDate)
+			#print(fv_f)
+			fv_f = urhk_SetUrhkInp("tranDetail.ignoreXcpnFlg|I")
+			#print(fv_f)
+			fv_f = urhk_ExecSrvNoCommit("SRV_PostAnEnteredTransaction|retain_all_output = Y")
+			#print(fv_f)
+			IF(fv_f != 0)THEN
+			#{
+				(fv_inpRepos).(fv_inpClass).("errorFlg") = "Y"
+				fv_e = func_handleSrvErrorB("Y","Y","Y","Y")
+				fv_e = func_replaceCharB(fv_e,"|","")
+				(fv_inpRepos).(fv_inpClass).("errorMsg") = fv_e
+				RETURN 1
+				#}
+			ELSE
+				#{
+				IF((fv_r).(fv_c).("tranType")  != "B")THEN
+				#{
+					RETURN 0
+				#}
+				ENDIF
+			#}
+			ENDIF
+			#}
+		ELSE
+			#{
+			IF((fv_inpRepos).(fv_inpClass).("errorFlg") == "N")THEN
+			#{
+				RETURN 0
+				#}
+			ELSE
+				#{
+				RETURN 1
+			#}
+			ENDIF
+		#}
+		ENDIF
+		
+		IF((fv_r).(fv_c).("tranType")  == "B")THEN
+		#{
+			IF(((fv_r).(fv_c).("cashTranId") != "") AND (fv_cashTranDate!= "")) THEN
+			#{
+				fv_f = urhk_SetUrhkInp("tranDetail.tranIdentifier.tranId|" + (fv_r).(fv_c).("cashTranId"))
+				#print(fv_f)
+				fv_f = urhk_SetUrhkInp("tranDetail.tranIdentifier.tranDate|" + fv_cashTranDate)
+				#print(fv_f)
+				fv_f = urhk_SetUrhkInp("tranDetail.ignoreXcpnFlg|I")
+				#print(fv_f)
+				fv_f = urhk_ExecSrvNoCommit("SRV_PostAnEnteredTransaction|retain_all_output = Y")
+				PRINT(fv_f)
+				IF(fv_f != 0)THEN
+				#{
+					(fv_inpRepos).(fv_inpClass).("errorFlg") = "Y"
+					fv_e = func_handleSrvErrorB("Y","Y","Y","Y")
+					fv_e = func_replaceCharB(fv_e,"|","")
+					(fv_inpRepos).(fv_inpClass).("errorMsg") = fv_e
+					RETURN 1
+					#}
+				ELSE
+					#{
+					
+					RETURN 0
+				#}
+				ENDIF
+				#}
+			ELSE
+				#{
+				IF((fv_inpRepos).(fv_inpClass).("errorFlg") == "N")THEN
+				#{
+					RETURN 0
+					#}
+				ELSE
+					#{
+					RETURN 1
+				#}
+				ENDIF
+				
+			#}
+			ENDIF
+		#}
+		ENDIF
+		RETURN 0
+	#}
+	ENDFUNCTION
+	
+	FUNCTION verifyCloseTxnAccount(fv_inpRepos,fv_inpClass)
+	#{
+		# Validation for the Account Id .
+		#PRINT(fv_inpRepos)
+		#PRINT(fv_inpClass)
+		
+		fv_r = fv_inpRepos
+		fv_c = fv_inpClass
+		
+		########################################################################################
+		# DEFAULT FIELDS INITIALIZATION
+		########################################################################################
+		(fv_r).(fv_c).("errorFlg") = "N"
+		(fv_r).(fv_c).("errorMsg") = " "
+		(fv_r).(fv_c).("errorCode")  = " "
+		
+		########################################################################################
+		# MANDATORY FIELDS CHECK
+		########################################################################################
+		fv_m = "foracid"
+		fv_e = " "
+		fv_f = func_chkMandatorySRVInputsB(fv_r,fv_c,fv_m,BYREF fv_e)
+		#PRINT(fv_f)
+		
+		IF(fv_f != 0)THEN
+		#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			fv_e = func_replaceCharB(fv_e,"|","")
+			(fv_r).(fv_c).("errorMsg")  = fv_e
+			RETURN 1
+		#}
+		ENDIF
+		
+		fv_a = urhk_B2k_ForacidToAcid((fv_r).(fv_c).("foracid"))
+		IF(fv_a == 0) THEN
+		#{
+			sub_copyOutparamFieldB("Acid",(fv_r),(fv_c),("Acid"),"")
+			#print((fv_r).(fv_c).("Acid"))
+			IF((fv_r).(fv_c).("Acid") == "")THEN
+			#{
+				(fv_r).(fv_c).("errorFlg") = "Y"
+				(fv_r).(fv_c).("errorMsg") = "Invalid Account Id."
+				RETURN 1
+			#}
+			ENDIF
+			#}
+		ELSE
+			#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			(fv_r).(fv_c).("errorMsg") =  "Invalid Account Id."
+			RETURN 1
+		#}
+		ENDIF
+		#PRINT((fv_r).(fv_c).("foracid"))
+		########################################################################################
+		# SRV EXECUTION
+		########################################################################################
+		fv_f = urhk_SetUrhkInp("acctBasic.foracid|"+(fv_r).(fv_c).("foracid"))
+		fv_f = urhk_ExecSrvNoCommit("SRV_FetchOperAcctClsrDtlForVerify|same_user_verify = Y|retain_all_output = Y")
+		#print(fv_f)
+		IF(fv_f != 0)THEN
+		#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			fv_e = func_handleSrvErrorB("Y","Y","Y","Y")
+			fv_e = func_replaceCharB(fv_e,"|","")
+			(fv_r).(fv_c).("errorMsg") = fv_e
+			RETURN 1
+		#}
+		ENDIF
+		
+		fv_u = urhk_CopyOutToIn("")
+		#print(fv_u)
+		
+		fv_f = urhk_ExecSrvNoCommit("SRV_VerifyOperAcctClsrDtl|same_user_verify = Y|retain_all_output = Y")
+		#print(fv_f)
+		IF (fv_f != 0) THEN
+		#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			fv_e = func_handleSrvErrorB("Y","Y","Y","Y")
+			fv_e = func_replaceCharB(fv_e,"|","")
+			(fv_r).(fv_c).("errorMsg") = fv_e
+			RETURN 1
+			#}
+		ELSE
+			#{
+			RETURN 0
+		#}
+		ENDIF
+	#}
+	ENDFUNCTION
+	
+	FUNCTION closeVerifyTxnAccount(fv_av_inpRepos,fv_av_inpClass)
+	#{
+		fv_a_inpRepos = fv_av_inpRepos
+		fv_a_inpClass = fv_av_inpClass
+		
+		fv_f = func_closeTxnAccount(fv_a_inpRepos, fv_a_inpClass)
+		#PRINT(fv_f)
+		
+		IF (fv_f != 0) THEN
+		#{
+			PRINT((fv_a_inpRepos).(fv_a_inpClass).("errorFlg"))
+			PRINT((fv_a_inpRepos).(fv_a_inpClass).("errorMsg"))
+			PRINT((fv_a_inpRepos).(fv_a_inpClass).("errorCode"))
+			RETURN 1
+		#}
+		ENDIF
+		
+		fv_v_inpRepos = fv_av_inpRepos
+		fv_v_inpClass = fv_av_inpClass
+		
+		fv_f = func_verifyCloseTxnAccount(fv_v_inpRepos, fv_v_inpClass)
+		PRINT(fv_f)
+		
+		IF (fv_f != 0) THEN
+		#{
+			PRINT((fv_v_inpRepos).(fv_v_inpClass).("errorFlg"))
+			PRINT((fv_v_inpRepos).(fv_v_inpClass).("errorMsg"))
+			PRINT((fv_v_inpRepos).(fv_v_inpClass).("errorCode"))
+			RETURN 1
+		#}
+		ENDIF
+		RETURN 0
+	#}
+	ENDFUNCTION
+	
+	FUNCTION cancelCloseTxnAccount(fv_inpRepos,fv_inpClass)
+	#{
+		# Validation for the Account Id .
+		#PRINT(fv_inpRepos)
+		#PRINT(fv_inpClass)
+		
+		fv_r = fv_inpRepos
+		fv_c = fv_inpClass
+		
+		########################################################################################
+		# DEFAULT FIELDS INITIALIZATION
+		########################################################################################
+		(fv_r).(fv_c).("errorFlg") = "N"
+		(fv_r).(fv_c).("errorMsg") = " "
+		(fv_r).(fv_c).("errorCode")  = " "
+		
+		########################################################################################
+		# MANDATORY FIELDS CHECK
+		########################################################################################
+		fv_m = "foracid"
+		fv_e = " "
+		fv_f = func_chkMandatorySRVInputsB(fv_r,fv_c,fv_m,BYREF fv_e)
+		#PRINT(fv_f)
+		
+		IF(fv_f != 0)THEN
+		#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			fv_e = func_replaceCharB(fv_e,"|","")
+			(fv_r).(fv_c).("errorMsg")  = fv_e
+			RETURN 1
+		#}
+		ENDIF
+		
+		fv_a = urhk_B2k_ForacidToAcid((fv_r).(fv_c).("foracid"))
+		IF(fv_a == 0) THEN
+		#{
+			sub_copyOutparamFieldB("Acid",(fv_r),(fv_c),("Acid"),"")
+			#print((fv_r).(fv_c).("Acid"))
+			IF((fv_r).(fv_c).("Acid") == "")THEN
+			#{
+				(fv_r).(fv_c).("errorFlg") = "Y"
+				(fv_r).(fv_c).("errorMsg") = "Invalid Account Id."
+				RETURN 1
+			#}
+			ENDIF
+			
+			#}
+		ELSE
+			#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			(fv_r).(fv_c).("errorMsg") =  "Invalid Account Id."
+			RETURN 1
+		#}
+		ENDIF
+		#PRINT((fv_r).(fv_c).("foracid"))
+		########################################################################################
+		# SRV EXECUTION
+		########################################################################################
+		
+		fv_f = urhk_SetUrhkInp("acctBasic.foracid|"+(fv_r).(fv_c).("foracid"))
+		fv_f = urhk_ExecSrvNoCommit("SRV_FetchOperAcctClsrDtlForCancel|same_user_verify = Y|retain_all_output = Y")
+		#print(fv_f)
+		IF(fv_f != 0)THEN
+		#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			fv_e = func_handleSrvErrorB("Y","Y","Y","Y")
+			fv_e = func_replaceCharB(fv_e,"|","")
+			(fv_r).(fv_c).("errorMsg") = fv_e
+			RETURN 1
+		#}
+		ENDIF
+		
+		fv_u = urhk_CopyOutToIn("")
+		#print(fv_u)
+		
+		fv_f = urhk_ExecSrvNoCommit("SRV_CancelOperAcctClsrDtl|same_user_verify = Y|retain_all_output = Y")
+		#print(fv_f)
+		IF (fv_f != 0) THEN
+		#{
+			(fv_r).(fv_c).("errorFlg") = "Y"
+			fv_e = func_handleSrvErrorB("Y","Y","Y","Y")
+			fv_e = func_replaceCharB(fv_e,"|","")
+			(fv_r).(fv_c).("errorMsg") = fv_e
+			RETURN 1
+			#}
+		ELSE
+			#{
+			RETURN 0
+		#}
+		ENDIF
+	#}
+	ENDFUNCTION
+	
+	
+<--START
+CHECKSUM="a347eb074da3aa19e51998f6de74ec1fe310cb46f3c159fa590ff71d26c12190"
+END-->

@@ -1,0 +1,101 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: LHCIFAPIBatch.scr
+# Type: NA|default
+# Description: LHCIFAPIBatch.scr
+# Author: Divya_John01
+# Date: 7/18/18 11:52 PM
+# Modification Log:
+#============================================================
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT LibBatchFrwk
+IMPORT LHCIFAPIBatch
+IMPORT RetCustModAPI
+IMPORT CIFCommonFunctions
+IMPORT corpCustModAPI
+
+<--START
+	# Script body goes here
+	TRACE ON
+	
+	LIBNAME CUSTOMSO
+	
+	##################################################################################
+	# REPOSITORY AND CLASS CREATION
+	##################################################################################
+	sub_createRepClassB("CUST","DATA")
+	#sv_r = urhk_b2k_printrepos("BANCS")
+	
+	##################################################################################
+	# INITIALIZE VARIABLES
+	##################################################################################
+	#MSG0000360:CIF Batch Upload Failed
+	CUST.DATA.technicalErrCode = "MSG0000002"
+	CUST.DATA.succLst = "CIF_SUCCESS_LST"
+	CUST.DATA.failLst = "CIF_FAILURE_LST"
+	CUST.DATA.succHeader = "CIF ADD_UPDATE SUCCESS REPORT" + "|" + BANCS.STDIN.mySolId + "|" + BANCS.STDIN.mySolDesc + "|" + BANCS.STDIN.dcAlias + " "
+	CUST.DATA.failHeader = "CIF ADD_UPDATE FAILURE REPORT" + "|" + BANCS.STDIN.mySolId + "|" + BANCS.STDIN.mySolDesc + "|" + BANCS.STDIN.dcAlias + " "
+	CUST.DATA.succColmnHeader = "SRL NUM|CIF ID|RESULT"
+	CUST.DATA.failColmnHeader = "SRL NUM|CIF ID|FAILURE REASON"
+	CUST.DATA.genFlg = "Y"
+	CUST.DATA.succJasperName = "GenericRpt_3Fields.jasper"
+	CUST.DATA.failJasperName = "GenericRpt_3Fields.jasper"
+	CUST.DATA.succReportName = "CIFucc"
+	CUST.DATA.failReportName = "CIFFail"
+	CUST.DATA.succReportTitle = "CIF SUCCESS RPT"
+	CUST.DATA.failReportTitle = "CIF FAILURE RPT"
+	CUST.DATA.succRptFormat = "PDF"
+	CUST.DATA.failRptFormat = "PDF"
+	CUST.DATA.srlNum = "0"
+	CUST.DATA.outRecord = ""
+	
+	CUST.DATA.successCount = "1"
+	CUST.DATA.failureCount = "1"
+	
+	CALLSCRIPTIFEXIST("CIFRecordReading.scr")
+	#CALLSCRIPTIFEXIST("uploadTestNew.scr")
+	
+	CUST.DATA.uploadStatus = "S"
+	IF(CUST.DATA.insertSuccess == "N")THEN
+	#{
+		PRINT("INSERTION FAILED")
+		EXITSCRIPT
+	#}
+	ENDIF
+	CUST.DATA.inpProcessdFlg ="N"
+	##################################################################################
+	# CURSOR INFORMATION
+	##################################################################################
+	PRINT("BATCH CURSOR INFO")
+	
+	CUST.DATA.outParam = "recordType, updateFlg, custNum, engTitle, engFirstName, engLastName, shortName, corpName, priRlnMgrId, forceLoanCls, "
+	CUST.DATA.outParam = CUST.DATA.outParam + "sector, subSector, businessType, homePhn, officePhn, othrPhn, telCntryCode, electronicAddr, "
+	CUST.DATA.outParam = CUST.DATA.outParam + "RecSrlNum, processedFlg"
+	
+	CUST.DATA.selectFields = "RECORD_TYPE, UPDATE_FLG, LTRIM(CUST_NUM,0), ENG_TITLE, ENG_FIRST_NAME, ENG_LAST_NAME, SHORT_NAME, CORP_NAME, PRIMARYRM, FORCE_LOAN, "
+	CUST.DATA.selectFields = CUST.DATA.selectFields + "SECTOR, SUB_SECTOR,BUSSINESS_CODE, HOME_PHONE, OFFICE_PHONE, OTHER_PHONE, TEL_CNTRY_CODE, ELECTRONIC_ADDR, "
+	CUST.DATA.selectFields = CUST.DATA.selectFields + "UPLOAD_REC_SRL_NUM, PROCESSED_FLG"
+	
+	CUST.DATA.tableName = "CUSTOM.LHCIF_UPLOAD"
+	
+	CUST.DATA.keyFields = " PROCESSED_FLG = ?SVAR"
+	CUST.DATA.keyValues	 = CUST.DATA.inpProcessdFlg
+	
+	CUST.DATA.additionalCond = "1 = 1"
+	
+	sv_f = func_batchFrameWrk("CUST","DATA",BYREF CUST.DATA.errorCode,BYREF CUST.DATA.errorMsg)
+	PRINT("EXEC BATCH FRMWRK")
+
+	#Moving report files to CIFUPL Path
+	sv_a = "mv CIF_* $TBA_PROD_ROOT/CDCI_LOGS/CIFUPL"
+	print(sv_a)
+	sv_v = system(sv_a)
+	print(sv_v)			
+
+	TRACE OFF
+	EXITSCRIPT
+	
+END-->

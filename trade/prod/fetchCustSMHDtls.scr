@@ -1,0 +1,135 @@
+#======================================================================================
+# script		: fetchCustSMHDtls.scr
+# event			: Transmission of message
+# description	: Custom SMH fetch logic script.
+#======================================================================================
+#--------------------------------------------------------------------------------------
+#   Script for validation of event types.
+#--------------------------------------------------------------------------------------
+<--start
+#trace on
+BANCS.OUTPUT.UETRExists = "N"
+BANCS.OUTPUT.UETR = ""
+
+IF(FIELDEXISTS(BANCS.STDIN.menuId)==0) THEN
+	BANCS.STDIN.menuId = "TRSWIFT"
+endif
+
+IF(BANCS.STDIN.menuId!="TRSWIFT") THEN
+#{
+	IF((BANCS.STDIN.menuId == "HSMI") OR (BANCS.STDIN.menuId == "HSMM")) THEN
+	#{
+		IF(BANCS.INPUT.SwSrlNum != "")THEN
+		#{	
+			sv_s = "UETRStr|SELECT UETR "
+			sv_s = sv_s + " from CSMHINST "
+			sv_s = sv_s + " WHERE SW_SRL_NUM = '"
+			sv_s = sv_s + BANCS.INPUT.SwSrlNum + "'"
+			sv_s = sv_s + " AND bank_id = '"
+			sv_s = sv_s + BANCS.STDIN.contextBankId + "'"
+			sv_r = urhk_dbselectWithBind(sv_s)
+        	IF (sv_r == 0) THEN
+        	#{
+            	BANCS.OUTPUT.UETR = BANCS.OUTPARAM.UETRStr
+            	BANCS.OUTPUT.UETRExists = "Y"
+        	#}
+       	 	ELSE
+        	#{
+				sv_s = "UETRStr|SELECT UETR "
+				sv_s = sv_s + " from CSMHINST "
+				sv_s = sv_s + " WHERE related_sw_srl_no = '"
+				sv_s = sv_s + BANCS.INPUT.SwSrlNum + "'"
+				sv_s = sv_s + " AND related_mt_no = '"
+				sv_s = sv_s + BANCS.INPUT.MessageId + "'"
+				sv_s = sv_s + " AND bank_id = '"
+				sv_s = sv_s + BANCS.STDIN.contextBankId + "'"
+ 	            sv_r = urhk_dbselectWithBind(sv_s)
+        	    IF (sv_r == 0) THEN
+                #{
+                    BANCS.OUTPUT.UETR = BANCS.OUTPARAM.UETRStr
+                   	BANCS.OUTPUT.UETRExists = "Y"
+   				#}
+				ENDIF
+       		#}
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ELSE
+	#{
+		IF(BANCS.INPUT.SwSrlNum != "")THEN
+        #{
+			sv_s = "UETRStr|SELECT UETR "
+			sv_s = sv_s + " from CSMHINST "
+            sv_s = sv_s + " WHERE SW_SRL_NUM = '"
+            sv_s = sv_s + BANCS.INPUT.SwSrlNum + "'"
+            sv_s = sv_s + " AND bank_id = '"
+            sv_s = sv_s + BANCS.STDIN.contextBankId + "'"
+			sv_r = urhk_dbselectWithBind(sv_s)
+            IF (sv_r == 0) THEN
+            #{
+				BANCS.OUTPUT.UETR = BANCS.OUTPARAM.UETRStr
+                BANCS.OUTPUT.UETRExists = "Y"
+            #}
+			endif
+		#}
+		endif
+	ENDIF
+	#}
+#}
+ELSE
+#{	
+	IF(BANCS.INPUT.SwSrlNum != "")THEN
+	#{
+		#Fetching the UETR from CSMHINST table for 202CV 
+		#Fetch the UETR of corresponding 103 message
+		sv_s = "UETRStr|SELECT UETR "
+		sv_s = sv_s + " from CSMHINST "
+		sv_s = sv_s + " WHERE ENTITY_ID = '"
+		sv_s = sv_s + BANCS.INPUT.EntityId + "'"
+		sv_s = sv_s + " AND ENTITY_TYPE = '"
+		sv_s = sv_s + BANCS.INPUT.EntityType + "'"
+		sv_s = sv_s + " AND related_sw_srl_no = '"
+		sv_s = sv_s + BANCS.INPUT.SwSrlNum + "'"
+		sv_s = sv_s + " AND related_mt_no = '"
+		sv_s = sv_s + BANCS.INPUT.MessageId + "'"
+		sv_s = sv_s + " AND bank_id = '"
+		sv_s = sv_s + BANCS.STDIN.contextBankId + "'"
+	#}
+	ENDIF
+	sv_r = urhk_dbselectWithBind(sv_s)
+	IF (sv_r == 0) THEN
+	#{
+		BANCS.OUTPUT.UETR = BANCS.OUTPARAM.UETRStr
+		BANCS.OUTPUT.UETRExists = "Y" 
+		#print(BANCS.OUTPARAM.UETRStr)
+	#}
+	ELSE
+	#{
+		IF(BANCS.INPUT.SwSrlNum != "")THEN
+        #{
+			sv_s = "UETRStr|SELECT UETR "
+            sv_s = sv_s + " from CSMHINST "
+            sv_s = sv_s + " WHERE SW_SRL_NUM = '"
+            sv_s = sv_s + BANCS.INPUT.SwSrlNum + "'"
+            sv_s = sv_s + " AND bank_id = '"
+            sv_s = sv_s + BANCS.STDIN.contextBankId + "'"
+            sv_r = urhk_dbselectWithBind(sv_s)
+            IF (sv_r == 0) THEN
+            #{
+				BANCS.OUTPUT.UETR = BANCS.OUTPARAM.UETRStr
+                BANCS.OUTPUT.UETRExists = "Y"
+            #}
+			else	
+				BANCS.OUTPUT.UETRExists = "N"
+				BANCS.OUTPUT.UETR = ""
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ENDIF	
+#}
+ENDIF
+exitscript
+#trace off
+end-->

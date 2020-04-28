@@ -1,0 +1,754 @@
+#########################################################################################################################
+# Name of the file      : tmdet_insert.scr
+# Start Date            : 22-May-2018
+# Description           : This script will insert data into custom table.
+# Design Id             : HTM
+# Menu Option           : HTM,HXFER,HCASHDEP,HACHWD
+# Input parameters      : NA
+# Output parameters     : NA
+# Author                : Isha Gupta
+# Called Script         : NA
+# Calling Script        : NA
+# Bank                  : LH Bank
+# Modification History:
+# <Serial No.>         <Date>         <Author Name>              <Description>
+#      0.1            22-May-2018     Isha Gupta               Initial Draft
+#      0.2            26-Jun-2018     Apurva Seth              Added Code for Ao Code and Cost Center
+##############################################################################################################################
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT LibAuditB001
+#IMPORT LibCasa001
+
+<--START
+TRACE ON
+libname CUSTOMSO
+#sv_u = urhk_B2K_printRepos("BANCS")
+##sv_v = urhk_B2K_printRepos("ONS")
+#----------------------------------------------
+#Create repository and class
+#----------------------------------------------
+sub_createRepClassB("HTM", "DATA")
+
+
+#--------------------------------------------
+#Initialize variables
+#--------------------------------------------
+HTM.DATA.bankId			= BANCS.STDIN.contextBankId
+HTM.DATA.funcCode		= ""
+HTM.DATA.delFlg			= "N"
+HTM.DATA.entityCreFlg	= "N"
+HTM.DATA.postFlg		= "N"
+HTM.DATA.userId			= BANCS.STDIN.userId
+HTM.DATA.purCode 		= ""
+HTM.DATA.aoCode		    = ""
+HTM.DATA.costCenter     = "" 
+HTM.DATA.acid 			= ""
+HTM.DATA.foracid 		= ""
+HTM.DATA.tranId 		= ""
+HTM.DATA.partTranSrlNum = ""
+HTM.DATA.tranDate 		= ""
+HTM.DATA.partTranType 	= ""
+HTM.DATA.noOfRecords	= ""
+HTM.DATA.purCodeOld		= ""
+HTM.DATA.tablename		= "C_DTD_P_EXT"
+HTM.DATA.BODDate		= MID$(BANCS.STDIN.BODDate,0,10)
+HTM.DATA.slAcctBal		= ""
+HTM.DATA.slAcctId		= ""
+HTM.DATA.slAcctName		= ""
+HTM.DATA.slAcctStatus	= ""
+HTM.DATA.slSeqTranID 	= ""
+HTM.DATA.accBalInsert   = ""
+IF((BANCS.STDIN.serviceName == "SRV_VerifyTran") OR (BANCS.STDIN.serviceName == "SRV_PostTran") OR (BANCS.STDIN.serviceName == "SRV_ModifyAndPostCashTran") OR (BANCS.STDIN.serviceName == "SRV_ModifyAndPostXferTran") OR (BANCS.STDIN.serviceName == "SRV_ModifyCashTranForPTranPost") OR (BANCS.STDIN.serviceName == "SRV_ModifyXferTranForPTranPost"))THEN
+#{
+	HTM.DATA.postFlg			= "Y"
+	HTM.DATA.entityCreFlg		= "Y"
+	HTM.DATA.funcCode			= "P"
+#}
+ENDIF
+
+IF((BANCS.STDIN.serviceName == "SRV_AddAndPostCashTran") OR (BANCS.STDIN.serviceName == "SRV_AddAndPostXferTran") OR (BANCS.STDIN.serviceName == "SRV_AddXferTranForPTranPost") OR (BANCS.STDIN.serviceName == "SRV_AddCashTranForPTranPost"))THEN
+#{
+	HTM.DATA.postFlg			= "Y"
+	HTM.DATA.entityCreFlg		= "Y"
+	HTM.DATA.funcCode			= "A"
+#}
+ENDIF
+
+IF((BANCS.STDIN.serviceName == "SRV_AddCashTran") OR (BANCS.STDIN.serviceName == "SRV_AddXferTran"))THEN
+#{
+	HTM.DATA.postFlg			= "N"
+	HTM.DATA.entityCreFlg		= "N"
+	HTM.DATA.funcCode			= "A"
+#}
+ENDIF
+
+IF((BANCS.STDIN.serviceName == "SRV_ModifyCashTran") OR (BANCS.STDIN.serviceName == "SRV_ModifyXferTran"))THEN
+#{
+	HTM.DATA.postFlg			= "N"
+	HTM.DATA.entityCreFlg		= "N"
+	HTM.DATA.funcCode			= "P"
+#}
+ENDIF
+
+IF((BANCS.STDIN.serviceName == "SRV_DeleteTran"))THEN
+#{
+	HTM.DATA.delFlg			= "Y"
+	HTM.DATA.funcCode		= "P"
+#}
+ENDIF
+#---------------------------------------------
+#Fetch the custom data from frontend
+#---------------------------------------------
+IF (FIELDEXISTS(ONS.CUSTOM.custDataIn) == 0) THEN
+#{
+	GOTO ENDOFSCRIPT
+#}
+ENDIF
+ONS.CUSTOM.custDataIn = TRIM(ONS.CUSTOM.custDataIn)
+IF (ONS.CUSTOM.custDataIn == "") THEN
+#{
+	GOTO ENDOFSCRIPT
+#}
+ENDIF
+PRINT(ONS.CUSTOM.custDataIn)
+sv_a = ONS.CUSTOM.custDataIn
+sv_u = urhk_ParseONSCustData(sv_a)
+PRINT(sv_u)
+
+#Checking for SL account details in case its transfer transaction and subtype BI or CINT
+			
+sv_v = urhk_SRV_GetVal("tranHdr.tranTypeSubType.tranType")
+IF(sv_v == 0) THEN
+#{
+	HTM.DATA.tranType = BANCS.OUTPARAM.srvValue
+	PRINT(HTM.DATA.tranType)
+#}
+ENDIF
+		
+sv_v = urhk_SRV_GetVal("tranHdr.tranTypeSubType.tranSubType")
+IF(sv_v == 0) THEN
+#{
+	HTM.DATA.tranSubType = BANCS.OUTPARAM.srvValue
+	PRINT(HTM.DATA.tranSubType)
+#}
+ENDIF
+
+
+HTM.DATA.pageName = "tmdet"
+IF(sv_u == 0)THEN
+#{
+	
+	#-------------------------------------------------------------------------------------------------
+	#  FIELD DESCRIPTION                                                                               
+	#-------------------------------------------------------------------------------------------------
+	#     FIELD_2 - No.of multirecs                                                                    
+	#     FIELD_4 - custom field, Purpose Code                                                         		
+	#-------------------------------------------------------------------------------------------------
+
+	IF(FIELDEXISTS(("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_2"))) THEN
+	#{
+		HTM.DATA.noOfRecords = ("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_2")
+		PRINT(HTM.DATA.noOfRecords)
+	#}
+	ELSE
+	#{
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+	
+IF (BANCS.STDIN.serviceName == "SRV_PostTran") THEN
+#{
+		sv_j = ""
+		sv_j = sv_j + " acid, ptransrlnum , trnDt , pTranType,delFlg,tranAmt,crncyCode , purCode,aoCode,coCenter,slAcctId,slAcctName,slAcctStatus,slAcctBal |"
+		sv_j = sv_j + " SELECT d.acid , d.part_tran_srl_num , d.tran_date , d.part_tran_type, d.del_flg , d.tran_amt , d.ref_crncy_code , "
+		sv_j = sv_j + " c.purpose_code , c.ao_code , c.cost_center ,c.free_text_1 ,c.free_text_2 ,c.free_text_3 , c.free_text_4 "
+		sv_j = sv_j + " from tbaadm.dtd d , tbaadm.c_dtd_p_ext c "
+		sv_j = sv_j + " where d.tran_id = c.tran_id and  trim(d.tran_id) = TRIM(?SVAR) "
+		sv_j = sv_j + " and d.part_Tran_srl_num = c.part_Tran_srl_num "
+		sv_j = sv_j + " and d.part_tran_type = c.part_tran_type "
+		sv_j = sv_j + " and d.pstd_flg = 'Y' and d.del_flg = 'N' "
+		sv_j = sv_j + " and d.TRAN_DATE = c.TRAN_DATE "
+		sv_j = sv_j + " AND d.BANK_ID = c.bank_id " 
+		sv_j = sv_j + " AND d.BANK_ID = ?SVAR " 
+		sv_j = sv_j + " AND d.tran_date = to_date(?SVAR,'DD-MM-YYYY') " 
+		sv_j = sv_j + " ORDER BY TRIM(d.part_Tran_srl_num)"
+		
+		print(sv_j)
+		IF(FIELDEXISTS(BANCS.INPUT.TranId)) THEN
+		#{
+			BANCS.INPARAM.BINDVARS = BANCS.INPUT.TranId + "|" +  HTM.DATA.bankId + "|" + MID$(BANCS.INPUT.TranDate,0,10)
+			print(BANCS.INPARAM.BINDVARS)
+		#}
+		ELSE
+		#{
+			GOTO EXIT2
+		#}
+		ENDIF
+		sv_d = urhk_dbCursorOpenWithBind(sv_j)
+
+		IF(sv_d != "0")THEN
+		#{
+			HTM.DATA.error = "Database errorr | Unable to select records"
+			GOTO EXIT2
+		#}
+		ENDIF
+		
+		HTM.DATA.MainCursor = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+		HTM.DATA.curCount = urhk_dbCursorFetch(HTM.DATA.MainCursor)
+		print(HTM.DATA.curCount)
+		if (HTM.DATA.curCount != 0) then
+		#{
+			print("Error in db query")
+			HTM.DATA.error ="No Data Found"
+			GOTO END_OF_CURSOR
+		#}
+		ENDIF
+		
+		sv_n = 0
+		
+		WHILE(HTM.DATA.curCount == 0)
+		#{
+			
+			sv_g = FORMAT$(sv_n,"%d")
+			print(sv_g)
+			("HTM").("DATA").("purCode_"+sv_g) = BANCS.OUTPARAM.purCode
+			PRINT(("HTM").("DATA").("purCode_"+sv_g))
+			
+			("HTM").("DATA").("aoCode_"+sv_g) = BANCS.OUTPARAM.aoCode
+			PRINT(("HTM").("DATA").("aoCode_"+sv_g))
+			
+			("HTM").("DATA").("costCenter_"+sv_g) = BANCS.OUTPARAM.coCenter
+			PRINT(("HTM").("DATA").("costCenter_"+sv_g))
+			
+			# Code addition for SL account insert in custom table Starts
+			IF ((HTM.DATA.tranType == "T") AND ((HTM.DATA.tranSubType == "BI") or (HTM.DATA.tranSubType == "CI"))) THEN
+			#{
+					
+				("HTM").("DATA").("slAcctId_"+sv_g) = BANCS.OUTPARAM.slAcctId
+				PRINT(("HTM").("DATA").("slAcctId_"+sv_g))
+				PRINT(sv_g)
+				IF (("HTM").("DATA").("slAcctId_"+sv_g) != "" ) THEN
+				#{
+					("HTM").("DATA").("slAcctName_"+sv_g) = BANCS.OUTPARAM.slAcctName
+					PRINT(("HTM").("DATA").("slAcctName_"+sv_g))
+							
+					("HTM").("DATA").("slAcctStatus_"+sv_g) = BANCS.OUTPARAM.slAcctStatus
+					PRINT(("HTM").("DATA").("slAcctStatus_"+sv_g))
+									
+					("HTM").("DATA").("slAcctBal_"+sv_g) = BANCS.OUTPARAM.slAcctBal
+					PRINT(("HTM").("DATA").("slAcctBal_"+sv_g))
+				#}
+				ELSE
+				#{
+					("HTM").("DATA").("slAcctId_"+sv_g) = "NULL"
+				#}
+				ENDIF
+			#}
+			ENDIF	
+			
+			("BANCS").("OUTPUT").("acid_"+sv_g) = BANCS.OUTPARAM.acid
+			PRINT(("BANCS").("OUTPUT").("acid_"+sv_g))
+			
+			("BANCS").("OUTPUT").("foracid_"+sv_g) = "ABCD"
+			PRINT(("BANCS").("OUTPUT").("foracid_"+sv_g))
+			
+			("BANCS").("OUTPUT").("tranId_"+sv_g) = BANCS.INPUT.TranId
+			PRINT(("BANCS").("OUTPUT").("tranId_"+sv_g))
+			
+			("BANCS").("OUTPUT").("partTranSrlNum_"+sv_g) = BANCS.OUTPARAM.ptransrlnum
+			PRINT(("BANCS").("OUTPUT").("partTranSrlNum_"+sv_g))
+			
+			("BANCS").("OUTPUT").("tranDate_"+sv_g) = MID$(BANCS.INPUT.TranDate,0,10)
+			PRINT(("BANCS").("OUTPUT").("tranDate_"+sv_g))
+			
+			("BANCS").("OUTPUT").("partTranType_"+sv_g) = BANCS.OUTPARAM.pTranType
+			PRINT(("BANCS").("OUTPUT").("partTranType_"+sv_g))
+			
+			("BANCS").("OUTPUT").("tranAmt_"+sv_g) = BANCS.OUTPARAM.tranAmt + "|" + BANCS.OUTPARAM.crncyCode
+			PRINT(("BANCS").("OUTPUT").("tranAmt_"+sv_g))
+			
+			sv_n = sv_n + 1
+			PRINT(sv_n)
+			HTM.DATA.noOfRecords = sv_n
+			NEXT:	
+			HTM.DATA.curCount = urhk_dbCursorFetch(HTM.DATA.MainCursor)
+		#}
+		DO
+			
+#}					
+ELSE
+#{	
+	sv_c = HTM.DATA.noOfRecords
+	IF (sv_c > 0) THEN
+	#{
+		sv_d = 3
+		sv_n = 0
+		#--------------------------------------------------------------------------------------------------
+		#  Getting multirec inputs
+		#--------------------------------------------------------------------------------------------------
+		WHILE (sv_n < sv_c)
+		#{		
+			sv_z = sv_n
+			sv_g = FORMAT$(sv_z,"%d")
+				##################################
+			sv_d = sv_d + 1
+			sv_f = FORMAT$(sv_d,"%d")
+			PRINT(sv_f)
+			IF (("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f) == "NULL") THEN
+			#{
+				("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f) = ""
+			#}
+			ENDIF
+			("HTM").("DATA").("purCode_"+sv_g) = ("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f)
+			PRINT(("HTM").("DATA").("purCode_"+sv_g))
+			
+			sv_d = sv_d + 1
+			sv_f = FORMAT$(sv_d,"%d")
+			print(sv_f)
+			("HTM").("DATA").("aoCode_"+sv_g) = ("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f)
+			PRINT(("HTM").("DATA").("aoCode_"+sv_g))
+			sv_d = sv_d + 1
+			sv_f = FORMAT$(sv_d,"%d")
+			print(sv_f)
+			("HTM").("DATA").("costCenter_"+sv_g) = ("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f)
+			PRINT(("HTM").("DATA").("costCenter_"+sv_g))
+			
+				
+			# Code addition for SL account insert in custom table Starts
+			IF ((HTM.DATA.tranType == "T") AND ((HTM.DATA.tranSubType == "BI") or (HTM.DATA.tranSubType == "CI"))) THEN
+			#{
+				
+				sv_d = sv_d + 1
+				sv_f = FORMAT$(sv_d,"%d")
+				print(sv_f)
+				("HTM").("DATA").("slAcctId_"+sv_g) = ("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f)
+				PRINT(("HTM").("DATA").("slAcctId_"+sv_g))
+					
+				IF (("HTM").("DATA").("slAcctId_"+sv_g) != "NULL" ) THEN
+				#{
+					sv_d = sv_d + 1
+					sv_f = FORMAT$(sv_d,"%d")
+					print(sv_f)
+					("HTM").("DATA").("slAcctName_"+sv_g) = ("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f)
+					PRINT(("HTM").("DATA").("slAcctName_"+sv_g))
+						
+					sv_d = sv_d + 1
+					sv_f = FORMAT$(sv_d,"%d")
+					print(sv_f)
+					("HTM").("DATA").("slAcctBal_"+sv_g) = ("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f)
+					PRINT(("HTM").("DATA").("slAcctBal_"+sv_g))
+						
+					sv_d = sv_d + 1
+					sv_f = FORMAT$(sv_d,"%d")
+					print(sv_f)
+					("HTM").("DATA").("slAcctStatus_"+sv_g) = ("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f)
+					PRINT(("HTM").("DATA").("slAcctStatus_"+sv_g))
+				#}
+				ELSE
+				#{
+					sv_d = sv_d + 3
+					print(sv_d)
+				#}
+				ENDIF
+				# Code addition for SL account insert in custom table Ends
+			#}
+			ELSE
+			#{	
+				sv_d = sv_d + 4 
+				print(sv_d)
+			#}
+			ENDIF
+			#--------------------------------------------------------
+			# Fetching the product fields from SRV
+			#--------------------------------------------------------
+			sv_u = urhk_SRV_GetVal("tranDtl.partTranDetailLL.<rec_"+sv_g+">.acctId.acid")
+			IF(sv_u == 0) THEN
+			#{
+				("BANCS").("OUTPUT").("acid_"+sv_g) = BANCS.OUTPARAM.srvValue
+				PRINT(("BANCS").("OUTPUT").("acid_"+sv_g))
+			#}
+			ENDIF
+			sv_u = urhk_SRV_GetVal("tranDtl.partTranDetailLL.<rec_"+sv_g+">.acctId.foracid")
+			IF(sv_u == 0) THEN
+			#{
+				("BANCS").("OUTPUT").("foracid_"+sv_g) = BANCS.OUTPARAM.srvValue
+				PRINT(("BANCS").("OUTPUT").("foracid_"+sv_g))
+			#}
+			ENDIF
+			sv_u = urhk_SRV_GetVal("tranDtl.partTranDetailLL.<rec_"+sv_g+">.pTranIdentifier.tranId")
+			IF(sv_u == 0) THEN
+			#{
+				("BANCS").("OUTPUT").("tranId_"+sv_g) = BANCS.OUTPARAM.srvValue
+				PRINT(("BANCS").("OUTPUT").("tranId_"+sv_g))
+			#}
+			ENDIF
+			sv_u = urhk_SRV_GetVal("tranDtl.partTranDetailLL.<rec_"+sv_g+">.pTranIdentifier.partTranSrlNum")
+			IF(sv_u == 0) THEN
+			#{
+				("BANCS").("OUTPUT").("partTranSrlNum_"+sv_g) = BANCS.OUTPARAM.srvValue
+				PRINT(("BANCS").("OUTPUT").("partTranSrlNum_"+sv_g))
+			#}
+			ENDIF
+			sv_u = urhk_SRV_GetVal("tranDtl.partTranDetailLL.<rec_"+sv_g+">.pTranIdentifier.tranDate")
+			IF(sv_u == 0) THEN
+			#{
+				("BANCS").("OUTPUT").("tranDate_"+sv_g) = BANCS.OUTPARAM.srvValue
+				PRINT(("BANCS").("OUTPUT").("tranDate_"+sv_g))
+			#}
+			ENDIF
+			sv_u = urhk_SRV_GetVal("tranDtl.partTranDetailLL.<rec_"+sv_g+">.partTranType.code")
+			IF(sv_u == 0) THEN
+			#{
+				("BANCS").("OUTPUT").("partTranType_"+sv_g) = BANCS.OUTPARAM.srvValue
+				PRINT(("BANCS").("OUTPUT").("partTranType_"+sv_g))
+			#}
+			ENDIF
+			sv_u = urhk_SRV_GetVal("tranDtl.partTranDetailLL.<rec_"+sv_g+">.tranAmt")
+			IF(sv_u == 0) THEN
+			#{
+				("BANCS").("OUTPUT").("tranAmt_"+sv_g) = BANCS.OUTPARAM.srvValue
+				PRINT(("BANCS").("OUTPUT").("tranAmt_"+sv_g))
+			#}
+			ENDIF
+				
+			sv_n = sv_n + 1
+			PRINT(sv_n)
+			
+			IF(sv_n == HTM.DATA.noOfRecords) THEN
+			#{
+				GOTO SKIP
+			#}
+			ENDIF
+		#}
+		DO
+	#}
+	ENDIF
+#}
+ENDIF
+#Aman
+	
+SKIP:
+	sv_m = 0
+	WHILE(sv_m < CINT(HTM.DATA.noOfRecords))
+	#{
+		sv_b = FORMAT$(sv_m,"%d")
+
+		#Assign the multi rec fields to repository variables
+		HTM.DATA.purCode 			= ("HTM").("DATA").("purCode_"+sv_b)
+		PRINT(HTM.DATA.purCode)	
+		HTM.DATA.aoCode				= ("HTM").("DATA").("aoCode_"+sv_b)
+		PRINT(HTM.DATA.aoCode)	
+		HTM.DATA.costCenter			= ("HTM").("DATA").("costCenter_"+sv_b)
+		PRINT(HTM.DATA.costCenter)	
+		
+		IF ((HTM.DATA.tranType == "T") AND ((HTM.DATA.tranSubType == "BI") or (HTM.DATA.tranSubType == "CI"))) THEN
+		# SL account details for inserting in custom table
+		#{
+			PRINT(sv_b)
+			HTM.DATA.slAcctId		=	("HTM").("DATA").("slAcctId_"+sv_b)
+			PRINT(HTM.DATA.slAcctId)
+			IF (HTM.DATA.slAcctId != "NULL" ) THEN
+			#{
+				HTM.DATA.slAcctName = ("HTM").("DATA").("slAcctName_"+sv_b) 
+				PRINT(HTM.DATA.slAcctName)
+				
+				HTM.DATA.slAcctBal = ("HTM").("DATA").("slAcctBal_"+sv_b)
+				PRINT(HTM.DATA.slAcctBal)
+					
+				HTM.DATA.slAcctStatus = ("HTM").("DATA").("slAcctStatus_"+sv_b)
+				PRINT(HTM.DATA.slAcctStatus)
+			#}
+			ENDIF	
+		# END
+		#}
+		ENDIF	
+		#Assign the product fields to repository variables
+		HTM.DATA.acid 			= ("BANCS").("OUTPUT").("acid_"+sv_b)
+		HTM.DATA.foracid 			= ("BANCS").("OUTPUT").("foracid_"+sv_b)
+		HTM.DATA.tranId 			= ("BANCS").("OUTPUT").("tranId_"+sv_b)
+		HTM.DATA.partTranSrlNum 	= ("BANCS").("OUTPUT").("partTranSrlNum_"+sv_b)
+		HTM.DATA.tranDate 		=    MID$(("BANCS").("OUTPUT").("tranDate_"+sv_b),0,10)
+		HTM.DATA.partTranType 	= ("BANCS").("OUTPUT").("partTranType_"+sv_b)
+		HTM.DATA.tranAmt 	= ("BANCS").("OUTPUT").("tranAmt_"+sv_b)
+		HTM.DATA.tranAmt 	= func_getNthFieldFromStringB(HTM.DATA.tranAmt,"|",1)
+		HTM.DATA.tableKey = HTM.DATA.tranId + "/" + HTM.DATA.tranDate + "/" + HTM.DATA.partTranSrlNum + "/" + HTM.DATA.bankId
+		IF(HTM.DATA.acid =="")THEN
+		#{
+			IF(HTM.DATA.foracid !="")THEN
+			#{
+				  sv_u = urhk_B2k_ForacidToAcid(HTM.DATA.foracid)
+				  IF (sv_u == 0 ) THEN
+				  #{
+						HTM.DATA.acid =BANCS.OUTPARAM.Acid
+						PRINT(HTM.DATA.acid)
+				  #}
+				  ENDIF
+				
+			#}
+			ENDIF
+		#}
+		ENDIF
+IF(HTM.DATA.acid != "") THEN
+#{
+sub_initAuditB()
+IF(HTM.DATA.funcCode =="P")THEN
+#{
+		IF ((HTM.DATA.tranType == "T") AND ((HTM.DATA.tranSubType == "BI") or (HTM.DATA.tranSubType == "CI"))) THEN
+		#{			
+			#changes for updating SL account details in Post Mode
+			IF (HTM.DATA.slAcctId != "NULL" ) THEN
+			#{
+				PRINT(HTM.DATA.slAcctBal)
+				sv_e = GETPOSITION(HTM.DATA.slAcctBal," ")
+				PRINT(sv_e)
+				sv_w = STRLEN(HTM.DATA.slAcctBal)
+				PRINT(sv_w)
+				sv_o = sv_e - 1
+				PRINT(sv_o)
+				HTM.DATA.amount = MID$(HTM.DATA.slAcctBal,0,sv_o ) 	
+				HTM.DATA.crncy = MID$(HTM.DATA.slAcctBal,sv_e,3 ) 	
+				
+				PRINT(HTM.DATA.amount)
+				PRINT(HTM.DATA.crncy)
+				IF (BANCS.STDIN.serviceName == "SRV_PostTran") THEN
+				#{
+					HTM.DATA.accBalInsert = HTM.DATA.slAcctBal
+				#}
+				ELSE
+				#{	
+					HTM.DATA.accBalInsert = HTM.DATA.crncy +"|"+ HTM.DATA.amount
+				#}
+				ENDIF	
+				IF (FIELDEXISTS(BANCS.STDIN.txnSeq)) THEN
+				#{
+					HTM.DATA.slSeqTranID  = BANCS.STDIN.txnSeq
+				#}
+				ENDIF	
+				PRINT(HTM.DATA.slSeqTranID)
+			#}
+			ELSE
+			#{
+				HTM.DATA.slAcctId  = ""
+				HTM.DATA.slAcctName = "" 
+				HTM.DATA.slAcctStatus = ""
+				HTM.DATA.accBalInsert = ""
+				HTM.DATA.slSeqTranID = ""
+			#}
+			ENDIF
+		#}
+		ENDIF	
+		IF(HTM.DATA.aoCode == "NULL")THEN
+        #{
+             HTM.DATA.aoCode = ""
+        #}
+        ENDIF
+        IF(HTM.DATA.costCenter == "NULL")THEN
+        #{
+            HTM.DATA.costCenter = ""
+        #}
+        ENDIF
+		#AMAN adding code for insert in case of modify
+
+		#-----------------------------------------------------------------------------------------------------------------------		
+		#COUNT_RECORDS:
+		#-----------------------------------------------------------------------------------------------------------------------
+			sv_h = ""
+			sv_h = sv_h + " count|SELECT COUNT(1)"
+			sv_h = sv_h + " FROM CUSTOM.C_DTD_P_EXT "
+			sv_h = sv_h + " WHERE  TRIM(TRAN_ID) = TRIM('" + HTM.DATA.tranId + "') "
+			sv_h = sv_h + " AND TRAN_DATE = TO_DATE('" + HTM.DATA.tranDate + "','DD-MM-YYYY HH24:MI:SS')"
+			sv_h = sv_h + " AND TRIM(PART_TRAN_SRL_NUM) = TRIM('"+ HTM.DATA.partTranSrlNum + "') "
+			sv_h = sv_h + " AND BANK_ID = '" + HTM.DATA.bankId + "'" 
+			print(sv_h)
+			sv_i = urhk_dbSelectWithBind(sv_h)
+			print(sv_i)
+			IF (sv_i != 0) THEN
+			#{
+				PRINT(sv_i)
+				HTM.DATA.count = "0"
+			#}
+			ELSE
+			#{	
+				HTM.DATA.count= BANCS.OUTPARAM.count
+				print(HTM.DATA.count)
+			#}
+			ENDIF
+			
+			IF(CINT(HTM.DATA.count) == CINT("0"))THEN
+			#{
+				sv_s = "INSERT INTO CUSTOM.C_DTD_P_EXT ("
+				sv_s = sv_s +"ACID,TRAN_ID,TRAN_DATE,TRAN_AMT,PART_TRAN_SRL_NUM,PART_TRAN_TYPE,PSTD_FLG,PURPOSE_CODE,FREE_TEXT_1,FREE_TEXT_2,FREE_TEXT_3,FREE_TEXT_4,"
+				sv_s = sv_s + "FREE_TEXT_5,ENTITY_CRE_FLG,DEL_FLG,LCHG_TIME,LCHG_USER_ID,RCRE_USER_ID,RCRE_TIME,BANK_ID,AO_CODE,COST_CENTER,SEQ_TRAN_ID_SL) VALUES ("
+				sv_s = sv_s + "'"+HTM.DATA.acid+"','" +HTM.DATA.tranId +"',TO_DATE('"+HTM.DATA.tranDate+"','DD-MM-YYYY HH24:MI:SS'),'"+HTM.DATA.tranAmt +"','"+ HTM.DATA.partTranSrlNum+"','"+ HTM.DATA.partTranType + "','" + HTM.DATA.postFlg +"','" + HTM.DATA.purCode + "','" + HTM.DATA.slAcctId + "','" +  HTM.DATA.slAcctName + "','" +  HTM.DATA.slAcctStatus + "','" + HTM.DATA.accBalInsert + "','',"
+				sv_s = sv_s  + "'"+HTM.DATA.entityCreFlg+"','N',TO_DATE('"+BANCS.STDIN.sysDate+"','DD-MM-YYYY HH24:MI:SS'),'"+ HTM.DATA.userId +"','"+ HTM.DATA.userId +"',TO_DATE('"+BANCS.STDIN.sysDate+"','DD-MM-YYYY HH24:MI:SS'),'" + HTM.DATA.bankId +"','" + HTM.DATA.aoCode + "','" + HTM.DATA.costCenter + "','" +  HTM.DATA.slSeqTranID +"')"  
+				print(sv_s)
+				sv_a = urhk_dbSQLWithBind(sv_s)
+				print(sv_a)
+				if(sv_a == 0) then
+				#{
+					PRINT("SUCCESS")
+				#}
+				ELSE
+				#{
+					sv_z = "Custom Fields : Insertion Failed in C_DTD_P_EXT(tmdet_insert.scr)."
+					sv_u = urhk_SRV_SetErr(sv_z)
+					sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+					BANCS.OUTPUT.successOrFailure = "F"
+					GOTO ENDOFSCRIPT
+				#}
+				ENDIF
+			#}
+			ELSE
+			#{
+				#-----------------------------------------------
+				# Update Post Flg into the custom Main table
+				#-----------------------------------------------
+				sv_t = "UPDATE CUSTOM.C_DTD_P_EXT SET "
+				sv_t = sv_t +"PSTD_FLG = 'Y' ,PURPOSE_CODE = '"+HTM.DATA.purCode+"'"
+				sv_t = sv_t +" ,AO_CODE = '"+HTM.DATA.aoCode+"',COST_CENTER = '"+HTM.DATA.costCenter+"',"
+				sv_t = sv_t +"  FREE_TEXT_1 = '"+HTM.DATA.slAcctId+"',FREE_TEXT_2 = '"+HTM.DATA.slAcctName+"',"
+				sv_t = sv_t +"  FREE_TEXT_3 = '" +HTM.DATA.slAcctStatus + "',FREE_TEXT_4 = '" +HTM.DATA.accBalInsert + "'," 
+				sv_t = sv_t + " ENTITY_CRE_FLG = 'Y',LCHG_TIME = TO_DATE('"+BANCS.STDIN.sysDate+"','DD-MM-YYYY HH24:MI:SS')," 
+				sv_t = sv_t +"  LCHG_USER_ID = '"+ HTM.DATA.userId +"',SEQ_TRAN_ID_SL = '"+ HTM.DATA.slSeqTranID + "',"
+				sv_t = sv_t + " DEL_FLG = '"+ HTM.DATA.delFlg +"', PART_TRAN_TYPE = '" + HTM.DATA.partTranType + "', "
+				sv_t = sv_t + " TRAN_AMT = '"+HTM.DATA.tranAmt +"' "
+				sv_t = sv_t + " WHERE TRIM(TRAN_ID) = TRIM('" + HTM.DATA.tranId + "') AND TRAN_DATE = TO_DATE('"+HTM.DATA.tranDate+"','DD-MM-YYYY HH24:MI:SS')AND TRIM(PART_TRAN_SRL_NUM) = TRIM('"+ HTM.DATA.partTranSrlNum+"')"
+				sv_t = sv_t + "  AND BANK_ID = '" + HTM.DATA.bankId + "'" 
+				print(sv_t)
+				sv_x = urhk_dbSQLWithBind(sv_t)
+				print(sv_x)
+				if(sv_x == 0) then
+				#{
+					PRINT("SUCCESS")
+				#}
+				ELSE
+				#{
+					sv_z = "Custom Fields : Update Failed in C_DTD_P_EXT(tmdet_insert.scr)"
+					sv_u = urhk_SRV_SetErr(sv_z)
+					sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+                                        BANCS.OUTPUT.successOrFailure = "F"
+					GOTO ENDOFSCRIPT
+				#}
+				ENDIF
+			#}
+			ENDIF
+					
+		#sv_d = func_updateCustTableB(HTM.DATA.tablename,HTM.DATA.updateFields,HTM.DATA.updateValues,HTM.DATA.keyFields,HTM.DATA.keyValues)
+		sub_insertAuditB("P",HTM.DATA.tablename, HTM.DATA.tableKey, "", "", "Y")
+		GOTO NEXTREC
+	#}
+	ELSE
+	#{
+		#SL account details for insert in custom table
+		IF (HTM.DATA.slAcctId != "NULL" ) THEN
+		#{
+			PRINT(HTM.DATA.slAcctBal)
+			sv_e = GETPOSITION(HTM.DATA.slAcctBal," ")
+			PRINT(sv_e)
+			sv_w = STRLEN(HTM.DATA.slAcctBal)
+			PRINT(sv_w)
+			sv_o = sv_e - 1
+			PRINT(sv_o)
+			HTM.DATA.amount = MID$(HTM.DATA.slAcctBal,0,sv_o ) 	
+			HTM.DATA.crncy = MID$(HTM.DATA.slAcctBal,sv_e,3 ) 	
+				
+			PRINT(HTM.DATA.amount)
+			PRINT(HTM.DATA.crncy)
+			IF (BANCS.STDIN.serviceName == "SRV_PostTran") THEN
+			#{
+				HTM.DATA.accBalInsert = HTM.DATA.slAcctBal
+			#}
+			ELSE
+			#{	
+				HTM.DATA.accBalInsert = HTM.DATA.crncy +"|"+ HTM.DATA.amount
+			#}
+			ENDIF
+			HTM.DATA.accBalInsert = HTM.DATA.crncy +"|"+ HTM.DATA.amount
+			IF (FIELDEXISTS(BANCS.STDIN.txnSeq)) THEN
+			#{
+				HTM.DATA.slSeqTranID  = BANCS.STDIN.txnSeq
+			#}
+			ENDIF	
+			PRINT(HTM.DATA.slSeqTranID)
+		#}
+		ELSE
+		#{
+			HTM.DATA.slAcctId  = ""
+			HTM.DATA.slAcctName = "" 
+			HTM.DATA.slAcctStatus = ""
+			HTM.DATA.accBalInsert = ""
+			HTM.DATA.slSeqTranID = ""
+		#}
+		ENDIF
+				
+		IF(HTM.DATA.aoCode == "NULL")THEN
+		#{
+			HTM.DATA.aoCode = ""
+		#}
+		ENDIF
+		IF(HTM.DATA.costCenter == "NULL")THEN
+		#{
+			HTM.DATA.costCenter = ""
+		#}
+		ENDIF 		
+
+		sv_s = "INSERT INTO CUSTOM.C_DTD_P_EXT ("
+		sv_s = sv_s +"ACID,TRAN_ID,TRAN_DATE,TRAN_AMT,PART_TRAN_SRL_NUM,PART_TRAN_TYPE,PSTD_FLG,PURPOSE_CODE,FREE_TEXT_1,FREE_TEXT_2,FREE_TEXT_3,FREE_TEXT_4,"
+		sv_s = sv_s + "FREE_TEXT_5,ENTITY_CRE_FLG,DEL_FLG,LCHG_TIME,LCHG_USER_ID,RCRE_USER_ID,RCRE_TIME,BANK_ID,AO_CODE,COST_CENTER,SEQ_TRAN_ID_SL) VALUES ("
+		sv_s = sv_s + "'"+HTM.DATA.acid+"','" +HTM.DATA.tranId +"',TO_DATE('"+HTM.DATA.tranDate+"','DD-MM-YYYY HH24:MI:SS'),'"+HTM.DATA.tranAmt +"','"+ HTM.DATA.partTranSrlNum+"','"+ HTM.DATA.partTranType + "','" + HTM.DATA.postFlg +"','" + HTM.DATA.purCode + "','" + HTM.DATA.slAcctId + "','" +  HTM.DATA.slAcctName + "','" +  HTM.DATA.slAcctStatus + "','" + HTM.DATA.accBalInsert + "','',"
+		sv_s = sv_s  + "'"+HTM.DATA.entityCreFlg+"','N',TO_DATE('"+BANCS.STDIN.sysDate+"','DD-MM-YYYY HH24:MI:SS'),'"+ HTM.DATA.userId +"','"+ HTM.DATA.userId +"',TO_DATE('"+BANCS.STDIN.sysDate+"','DD-MM-YYYY HH24:MI:SS'),'" + HTM.DATA.bankId +"','" + HTM.DATA.aoCode + "','" + HTM.DATA.costCenter + "','" +  HTM.DATA.slSeqTranID +"')"  
+		print(sv_s)
+		sv_a = urhk_dbSQLWithBind(sv_s)
+		print(sv_a)
+		if(sv_a == 0) then
+		#{
+			PRINT("SUCCESS")
+		#}
+		ELSE
+		#{
+			sv_z = "Custom Fields : Insertion Failed in C_DTD_P_EXT(tmdet_insert.scr)."
+			sv_u = urhk_SRV_SetErr(sv_z)
+			sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+			BANCS.OUTPUT.successOrFailure = "F"
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+			
+			#lv_f = func_insertIntoCustTableB(HTM.DATA.tablename, HTM.DATA.insertFields, HTM.DATA.insertValues)
+			
+			sub_insertAuditB("A",HTM.DATA.tablename, HTM.DATA.tableKey, "", "", "Y")
+			GOTO NEXTREC
+		#}
+		ENDIF
+		#-----------------------------------------------
+		#Insert values into the custom Main table
+		#-----------------------------------------------	
+	#}
+        ENDIF
+	NEXTREC:
+		sv_m = sv_m + 1
+		PRINT(sv_m)
+	#}
+	DO
+#}	
+ENDIF
+ENDOFSCRIPT:
+IF (BANCS.STDIN.serviceName == "SRV_PostTran") THEN
+#{
+	sv_r = urhk_dbCursorClose(HTM.DATA.MainCursor)
+#}
+ENDIF
+
+IF (FIELDEXISTS(BANCS.STDIN.txnSeq)) THEN
+#{
+	BANCS.STDIN.txnSeq = ""
+#}
+ENDIF
+###################################################################################################
+#	START-	DELETE CLASS AND REPOSITORY
+###################################################################################################
+EXIT2:
+sub_deleteRepClassB("HTM", "DATA")
+EXITSCRIPT
+END-->

@@ -1,0 +1,259 @@
+#=======================================================================================#
+#   Source Name             : cust_acctBalMonitor.scr
+#   Author                  : Noopur
+#   Date                    : 29-May-18
+#   Description             : This script does Customer Level Account Balance Monitoring.
+#							: User Story No/Requirement Id - 7970360/Liabilities_020
+#   Input                   : None.
+#   Output                  : None.
+#   Calling script          : UserDefinedXcpns.scr
+#   Called  Script          : None.
+#   Design Document         : DesignDocument_CustomerAccountBalanceMonitoring.xlsm
+#   Modification History    :
+#   <Serial No.>        <Date>                  <Author Name>			<Description>
+#=======================================================================================#
+#   001					30-May-18               Noopur					Original version
+#=======================================================================================#
+IMPORT LibAcctBalMonitor
+<--START
+	#-------------------------------------------------------------------------#
+	# Allowed mode - Post.
+	#-------------------------------------------------------------------------#
+	IF (BANCS.INPUT.ValMode != "P") THEN
+	#{
+		EXITSCRIPT
+	#}
+	ENDIF
+
+	#-------------------------------------------------------------------------#
+	# Allowed menus - HTM, HXFER and HCASHDEP.
+	#-------------------------------------------------------------------------#
+	sv_m = ""
+	sv_n = ""
+
+	IF (FIELDEXISTS(BANCS.STDIN.menuId)) THEN
+	#{
+		sv_m = BANCS.STDIN.menuId
+	#}
+	ENDIF
+	IF (FIELDEXISTS(BANCS.STDIN.menuOption)) THEN
+	#{
+		sv_n = BANCS.STDIN.menuOption
+	#}
+	ENDIF
+
+	IF ((sv_m == "") AND (sv_n == "")) THEN
+	#{
+		EXITSCRIPT
+	#}
+	ENDIF
+
+	print(sv_m)
+	print(sv_n)
+
+	IF ((sv_m != "HTM") AND (sv_m != "HXFER") AND (sv_m != "HCASHDEP")) THEN
+	#{
+		IF ((sv_n != "HTM") AND (sv_n != "HXFER") AND (sv_n != "HCASHDEP")) THEN
+		#{
+			EXITSCRIPT
+		#}
+		ENDIF
+	#}
+	ENDIF
+
+	#-------------------------------------------------------------------------#
+	# Allowed functions - Add & Post, Modify & Post, Post, Post By Part Tran
+	#-------------------------------------------------------------------------#
+	sv_f = BANCS.STDIN.funcName
+	print(sv_f)
+
+	IF ((sv_f != "NAPI_PostPartTranListIfNoExcpns") AND (sv_f != "SRV_AddAndPostXferTran") AND (sv_f != "SRV_ModifyAndPostXferTran") AND (sv_f != "SRV_AddAndPostCashTran") AND (sv_f != "SRV_ModifyAndPostCashTran") AND (sv_f != "SRV_PostTran")) THEN
+	#{
+		EXITSCRIPT
+	#}
+	ENDIF
+
+	#============================================
+	#   CREATION OF REPOSITORY AND CLASS
+	#============================================
+	sub_createRepClassB("CUST", "DATA")
+
+	#============================================
+	# Variable Initialization
+	#============================================
+	# lv_l, lv_w, lv_t and lv_f are reserved for specific output values.
+
+	lv_t = 0
+	lv_l = ""
+	lv_w = ""
+	lv_f = 0
+
+	CUST.DATA.BODDate		= MID$(BANCS.STDIN.BODDate,0,10)
+	CUST.DATA.count			= ""
+	CUST.DATA.loopCheck		= ""
+	CUST.DATA.custBalLimit	= ""
+	CUST.DATA.warningCode	= ""
+	CUST.DATA.totDebitBal	= 0
+	CUST.DATA.totCreditBal	= 0
+
+	sv_s = func_getCPARAMValueB("BE_CUSTBAL_LIM", "CASA" , BANCS.STDIN.contextBankId , BYREF lv_l)
+	IF (sv_s != 0) THEN
+	#{
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+
+	sv_s = func_getCPARAMValueB("BE_WAR_ACCT_LIM", "CASA" , BANCS.STDIN.contextBankId , BYREF lv_w)
+	IF (sv_s != 0) THEN
+	#{
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+
+	IF (BANCS.INPUT.CustomerId == "") THEN
+	#{
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+
+	IF ((BANCS.INPUT.SchemeType != "SBA") AND (BANCS.INPUT.SchemeType != "CAA")) THEN
+	#{
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+
+	#===================================================================================
+	# WHILE loop to get CIF Ids of all Credit transaction legs
+	#===================================================================================
+	CUST.DATA.count = "0"
+	CUST.DATA.loopCheck = "Y"
+	CUST.DATA.creditCIFs = ""
+
+	WHILE(CUST.DATA.loopCheck == "Y")
+	#{
+		#==================================================================================
+		# Fetching account number,tran id,tran date from message structure
+		#==================================================================================
+		CUST.DATA.foracidField	= "tranDtl.partTranDetailLL.<rec_" +format$(CINT(CUST.DATA.count),"%d") + ">.acctId.foracid"
+		CUST.DATA.acidField		= "tranDtl.partTranDetailLL.<rec_" +format$(CINT(CUST.DATA.count),"%d") + ">.acctId.acid"
+		CUST.DATA.drCrField		= "tranDtl.partTranDetailLL.<rec_" +format$(CINT(CUST.DATA.count),"%d") + ">.partTranType.code"
+		CUST.DATA.tranIdField	= "tranHdr.tranIdentifier.tranId"
+		CUST.DATA.tranDateField = "tranHdr.tranIdentifier.tranDate"
+
+		CUST.DATA.srvFields		= CUST.DATA.foracidField + "|" + CUST.DATA.acidField + "|" + CUST.DATA.drCrField
+		CUST.DATA.srvFields		= CUST.DATA.srvFields + "|" + CUST.DATA.tranIdField + "|"+ CUST.DATA.tranDateField
+		CUST.DATA.reposFields	= "tempAcctNum|tempAcid|tempDrCrInd|tranId|tranDate"
+
+		sub_getFieldValuesfromSRVStructB("5","CUST","DATA",CUST.DATA.srvFields,CUST.DATA.reposFields)
+		print("foracid is " + CUST.DATA.tempAcctNum)
+
+		IF (CUST.DATA.tempAcctNum != "") THEN
+		#{
+			#==================================================================================
+			# Get CIF Ids of all Credit Transactions
+			#==================================================================================
+			CUST.DATA.tempCifId = ""
+			sv_f = func_isAcctEligible(CUST.DATA.tempAcctNum, CUST.DATA.tempAcid, BYREF CUST.DATA.isAcctEligible, BYREF CUST.DATA.tempCifId)
+			IF (CUST.DATA.isAcctEligible == "N") THEN
+			#{
+				GOTO NEXTLEG1
+			#}
+			ENDIF
+
+			IF (CUST.DATA.tempDrCrInd == "C") THEN
+			#{
+				CUST.DATA.creditCIFs = CUST.DATA.creditCIFs + "," + CUST.DATA.tempCifId
+				print(CUST.DATA.creditCIFs)
+			#}
+			ENDIF
+
+			NEXTLEG1:
+			CUST.DATA.count = CINT(CUST.DATA.count) + 1
+		#}
+		ELSE
+		#{
+			CUST.DATA.loopCheck = "N"
+		#}
+		ENDIF
+	#}
+	DO
+
+	print("CUST.DATA.creditCIFs " + CUST.DATA.creditCIFs)
+
+	IF ((BANCS.INPUT.DrCrInd == "D") AND (GETPOSITION(CUST.DATA.creditCIFs,BANCS.INPUT.CifId) == 0)) THEN
+	#{
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+
+	IF (BANCS.INPUT.TranCurrency != "USD") THEN
+	#{
+		sv_f = func_getRevalRateCode(BANCS.INPUT.TranCurrency, "USD", BYREF CUST.DATA.revalRateCode)
+		print(CUST.DATA.revalRateCode)
+
+		# Amount conversion as per HCYCM setup.
+		BANCS.INPARAM.InputAmount  =  CDOUBLE(BANCS.INPUT.TranAmt)
+		BANCS.INPARAM.FromCurrency =  BANCS.INPUT.TranCurrency
+		BANCS.INPARAM.ToCurrency   =  "USD"
+		BANCS.INPARAM.Rate         =  ""
+		BANCS.INPARAM.RateCode     =  CUST.DATA.revalRateCode
+		sv_u = urhk_B2k_ConvertAmount("")
+		IF (sv_u == 0 ) THEN
+		#{
+			lv_t = CDOUBLE(BANCS.OUTPARAM.OutputAmount)
+			print(lv_t)
+		#}
+		ENDIF
+	#}
+	ELSE
+	#{
+		lv_t = CDOUBLE(BANCS.INPUT.TranAmt)
+	#}
+	ENDIF
+
+	IF (BANCS.INPUT.DrCrInd == "D") THEN
+	#{
+		CUST.DATA.totDebitBal		= lv_t
+		print(CUST.DATA.totDebitBal)
+	#}
+	ELSE
+	#{
+		sv_s = func_getTotalClearBal(BANCS.INPUT.AcctNum, BANCS.INPUT.CustomerId, BYREF CUST.DATA.totalClearBal)
+		CUST.DATA.totCreditBal		= CDOUBLE(CUST.DATA.totalClearBal) + lv_t
+		print(CUST.DATA.totCreditBal)
+	#}
+	ENDIF
+
+	lv_f = CDOUBLE(CUST.DATA.totCreditBal) - CDOUBLE(CUST.DATA.totDebitBal)
+
+	IF (lv_f > lv_l) THEN
+	#{
+		IF (BANCS.INPUT.DrCrInd == "C") THEN
+		#{
+			BANCS.INPARAM.ValMode = BANCS.INPUT.ValMode
+			BANCS.INPARAM.DrCrInd = BANCS.INPUT.DrCrInd
+			BANCS.INPARAM.ExceptionIgnoreFlg = BANCS.INPUT.ExceptionIgnoreFlg
+			BANCS.INPARAM.PartTranSrlNum = BANCS.INPUT.PartTranSrlNum
+			BANCS.INPARAM.TranAmt = lv_t
+			BANCS.INPARAM.AcctNum = BANCS.INPUT.AcctNum
+			BANCS.INPARAM.TranCurrency = BANCS.INPUT.TranCurrency
+			BANCS.INPARAM.CustomerId = BANCS.INPUT.CustomerId
+
+			print(BANCS.INPARAM.ValMode)
+			print(BANCS.INPARAM.DrCrInd)
+			print(BANCS.INPARAM.ExceptionIgnoreFlg)
+			print(BANCS.INPARAM.PartTranSrlNum)
+			print(BANCS.INPARAM.TranAmt)
+			print(BANCS.INPARAM.AcctNum)
+			print(BANCS.INPARAM.TranCurrency)
+			print(BANCS.INPARAM.CustomerId)
+			lv_u = urhk_FTS_RaiseException(lv_w)
+			print(lv_u)
+		#}
+		ENDIF
+	#}
+	ENDIF
+
+	ENDOFSCRIPT:
+		EXITSCRIPT
+END-->

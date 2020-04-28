@@ -1,0 +1,197 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: OGM_SLAcctChrgDtls_Fetch.scr
+# Type: NA|default
+# Description: OGM_SLAcctChrgDtls_Fetch.scr
+# Author: Saisomasekhar_N
+# Date: 6/13/18 3:06 PM
+# Modification Log:
+#============================================================
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT customFields
+<--START
+	# Script body goes here
+	TRACE ON
+	sub_createRepClassB("CUST","DATA")
+	
+	##sv_a = urhk_b2k_printRepos("BANCS")
+	##sv_a = urhk_b2k_printRepos("ONS")
+	
+	### 1.GET MENU ID ###
+	sv_a = func_getCallingMenuOptionB("CMMSG00004",BYREF CUST.DATA.menuId)
+	PRINT(sv_a)
+	PRINT(CUST.DATA.menuId)
+	IF((CUST.DATA.menuId != "OGM")AND(CUST.DATA.menuId != "ODCM")AND(CUST.DATA.menuId != "IGM")AND(CUST.DATA.menuId != "IDCM"))THEN
+	#{
+		EXITSCRIPT
+	#}
+	ENDIF
+	
+	### 2.INITIALIZE VARIABLES ###
+	sub_copyOptionalFieldB("errorFlg","CUST","DATA","errorFlg","N")
+	sub_copyOptionalFieldB("errorMsg","CUST","DATA","errorMsg","")
+	sub_copyOptionalFieldB("slAcctName","CUST","DATA","slAcctName","")
+	sub_copyOptionalFieldB("slAcctId","CUST","DATA","slAcctId","")
+	sub_copyOptionalFieldB("slAcctStatus","CUST","DATA","slAcctStatus","")
+	sub_copyOptionalFieldB("slAcctBal","CUST","DATA","slAcctBal","")
+	sub_copyOptionalFieldB("slAcctCcy","CUST","DATA","slAcctCcy","")
+	sub_copyOptionalFieldB("slPurposeTxn","CUST","DATA","slPurposeTxn","")
+	sub_copyOptionalFieldB("slLimitId","CUST","DATA","slLimitId","")
+	sub_copyOptionalFieldB("custDataOut","CUST","DATA","custDataOut","")
+	sub_copyOptionalFieldB("noOfRecs","CUST","DATA","noOfRecs","0")
+	sub_copyOptionalFieldB("noOfFldsPerRec","CUST","DATA","noOfFldsPerRec","7")
+	
+	### 3.GET KEY FIELD VALUES FROM SRV ###
+	CUST.DATA.noOfFields 	 = "5"
+	IF(CUST.DATA.menuId == "OGM")THEN
+	#{
+		CUST.DATA.srvFieldNames  = "bgCritDtl.bgFuncCode|bgCritDtl.bgType.type|bgCritDtl.bgSrlNum|bgCommonDtl.bgB2kId|bgChargeDtl.eventSrlNum"
+		CUST.DATA.b2kIdType = "BNKGR"
+	#}
+	ENDIF
+	IF(CUST.DATA.menuId == "ODCM")THEN
+	#{
+		CUST.DATA.srvFieldNames  = "dcOutCritDtl.dcFuncCode|dcOutCritDtl.dcReg.type|dcOutCritDtl.dcRefNum|dcOutGenDtl.dcPordDtl.purOrdrDtl.purOrdHdrDtl.entityB2kId|dcChargeDtl.eventSrlNum"
+		CUST.DATA.b2kIdType = "DOCCR"
+	#}
+	ENDIF
+	IF(CUST.DATA.menuId == "IGM")THEN
+	#{
+		CUST.DATA.srvFieldNames  = "bgInMsg.bgCritDtl.bgFuncCode|bgInMsg.bgCritDtl.bgType.type|bgInMsg.bgCritDtl.bgSrlNum|bgInMsg.bgCommonDtl.bgB2kId|bgInMsg.bgChargeDtl.eventSrlNum"
+		CUST.DATA.b2kIdType = "BNKGR"
+	#}
+	ENDIF
+	IF(CUST.DATA.menuId == "IDCM")THEN
+	#{
+		CUST.DATA.srvFieldNames  = "dcInMsgDtl.dcOutCritDtl.dcFuncCode|dcInMsgDtl.dcOutCritDtl.dcReg.type|dcInMsgDtl.dcOutCritDtl.dcRefNum|dcInMsgDtl.dcOutGenDtl.dcPordDtl.purOrdrDtl.purOrdHdrDtl.entityB2kId|dcInMsgDtl.dcChargeDtl.eventSrlNum"
+		CUST.DATA.b2kIdType = "DOCCR"
+	#}
+	ENDIF
+	CUST.DATA.srvFieldValues = "funcCode|b2kType|b2kRefNo|entityB2kId|eventSrlNum"
+	sub_getFieldValuesfromSRVStructB(CUST.DATA.noOfFields,"CUST","DATA",CUST.DATA.srvFieldNames,CUST.DATA.srvFieldValues)
+	PRINT(CUST.DATA.funcCode)
+	PRINT(CUST.DATA.b2kType)
+	PRINT(CUST.DATA.b2kRefNo)
+	PRINT(CUST.DATA.entityB2kId)
+	PRINT(CUST.DATA.b2kIdType)
+	PRINT(CUST.DATA.eventSrlNum)
+	
+	### 4.CUSROSR TO FETCH SL ACCOUNT DETAILS ###
+	PRINT(CUST.DATA.custDataOut)
+	BANCS.INPARAM.BINDVARS = CUST.DATA.entityB2kId + "|" + CUST.DATA.b2kIdType + "|" + CUST.DATA.entityB2kId + "|" + CUST.DATA.b2kIdType + "|" + BANCS.STDIN.contextBankId + "|" + BANCS.STDIN.contextBankId
+	PRINT(BANCS.INPARAM.BINDVARS)
+	sv_a = "slAcctId,slAcctName,slAcctCcy,slAcctBal,slAcctStatus,slPurposeTxn,slLimitId,slRmks|"
+	sv_a = sv_a + " SELECT SL_ACCT_ID,ACCT_NAME,ACCT_CCY,ACCT_BAL,ACCT_STATUS,PURPOSE_OF_TXN,SL_LIMIT_ID,SL_REMARKS "
+	sv_a = sv_a + " FROM CUSTOM.C_TFCT_TBL WHERE B2K_ID = ?SVAR "
+	sv_a = sv_a + " AND B2KID_TYPE = ?SVAR AND SRL_NUM = (SELECT MAX(SRL_NUM) FROM CUSTOM.C_TFCT_TBL WHERE B2K_ID = ?SVAR AND B2KID_TYPE = ?SVAR AND BANK_ID = ?SVAR) "
+	sv_a = sv_a + " AND BANK_ID = ?SVAR ORDER BY TFCT_KEY_SRL_NUM "
+	PRINT(sv_a)
+	sv_a = urhk_dbCursorOpenWithBind(sv_a)
+	PRINT(sv_a)
+	IF(sv_a != 0)THEN
+	#{
+		PRINT("NO RECORDS PRESENT")
+		CUST.DATA.custDataOut = ""
+		EXITSCRIPT
+	#}
+	ENDIF
+	CUST.DATA.mainCursor = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+	PRINT(CUST.DATA.mainCursor)
+	sv_a = urhk_dbCursorFetch(CUST.DATA.mainCursor)
+	PRINT(sv_a)
+	IF(sv_a!= 0)THEN
+	#{
+		sv_a = urhk_dbCursorClose(CUST.DATA.mainCursor)
+		PRINT(sv_a)
+		PRINT("NO RECORDS PRESENT")
+		CUST.DATA.custDataOut = ""
+		EXITSCRIPT
+	#}
+	ENDIF
+	WHILE(sv_a == 0)
+	#{
+		CUST.DATA.noOfRecs = CINT(CUST.DATA.noOfRecs) + 1
+		PRINT(CUST.DATA.noOfRecs)
+		sub_copyOutparamFieldB("slAcctId","CUST","DATA","slAcctId","NULL")
+		sub_copyOutparamFieldB("slAcctName","CUST","DATA","slAcctName","NULL")
+		sub_copyOutparamFieldB("slAcctCcy","CUST","DATA","slAcctCcy","NULL")
+		sub_copyOutparamFieldB("slAcctBal","CUST","DATA","slAcctBal","NULL")
+		sub_copyOutparamFieldB("slAcctStatus","CUST","DATA","slAcctStatus","NULL")
+		sub_copyOutparamFieldB("slPurposeTxn","CUST","DATA","slPurposeTxn","NULL")
+		sub_copyOutparamFieldB("slLimitId","CUST","DATA","slLimitId","")
+		sub_copyOutparamFieldB("slRmks","CUST","DATA","slRmks","NULL")
+		PRINT(CUST.DATA.slAcctId)
+		PRINT(CUST.DATA.slAcctName)
+		PRINT(CUST.DATA.slAcctCcy)
+		PRINT(CUST.DATA.slAcctBal)
+		PRINT(CUST.DATA.slAcctStatus)
+		PRINT(CUST.DATA.slPurposeTxn)
+		PRINT(CUST.DATA.slLimitId)
+		PRINT(CUST.DATA.slRmks)
+		
+		CUST.DATA.custDataOut = CUST.DATA.custDataOut + "|" + CUST.DATA.slAcctId + "|" + CUST.DATA.slAcctName + "|" + CUST.DATA.slAcctCcy
+		CUST.DATA.custDataOut = CUST.DATA.custDataOut + "|" + CUST.DATA.slAcctBal + "|" + CUST.DATA.slAcctStatus + "|" + CUST.DATA.slPurposeTxn + "|" + CUST.DATA.slRmks
+		PRINT(CUST.DATA.custDataOut)
+		
+		sv_a = urhk_dbCursorFetch(CUST.DATA.mainCursor)
+		PRINT(sv_a)
+	#}
+	DO
+	sv_a = urhk_dbCursorClose(CUST.DATA.mainCursor)
+	PRINT(sv_a)
+	
+	### 5.SET ONS CUSTOM DATA OUT ###
+	PRINT(CUST.DATA.custDataOut)
+	IF(TRIM(CUST.DATA.custDataOut) != "")THEN
+	#{
+		CUST.DATA.custDataOut = "intFlag|" + CUST.DATA.noOfRecs + "|" + CUST.DATA.noOfFldsPerRec + CUST.DATA.custDataOut
+		PRINT(CUST.DATA.custDataOut)
+	#}
+	ENDIF
+	PRINT(ONS.CUSTOM.custDataOut)
+	IF(TRIM(CUST.DATA.custDataOut) != "")THEN
+	#{
+		IF(TRIM(ONS.CUSTOM.custDataOut) != "")THEN
+		#{
+			IF((CUST.DATA.funcCode == "V") OR (CUST.DATA.funcCode == "X") OR (CUST.DATA.funcCode == "M"))THEN
+			#{
+				ONS.CUSTOM.custDataOut = ONS.CUSTOM.custDataOut + "|~tfc_charge_details|" + CUST.DATA.custDataOut + "|~tfc_limit_details|" + CUST.DATA.slLimitId + "|"
+				#}
+			ELSE
+				#{
+				ONS.CUSTOM.custDataOut = ONS.CUSTOM.custDataOut + "|~tfc_limit_details|" + CUST.DATA.slLimitId + "|"
+			#}
+			ENDIF
+			#ONS.CUSTOM.custDataOut = ONS.CUSTOM.custDataOut + "|~tfc_charge_details|" + CUST.DATA.custDataOut
+			#}
+		ELSE
+			#{
+			IF((CUST.DATA.funcCode == "V") OR (CUST.DATA.funcCode == "X")OR (CUST.DATA.funcCode == "M"))THEN
+			#{
+				ONS.CUSTOM.custDataOut = "~tfc_charge_details|" + CUST.DATA.custDataOut + "|~tfc_limit_details|" + CUST.DATA.slLimitId + "|"
+				#}
+			ELSE
+				#{
+				ONS.CUSTOM.custDataOut = "~tfc_limit_details|" + CUST.DATA.slLimitId + "|"
+			#}
+			ENDIF
+			#ONS.CUSTOM.custDataOut = "~tfc_charge_details|" + CUST.DATA.custDataOut
+		#}
+		ENDIF
+	#}
+	ENDIF
+	PRINT(ONS.CUSTOM.custDataOut)
+	IF(CUST.DATA.errorFlg == "Y")THEN
+	#{
+		PRINT(CUST.DATA.errorMsg)
+		sv_a = urhk_SRV_SetErr(CUST.DATA.errorMsg)
+		sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+		BANCS.OUTPUT.successOrFailure = "F"
+	#}
+	ENDIF
+	sub_deleteRepClassB("CUST","DATA")
+	TRACE OFF
+END-->

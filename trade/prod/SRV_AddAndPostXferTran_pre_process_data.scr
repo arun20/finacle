@@ -1,0 +1,52 @@
+#########################################################################################################################
+# Name of the file      : SRV_AddAndPostXferTran_pre_process_data.scr
+# Start Date            : 14-Jun-2018
+# Description           : This script will call cust_slAcctValidateTran.scr.
+# Design Id             :
+# Menu Option           : HTM,HXFER
+# Input parameters      : NA
+# Output parameters     : NA
+# Author                : Amandeep Kaur
+# Called Script         : cust_slAcctPostTran.scr
+# Calling Script        : NA
+# Bank                  : LH Bank
+# Modification History:
+# <Serial No.>         <Date>			<Author Name>              <Description>
+#      0.1             14-Jun-2018		Amandeep Kaur              Initial Draft
+##############################################################################################################################
+<--START
+TRACE ON
+libname CUSTOMSO
+IF (FIELDEXISTS(BANCS.STDIN.menuId)) THEN
+#{
+	IF ((BANCS.STDIN.menuId == "HTM")OR(BANCS.STDIN.menuId == "HXFER")) THEN
+	#{
+		sv_u = urhk_SRV_GetVal("tranHdr.tranTypeSubType.tranType")
+		IF(sv_u == 0) THEN
+		#{
+			BANCS.OUTPUT.tranType = BANCS.OUTPARAM.srvValue
+			PRINT(BANCS.OUTPUT.tranType)
+		#}
+		ENDIF
+
+		sv_u = urhk_SRV_GetVal("tranHdr.tranTypeSubType.tranSubType")
+		IF(sv_u == 0) THEN
+		#{
+			BANCS.OUTPUT.tranSubType = BANCS.OUTPARAM.srvValue
+			PRINT(BANCS.OUTPUT.tranType)
+		#}
+		ENDIF
+
+		IF ((BANCS.OUTPUT.tranType == "T") AND ((BANCS.OUTPUT.tranSubType == "BI") or (BANCS.OUTPUT.tranSubType == "CI")))THEN
+		#{
+			#CALLSCRIPTIFEXIST("cust_slAcctPostTran.scr")
+			PRINT("Calling Post Tran in Post Process")
+		#}
+		ENDIF
+	#}
+	ENDIF
+#}
+ENDIF
+ENDOFSCRIPT:
+EXITSCRIPT
+END-->

@@ -1,0 +1,113 @@
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+        # Script body goes here
+        TRACE ON
+	sub_createRepClassB("CUST","DATA")
+	sv_a    = urhk_SRV_GetVal("acctCommonInfo.acctGeneralInfo.acctBasic.foracid")
+	CUST.DATA.foracid = BANCS.OUTPARAM.srvValue
+	PRINT(CUST.DATA.foracid)
+	sv_u = urhk_SRV_GetVal("acctCommonInfo.acctClassMISC.freeText3")
+	IF(sv_u == 0) THEN
+	#{
+		sv_b = 0
+		CUST.DATA.fullInvoiceNo = BANCS.OUTPARAM.srvValue
+		sv_a = STRLEN(CUST.DATA.fullInvoiceNo)
+		PRINT(CUST.DATA.fullInvoiceNo)
+		PRINT(sv_a)
+		BANCS.INPUT.OutputStringtemp = ""
+		WHILE( sv_a > 0)
+		#{
+			sv_l = ","
+			##"
+			sv_n = GETPOSITION(CUST.DATA.fullInvoiceNo,sv_l)
+			print(sv_n)
+			IF(sv_n == 0) THEN
+			#{
+				BANCS.INPUT.OutputStringtemp = CUST.DATA.fullInvoiceNo
+				CUST.DATA.invoiceNum = BANCS.INPUT.OutputStringtemp
+				PRINT(CUST.DATA.invoiceNum)
+				IF(CUST.DATA.foracid != "") THEN
+				#{
+					BANCS.INPARAM.BINDVARS = CUST.DATA.foracid
+				#}
+				ENDIF
+				sv_v = "invoiceCount|"
+				sv_v = sv_v + "SELECT COUNT(1) FROM TBAADM.GAC WHERE (FREE_TEXT_3 like '%," + CUST.DATA.invoiceNum + "%')"
+				IF(CUST.DATA.foracid != "") THEN
+				#{
+					sv_v = sv_v + " AND ACID != (SELECT ACID FROM TBAADM.GAM WHERE FORACID = ?SVAR)"
+				#}
+				ENDIF
+				PRINT(sv_v)
+				sv_m = urhk_dbSelectWithBind(sv_v)
+				CUST.DATA.invoiceCount = BANCS.OUTPARAM.invoiceCount
+				PRINT(CUST.DATA.invoiceCount)
+				IF(CUST.DATA.invoiceCount > 0) THEN
+				#{
+					CUST.DATA.errorMsg = "Invoice Number Is Already Used"
+					#sv_a = urhk_SRV_SetErr(CUST.DATA.errorMsg)
+					#sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+					BANCS.OUTPUT.successOrFailure = "F"
+					sv_a = urhk_B2k_PutUserException("DIN")
+					GOTO OUT
+				#}
+				ENDIF
+				GOTO OUT
+			#}
+			ELSE
+			#{
+				IF(sv_b == 0) THEN
+				#{
+					sv_b = 1
+					sv_a = sv_a - sv_n
+					PRINT(sv_a)
+					CUST.DATA.fullInvoiceNo = MID$(CUST.DATA.fullInvoiceNo,sv_n,sv_a)
+					PRINT(CUST.DATA.fullInvoiceNo)
+					
+				#}
+				ELSE
+				#{
+					BANCS.INPUT.OutputStringtemp = MID$(CUST.DATA.fullInvoiceNo,0,sv_n-1)
+					sv_a = sv_a - sv_n
+					CUST.DATA.fullInvoiceNo = MID$(CUST.DATA.fullInvoiceNo,sv_n,sv_a)
+					PRINT(CUST.DATA.fullInvoiceNo)
+					CUST.DATA.invoiceNum = BANCS.INPUT.OutputStringtemp
+					PRINT(CUST.DATA.invoiceNum)
+					IF(CUST.DATA.foracid != "") THEN
+					#{
+						BANCS.INPARAM.BINDVARS = CUST.DATA.foracid
+					#}
+					ENDIF
+					sv_v = "invoiceCount|"
+					sv_v = sv_v + "SELECT COUNT(1) FROM TBAADM.GAC WHERE (FREE_TEXT_3 like '%," + CUST.DATA.invoiceNum + ",%'"
+					sv_v = sv_v + "OR FREE_TEXT_3 like '%," + CUST.DATA.invoiceNum + ".%')"
+					IF(CUST.DATA.foracid != "") THEN
+					#{
+						sv_v = sv_v + " AND ACID != (SELECT ACID FROM TBAADM.GAM WHERE FORACID = ?SVAR)"
+					#}
+					ENDIF
+					PRINT(sv_v)
+					sv_m = urhk_dbSelectWithBind(sv_v)
+					CUST.DATA.invoiceCount = BANCS.OUTPARAM.invoiceCount
+					PRINT(CUST.DATA.invoiceCount)
+					IF(CUST.DATA.invoiceCount > 0) THEN
+					#{
+						CUST.DATA.errorMsg = "Invoice Number Is Already Used"
+						#sv_a = urhk_SRV_SetErr(CUST.DATA.errorMsg)
+						#sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+						BANCS.OUTPUT.successOrFailure = "F"
+						sv_a = urhk_B2k_PutUserException("DIN")
+						GOTO OUT
+					#}
+					ENDIF
+				#}
+				ENDIF
+			#}
+			ENDIF
+		#}
+		DO
+		OUT:
+	#}
+	ENDIF
+END-->

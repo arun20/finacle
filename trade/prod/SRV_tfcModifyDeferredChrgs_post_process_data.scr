@@ -1,0 +1,17 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: SRV_tfcModifyDeferredChrgs_post_process_data.scr
+# Type: NA|default
+# Description: SRV_tfcModifyDeferredChrgs_post_process_data.scr
+# Author: Saisomasekhar_N
+# Date: 7/4/18 1:10 PM
+# Modification Log:
+#============================================================
+
+<--START
+	# Script body goes here
+	TRACE ON
+	CALL("APCHCOLL_SLAcctChrgDtls.scr")
+END-->

@@ -1,0 +1,38 @@
+######################################################################################W#########
+#    Name				: SRV_RecoveryImportBillDtls_pre_process_data.scr
+#    Start Date			: 24-07-2018
+#    Description			: Script to Check total count of PartTrans
+#    Author				: Surya Sneha Pulavarthy
+#    Modification History:
+#    <Serial No.>		<Date>			<Author Name>                 <Description>
+#	001			24-07-2018		Surya Sneha Pulavarthy
+################################################################################################
+
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+
+TRACE ON
+
+###################################################################################################
+#	Start-	Create Repository class
+###################################################################################################
+	sub_createRepClassB("MIIB","CUSTOM")
+	#sv_a = urhk_B2k_printRepos("ONS")
+
+	#check if the invoked menu is MIIB
+	IF(BANCS.STDIN.menuId == "MIIB") THEN
+	#{
+		CALLSCRIPTIFEXIST("miib_countOfPartTrans.scr")	
+	#}
+	ELSE
+	#{
+		GOTO ENDSCRIPT
+	#}
+	ENDIF
+
+ENDSCRIPT:
+sub_deleteRepClassB("MIIB","CUSTOM")
+
+TRACE OFF
+END-->
