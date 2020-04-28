@@ -1,0 +1,684 @@
+#===============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# category: Script Name Based
+# script: MT700msg.scr
+# event: NA
+# description: MT700msg
+#===============================================================
+#----------------------------------------------------------------------------------
+#
+#					MT700msg.scr
+# Script to format MT700 message from the message screen of MT700
+# Repositories has been passed from the calling program.
+# It is assumed that all the validations has been done before calling this script
+#
+#	Author : Surendra Babu             
+#	Date   : 04-Dec-2002    
+#----------------------------------------------------------------------------------
+<--start
+#
+trace on
+#
+sv_e = ""
+LIBNAME SWIFT2018SO
+BANCS.INPUT.TAG45A=""
+BANCS.INPUT.TAG46A=""
+BANCS.INPUT.TAG47A=""
+BANCS.INPUT.TAG49G=""
+BANCS.INPUT.TAG49H=""
+sv_m = ""
+sv_s = ""
+#
+IF (BANCS.INPUT.tag271 != "") THEN
+	sv_s = sv_s+":271:"+BANCS.INPUT.tag271+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag272 != "") THEN
+	sv_s = sv_s+":272:"+BANCS.INPUT.tag272+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag40a1 != "") THEN
+    sv_m = sv_m+":40a1:"+BANCS.INPUT.tag40a1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag201 != "") THEN
+	sv_m = sv_m+":201:"+BANCS.INPUT.tag201+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag231 != "") THEN
+	sv_m = sv_m+":231:"+BANCS.INPUT.tag231+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag31c1 != "") THEN
+	sv_m = sv_m+":31c1:"+BANCS.INPUT.tag31c1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag40e1 != "") THEN
+    sv_m = sv_m+":40e1:"+BANCS.INPUT.tag40e1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag40e2 != "") THEN
+    sv_m = sv_m+":40e2:"+BANCS.INPUT.tag40e2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag31d1 != "") THEN
+    sv_m = sv_m+":31d1:"+BANCS.INPUT.tag31d1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag31d2 != "") THEN
+    sv_m = sv_m+":31d2:"+BANCS.INPUT.tag31d2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag51a1 != "") THEN
+	sv_m = sv_m+":51a1:"+BANCS.INPUT.tag51a1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag51a2 != "") THEN
+    sv_m = sv_m+":51a2:"+BANCS.INPUT.tag51a2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag51d1 != "") THEN
+    sv_m = sv_m+":51d1:"+BANCS.INPUT.tag51d1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag51d2 != "") THEN
+    sv_m = sv_m+":51d2:"+BANCS.INPUT.tag51d2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag51d3 != "") THEN
+    sv_m = sv_m+":51d3:"+BANCS.INPUT.tag51d3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag51d4 != "") THEN
+    sv_m = sv_m+":51d4:"+BANCS.INPUT.tag51d4+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag51d5 != "") THEN
+    sv_m = sv_m+":51d5:"+BANCS.INPUT.tag51d5+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag501 != "") THEN
+    sv_m = sv_m+":501:"+BANCS.INPUT.tag501+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag502 != "") THEN
+    sv_m = sv_m+":502:"+BANCS.INPUT.tag502+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag503 != "") THEN
+    sv_m = sv_m+":503:"+BANCS.INPUT.tag503+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag504 != "") THEN
+    sv_m = sv_m+":504:"+BANCS.INPUT.tag504+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag591 != "") THEN
+    sv_m = sv_m+":591:"+BANCS.INPUT.tag591+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag592 != "") THEN
+    sv_m = sv_m+":592:"+BANCS.INPUT.tag592+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag593 != "") THEN
+    sv_m = sv_m+":593:"+BANCS.INPUT.tag593+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag594 != "") THEN
+    sv_m = sv_m+":594:"+BANCS.INPUT.tag594+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag595 != "") THEN
+    sv_m = sv_m+":595:"+BANCS.INPUT.tag595+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag32b1 != "") THEN
+    sv_m = sv_m+":32b1:"+BANCS.INPUT.tag32b1+"|"+""
+ENDIF
+#
+sv_x = ltrim(rtrim(Mid$(BANCS.INPUT.tag32b2,0,17)))
+sv_y = CDOUBLE(sv_x)
+IF (sv_y != 0) THEN
+    sv_m = sv_m+":32b2:"+BANCS.INPUT.tag32b2+"|"+""
+ENDIF
+#
+IF ((BANCS.INPUT.tag39a1 != "") OR (BANCS.INPUT.tag39a2 != ""))  THEN
+	IF ((BANCS.INPUT.tag39a1 != 0) OR (BANCS.INPUT.tag39a2 != 0)) THEN
+		sv_m = sv_m+":39a1:"+BANCS.INPUT.tag39a1+"|"+""
+		sv_m = sv_m+":39a2:"+BANCS.INPUT.tag39a2+"|"+""
+	ENDIF
+ENDIF
+#
+IF (BANCS.INPUT.tag39c1 != "") THEN
+    sv_m = sv_m+":39c1:"+BANCS.INPUT.tag39c1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag39c2 != "") THEN
+    sv_m = sv_m+":39c2:"+BANCS.INPUT.tag39c2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag39c3 != "") THEN
+    sv_m = sv_m+":39c3:"+BANCS.INPUT.tag39c3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag39c4 != "") THEN
+    sv_m = sv_m+":39c4:"+BANCS.INPUT.tag39c4+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag41a1 != "") THEN
+    sv_m = sv_m+":41a1:"+BANCS.INPUT.tag41a1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag41a2 != "") THEN
+    sv_m = sv_m+":41a2:"+BANCS.INPUT.tag41a2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag41d1 != "") THEN
+    sv_m = sv_m+":41d1:"+BANCS.INPUT.tag41d1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag41d2 != "") THEN
+    sv_m = sv_m+":41d2:"+BANCS.INPUT.tag41d2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag41d3 != "") THEN
+    sv_m = sv_m+":41d3:"+BANCS.INPUT.tag41d3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag41d4 != "") THEN
+    sv_m = sv_m+":41d4:"+BANCS.INPUT.tag41d4+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag41d5 != "") THEN
+    sv_m = sv_m+":41d5:"+BANCS.INPUT.tag41d5+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42c1 != "") THEN
+    sv_m = sv_m+":42c1:"+BANCS.INPUT.tag42c1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42c2 != "") THEN
+    sv_m = sv_m+":42c2:"+BANCS.INPUT.tag42c2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42c3 != "") THEN
+    sv_m = sv_m+":42c3:"+BANCS.INPUT.tag42c3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42a1 != "") THEN
+    sv_m = sv_m+":42a1:"+BANCS.INPUT.tag42a1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42a2 != "") THEN
+    sv_m = sv_m+":42a2:"+BANCS.INPUT.tag42a2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42d1 != "") THEN
+    sv_m = sv_m+":42d1:"+BANCS.INPUT.tag42d1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42d2 != "") THEN
+    sv_m = sv_m+":42d2:"+BANCS.INPUT.tag42d2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42d3 != "") THEN
+    sv_m = sv_m+":42d3:"+BANCS.INPUT.tag42d3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42d4 != "") THEN
+    sv_m = sv_m+":42d4:"+BANCS.INPUT.tag42d4+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42d5 != "") THEN
+    sv_m = sv_m+":42d5:"+BANCS.INPUT.tag42d5+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42m1 != "") THEN
+    sv_m = sv_m+":42m1:"+BANCS.INPUT.tag42m1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42m2 != "") THEN
+    sv_m = sv_m+":42m2:"+BANCS.INPUT.tag42m2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42m3 != "") THEN
+    sv_m = sv_m+":42m3:"+BANCS.INPUT.tag42m3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42m4 != "") THEN
+    sv_m = sv_m+":42m4:"+BANCS.INPUT.tag42m4+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42p1 != "") THEN
+    sv_m = sv_m+":42p1:"+BANCS.INPUT.tag42p1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42p2 != "") THEN
+    sv_m = sv_m+":42p2:"+BANCS.INPUT.tag42p2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42p3 != "") THEN
+    sv_m = sv_m+":42p3:"+BANCS.INPUT.tag42p3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag42p4 != "") THEN
+    sv_m = sv_m+":42p4:"+BANCS.INPUT.tag42p4+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag43p1 != "") THEN
+    sv_m = sv_m+":43p1:"+BANCS.INPUT.tag43p1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag43t1 != "") THEN
+    sv_m = sv_m+":43t1:"+BANCS.INPUT.tag43t1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag44a1 != "") THEN
+    sv_m = sv_m+":44a1:"+BANCS.INPUT.tag44a1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag44e1 != "") THEN
+    sv_m = sv_m+":44e1:"+BANCS.INPUT.tag44e1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag44f1 != "") THEN
+    sv_m = sv_m+":44f1:"+BANCS.INPUT.tag44f1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag44b1 != "") THEN
+    sv_m = sv_m+":44b1:"+BANCS.INPUT.tag44b1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag44c1 != "") THEN
+    sv_m = sv_m+":44c1:"+BANCS.INPUT.tag44c1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag44d1 != "") THEN
+    sv_m = sv_m+":44d1:"+BANCS.INPUT.tag44d1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag44d2 != "") THEN
+    sv_m = sv_m+":44d2:"+BANCS.INPUT.tag44d2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag44d3 != "") THEN
+    sv_m = sv_m+":44d3:"+BANCS.INPUT.tag44d3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag44d4 != "") THEN
+    sv_m = sv_m+":44d4:"+BANCS.INPUT.tag44d4+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag44d5 != "") THEN
+    sv_m = sv_m+":44d5:"+BANCS.INPUT.tag44d5+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag44d6 != "") THEN
+    sv_m = sv_m+":44d6:"+BANCS.INPUT.tag44d6+"|"+""
+ENDIF
+#
+sv_p = ""
+sv_e = ""
+sv_l = ""  
+# 
+IF(BANCS.STDIN.menuId != "ODCM") THEN
+if (BANCS.INPUT.tag45a1 != "") then
+    sv_v = 1
+    sv_j = CINT(BANCS.INPUT.TagCount45a)
+    while(sv_v <= sv_j)
+        sv_p = sv_p + ":45a" + FORMAT$(sv_v,"%d") + ":" + ("BANCS").("INPUT").("tag45a" + FORMAT$(sv_v,"%d")) + "|"
+        sv_l = sv_l + ":45b" + FORMAT$(sv_v,"%d") + ":" + ("BANCS").("INPUT").("tag45a" + FORMAT$(sv_v,"%d")) + "|"
+        sv_e = sv_e + ("BANCS").("INPUT").("tag45a" + FORMAT$(sv_v,"%d"))
+        sv_v = sv_v + 1
+    do
+endif
+endif
+#
+sv_q = ""
+sv_f = ""
+sv_n = ""
+#
+IF(BANCS.STDIN.menuId != "ODCM") THEN
+if (BANCS.INPUT.tag46a1 != "") then
+    sv_v = 1
+    sv_j = CINT(BANCS.INPUT.TagCount46a)
+    while(sv_v <= sv_j)
+        sv_q = sv_q + ":46a" + FORMAT$(sv_v,"%d") + ":" + ("BANCS").("INPUT").("tag46a" + FORMAT$(sv_v,"%d")) + "|"
+        sv_n = sv_n + ":46b" + FORMAT$(sv_v,"%d") + ":" + ("BANCS").("INPUT").("tag46a" + FORMAT$(sv_v,"%d")) + "|"
+        sv_f = sv_f + ("BANCS").("INPUT").("tag46a" + FORMAT$(sv_v,"%d"))
+        sv_v = sv_v + 1
+    do
+endif
+#
+endif
+sv_r = ""
+sv_g = ""
+sv_o = ""
+#
+IF(BANCS.STDIN.menuId != "ODCM") THEN
+if (BANCS.INPUT.tag47a1 != "") then
+    sv_v = 1
+    sv_j = CINT(BANCS.INPUT.TagCount47a)
+    while(sv_v <= sv_j)
+        sv_r = sv_r + ":47a" + FORMAT$(sv_v,"%d") + ":" + ("BANCS").("INPUT").("tag47a" + FORMAT$(sv_v,"%d")) + "|"
+        sv_o = sv_o + ":47b" + FORMAT$(sv_v,"%d") + ":" + ("BANCS").("INPUT").("tag47a" + FORMAT$(sv_v,"%d")) + "|"
+        sv_g = sv_g + ("BANCS").("INPUT").("tag47a" + FORMAT$(sv_v,"%d"))
+        sv_v = sv_v + 1
+    do
+endif
+
+if (BANCS.INPUT.tag49g1 != "") then
+    sv_v = 1
+	sv_j = CINT(BANCS.INPUT.TagCount49g)
+	while(sv_v <= sv_j)
+		sv_r = sv_r + ":49g" + FORMAT$(sv_v,"%d") + ":" + ("BANCS").("INPUT").("tag49g" + FORMAT$(sv_v,"%d")) + "|"
+		sv_v = sv_v + 1
+	do
+endif
+
+if (BANCS.INPUT.tag49h1 != "") then
+    sv_v = 1
+	sv_j = CINT(BANCS.INPUT.TagCount49h)
+	while(sv_v <= sv_j)
+		sv_r = sv_r + ":49h" + FORMAT$(sv_v,"%d") + ":" + ("BANCS").("INPUT").("tag49h" + FORMAT$(sv_v,"%d")) + "|"
+		sv_v = sv_v + 1
+	do
+endif
+endif
+#
+sv_z = ""
+#
+IF (BANCS.INPUT.tag71d1 != "") THEN
+    sv_z = sv_z+":71d1:"+BANCS.INPUT.tag71d1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag71d2 != "") THEN
+    sv_z = sv_z+":71d2:"+BANCS.INPUT.tag71d2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag71d3 != "") THEN
+    sv_z = sv_z+":71d3:"+BANCS.INPUT.tag71d3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag71d4 != "") THEN
+    sv_z = sv_z+":71d4:"+BANCS.INPUT.tag71d4+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag71d5 != "") THEN
+    sv_z = sv_z+":71d5:"+BANCS.INPUT.tag71d5+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag71d6 != "") THEN
+    sv_z = sv_z+":71d6:"+BANCS.INPUT.tag71d6+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag481 != "") THEN
+    sv_z = sv_z+":481:"+BANCS.INPUT.tag481+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag491 != "") THEN
+    sv_z = sv_z+":491:"+BANCS.INPUT.tag491+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag53a1 != "") THEN
+    sv_z = sv_z+":53a1:"+BANCS.INPUT.tag53a1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag53a2 != "") THEN
+    sv_z = sv_z+":53a2:"+BANCS.INPUT.tag53a2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag53d1 != "") THEN
+    sv_z = sv_z+":53d1:"+BANCS.INPUT.tag53d1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag53d2 != "") THEN
+    sv_z = sv_z+":53d2:"+BANCS.INPUT.tag53d2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag53d3 != "") THEN
+    sv_z = sv_z+":53d3:"+BANCS.INPUT.tag53d3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag53d4 != "") THEN
+    sv_z = sv_z+":53d4:"+BANCS.INPUT.tag53d4+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag53d5 != "") THEN
+    sv_z = sv_z+":53d5:"+BANCS.INPUT.tag53d5+"|"+""
+ENDIF
+#
+if (BANCS.INPUT.tag781 != "") then
+    sv_v = 1
+    sv_j = CINT(BANCS.INPUT.TagCount78)
+    while(sv_v <= sv_j)
+        sv_z = sv_z + ":78" + FORMAT$(sv_v,"%d") + ":" + ("BANCS").("INPUT").("tag78" + FORMAT$(sv_v,"%d")) + "|"
+        sv_v = sv_v + 1
+    do
+endif
+#
+IF (BANCS.INPUT.tag57a1 != "") THEN
+    sv_z = sv_z+":57a1:"+BANCS.INPUT.tag57a1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag57a2 != "") THEN
+    sv_z = sv_z+":57a2:"+BANCS.INPUT.tag57a2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag57b1 != "") THEN
+    sv_z = sv_z+":57b1:"+BANCS.INPUT.tag57b1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag57b2 != "") THEN
+    sv_z = sv_z+":57b2:"+BANCS.INPUT.tag57b2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag57d1 != "") THEN
+    sv_z = sv_z+":57d1:"+BANCS.INPUT.tag57d1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag57d2 != "") THEN
+    sv_z = sv_z+":57d2:"+BANCS.INPUT.tag57d2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag57d3 != "") THEN
+    sv_z = sv_z+":57d3:"+BANCS.INPUT.tag57d3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag57d4 != "") THEN
+    sv_z = sv_z+":57d4:"+BANCS.INPUT.tag57d4+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag57d5 != "") THEN
+    sv_z = sv_z+":57d5:"+BANCS.INPUT.tag57d5+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag58a1 != "") THEN
+sv_m = sv_m+":58a1:"+BANCS.INPUT.tag58a1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag58a2 != "") THEN
+sv_m = sv_m+":58a2:"+BANCS.INPUT.tag58a2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag58d1 != "") THEN
+sv_m = sv_m+":58d1:"+BANCS.INPUT.tag58d1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag58d2 != "") THEN
+sv_m = sv_m+":58d2:"+BANCS.INPUT.tag58d2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag58d3 != "") THEN
+sv_m = sv_m+":58d3:"+BANCS.INPUT.tag58d3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag58d4 != "") THEN
+sv_m = sv_m+":58d4:"+BANCS.INPUT.tag58d4+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag58d5 != "") THEN
+sv_m = sv_m+":58d5:"+BANCS.INPUT.tag58d5+"|"+""
+ENDIF
+
+IF (BANCS.INPUT.tag72z1 != "") THEN
+    sv_z = sv_z+":72z1:"+BANCS.INPUT.tag72z1+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag72z2 != "") THEN
+    sv_z = sv_z+":72z2:"+BANCS.INPUT.tag72z2+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag72z3 != "") THEN
+    sv_z = sv_z+":72z3:"+BANCS.INPUT.tag72z3+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag72z4 != "") THEN
+    sv_z = sv_z+":72z4:"+BANCS.INPUT.tag72z4+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag72z5 != "") THEN
+    sv_z = sv_z+":72z5:"+BANCS.INPUT.tag72z5+"|"+""
+ENDIF
+#
+IF (BANCS.INPUT.tag72z6 != "") THEN
+    sv_z = sv_z+":72z6:"+BANCS.INPUT.tag72z6+"|"+""
+ENDIF
+#
+BANCS.OUTPUT.swift_msg=""
+BANCS.OUTPUT.addtnl_msg1 =""
+BANCS.OUTPUT.addtnl_msg2 =""
+BANCS.OUTPUT.addtnl_msg3 =""
+BANCS.OUTPUT.addtnl_msg4 =""
+BANCS.OUTPUT.addtnl_msg5 =""
+BANCS.OUTPUT.addtnl_msg6 =""
+BANCS.OUTPUT.addtnl_msg7 =""
+BANCS.OUTPUT.warningMessage =""
+#
+#If function code is Verify then we are generating additional messages depending upon the conditions.
+IF ((BANCS.INPUT.funcCode == "V") AND (BANCS.STDIN.menuId == "ODCM") ) THEN
+BANCS.OUTPUT.swift_msg = sv_s + sv_m + sv_p + sv_q + sv_r + sv_z
+#Upto before verifation ,we are storing the entire swift message in MT700. In the verification we are generating the 701(additional messages) messages depending upon the length of swift message. Because swift message can hold maximum of 10,000 char length. So if the length is more, we are splitting that 700 message and generating the 701 messages.
+#The logic for generating the 701 messages is as follows. 
+# 1. If the length of whole swift message is less than or equal to 10,000 then we are not generating the 701 message.
+# 2. if the length of each of 45a,46a and 47a is more than 6000 then we are generating the Three 701 messages.
+# 3. Length of the swift message must be more than 10,000 char. (Length of any two of 45a,46a,47a is  less than or equal to 6,000) OR  (length of any two of 45a,46a,47a is less than or equal to 10,000 char and length of the third field is less than or equal to 6,000) then only we are generating the one 701 message.
+# 4. If it is not satisfies above conditions then we are generating the two 701s. The logic is as follows. If the length of any two of 45a, 46a, 47a is more than 6,000 char and third one is less than or equal to 6,000 then we are generating the two 701 messages.  
+#Length of all the fields in MT700 excluding 45A,46A,47A is maximum 4000 char
+#sv_m is used for storing all the fields before 45a ,except 27.
+#sv_z is used for storing all the fields after 47a.
+#sv_p is used for storing 45a Field Name and Field Value. like :45a1:hello|:45a2:hai|
+#sv_l is used for storing 45b Field Name and Field Value. like :45b1:hello|:45b2:hai|
+#sv_e is used for storing 45a Field Values only. like hellohai. It is used for finding the length.
+#sv_q is used for storing 46a Field Name and Field Value. like :46a1:hello|:46a2:hai|	
+#sv_n is used for storing 46b Field Name and Field Value. like :46b1:hello|:46b2:hai|
+#sv_f is used for storing 46a Field Values only. like hellohai. It is used for finding the length.
+#sv_r is used for storing 47a Field Name and Field Value. like :47a1:hello|:47a2:hai|	
+#sv_o is used for storing 47b Field Name and Field Value. like :47b1:hello|:47b2:hai|
+#sv_g is used for storing 47a Field Values only. like hellohai. It is used for finding the length.
+#sv_s is used for storing 27 Field orginal message.
+#sv_x is having the length of all fields except 45a,46a,47a.
+#sv_t is having the length of 45a, 46a, 47a.
+#sv_a is having the length of 45a.
+#sv_b is having the length of 46a.
+#sv_c is having the length of 47a.
+#sv_d is used for storing 27 field of additional message1.
+#sv_e is used for storing 27 field of additional message2.
+#sv_f is used for storing 27 field of additional message3.
+	
+
+	
+
+
+BANCS.OUTPUT.MSG1=""
+BANCS.OUTPUT.MSG2=""
+BANCS.OUTPUT.MSG3=""
+BANCS.OUTPUT.MSG4=""
+BANCS.OUTPUT.MSG5=""
+BANCS.OUTPUT.MSG6=""
+BANCS.OUTPUT.MSG7=""
+BANCS.OUTPUT.MSG8=""
+print(BANCS.INPUT.tag201)
+print(BANCS.STDIN.homeSolId)
+print(BANCS.STDIN.menuId)
+print(BANCS.STDIN.contextBankId)
+
+BANCS.INPUT.tagInputs  = BANCS.STDIN.mySolId + "|" + BANCS.STDIN.menuId + "|" + BANCS.INPUT.tag201 + "|" + "MT700" + "|" + "!" + "|" + BANCS.STDIN.contextBankId + "|" + "V"
+print(BANCS.INPUT.tagInputs)
+sv_r = urtn_readtfblobtext(BANCS.INPUT.tagInputs)
+#{
+       BANCS.INPUT.TAG45A = BANCS.OUTPUT.mt700_tag45a
+       BANCS.INPUT.TAG46A = BANCS.OUTPUT.mt700_tag46a
+       BANCS.INPUT.TAG47A = BANCS.OUTPUT.mt700_tag47a
+       BANCS.INPUT.TAG49G = BANCS.OUTPUT.mt700_tag49g
+       BANCS.INPUT.TAG49H = BANCS.OUTPUT.mt700_tag49h
+#}
+
+
+sv_a=BANCS.INPUT.TAG45A
+sv_b=BANCS.INPUT.TAG46A
+sv_c=BANCS.INPUT.TAG47A
+sv_d=BANCS.INPUT.TAG49G
+sv_e=BANCS.INPUT.TAG49H
+sv_s = 1
+while(sv_s < 9)
+	sv_a=BANCS.INPUT.TAG45A
+	sv_b=BANCS.INPUT.TAG46A
+	sv_c=BANCS.INPUT.TAG47A
+	sv_d=BANCS.INPUT.TAG49G
+	sv_e=BANCS.INPUT.TAG49H
+
+	if ((sv_a !="") OR (sv_b !="") OR (sv_c !="") OR (sv_d !="") OR (sv_e!="")) then
+		if(sv_s == 1) then 
+			BANCS.INPUT.maxLinesPerMsg="90"
+		else
+			BANCS.INPUT.maxLinesPerMsg="150"
+		endif
+		call("Generate701.scr")
+		("BANCS").("OUTPUT").("MSG" + FORMAT$(sv_s,"%d"))=BANCS.OUTPUT.OUTPUTMSG
+
+		BANCS.INPUT.TAG45A=BANCS.OUTPUT.TAG45A
+		BANCS.INPUT.TAG46A=BANCS.OUTPUT.TAG46A
+		BANCS.INPUT.TAG47A=BANCS.OUTPUT.TAG47A
+		BANCS.INPUT.TAG49G=BANCS.OUTPUT.TAG49G
+		BANCS.INPUT.TAG49H=BANCS.OUTPUT.TAG49H
+	else
+		goto ENDOFSCRIPT
+	endif
+	sv_s = sv_s + 1
+do
+ENDOFSCRIPT:
+    sv_f = 1
+	sv_k = 1
+	sv_h = sv_s - 1
+	while(sv_f < sv_s)
+		sv_g=""
+		sv_g = sv_g+":271:"+FORMAT$(sv_f,"%d")+"|"+""
+		sv_g = sv_g+":272:"+FORMAT$(sv_h,"%d")+"|"+""
+		if(sv_f == 1) then
+			BANCS.OUTPUT.swift_msg = sv_g + sv_m + ("BANCS").("OUTPUT").("MSG" + FORMAT$(sv_f,"%d")) + sv_z
+		else
+			IF (BANCS.INPUT.tag201 != "") THEN
+				sv_g = sv_g+":201:"+BANCS.INPUT.tag201+"|"+""
+		    ENDIF
+			("BANCS").("OUTPUT").("addtnl_msg" + FORMAT$(sv_k,"%d")) = sv_g + ("BANCS").("OUTPUT").("MSG" + FORMAT$(sv_f,"%d"))
+			sv_k = sv_k + 1
+
+		endif
+		sv_f = sv_f + 1
+	do
+	sv_a = sv_s - 2
+	if(sv_a > 0) then
+		BANCS.OUTPUT.warningMessage = FORMAT$(sv_a,"%d") + " MT701s is/are generated"
+	endif
+	print(BANCS.OUTPUT.swift_msg)
+ELSE
+	BANCS.OUTPUT.swift_msg = sv_s + sv_m + sv_p + sv_q + sv_r + sv_z
+ENDIF
+#
+#trace off
+end-->
+
+
+

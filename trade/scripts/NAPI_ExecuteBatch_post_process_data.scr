@@ -1,0 +1,10 @@
+<--START
+	TRACE ON
+	
+	print("Hello")
+	
+	ENDOFSCRIPT:	
+	exitscript
+
+TRACE OFF
+END-->

@@ -42,7 +42,7 @@ print(sv_u)
 IF(sv_u == 0) THEN
 #{
 
-	sv_a = "mv /FCPROD/BE/Finacle/FC/app/PAYSYS/SWIFT_OUT/*.MSG /FCPROD/BE/Finacle/FC/app/PAYSYS/SWIFT_TEMP"
+	sv_a = "mv /FCUAT2/BE/Finacle/FC/app/PAYSYS/SWIFT_OUT/*.MSG /FCUAT2/BE/Finacle/FC/app/PAYSYS/SWIFT_TEMP"
 	print(sv_a)
 	sv_v = system(sv_a)
 	print(sv_v)
@@ -54,7 +54,7 @@ IF(sv_u == 0) THEN
         sv_v = system(sv_a)
         print(sv_v)
 
-	sv_a = "mv /FCPROD/BE/Finacle/FC/app/PAYSYS/SWIFT_TEMP/*.MSG /FCPROD/BE/Finacle/FC/app/PAYSYS/SWIFT_OUT_BACKUP"
+	sv_a = "mv /FCUAT2/BE/Finacle/FC/app/PAYSYS/SWIFT_TEMP/*.MSG /FCUAT2/BE/Finacle/FC/app/PAYSYS/SWIFT_OUT_BACKUP"
 	print(sv_a)
 	sv_v = system(sv_a)
 	print(sv_v)

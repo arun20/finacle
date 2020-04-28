@@ -1,0 +1,34 @@
+<--START
+TRACE ON
+
+IF (REPEXISTS("CUST") == 0) THEN
+#{
+		CREATEREP("CUST")
+#}
+ENDIF
+
+IF (CLASSEXISTS("CUST", "DATA") == 0) THEN
+#{
+		CREATECLASS("CUST", "DATA", 5)
+#}
+ENDIF
+
+CUST.DATA.mastAcctNum = "79233000659"
+#CUST.DATA.consCrncyCode = "TWD"
+CUST.DATA.srvName = "SRV_InquireTDAcct"
+
+sv_r = urhk_SetUrhkInp("acctCommonInfo.acctGeneralInfo.acctBasic.foracid|" + CUST.DATA.mastAcctNum)
+#sv_r = urhk_SetUrhkInp("consCrncyCode|" + CUST.DATA.consCrncyCode)
+
+sv_u = urhk_ExecSrv(CUST.DATA.srvName + "|retain_all_output = Y|call_mode = N")
+print(sv_u)
+
+sv_r = urhk_GetUrhkOut("acctCommonInfo.acctInterestTax.basicInterest.netInt")
+print(sv_r)	
+if(sv_r == 0)then
+	CUST.DATA.interestrate = BANCS.OUTPARAM.srvValue
+	print(CUST.DATA.interestrate)
+endif
+
+TRACE OFF
+END-->

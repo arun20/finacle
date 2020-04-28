@@ -103,35 +103,35 @@ CUST.ODCM.check46A = ""
 CUST.ODCM.check47A = ""
 CUST.ODCM.check49G = ""
 CUST.ODCM.check49H = ""
-sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,"45A")
+sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,":45A:")
 print(sv_p)
 IF(sv_p != 0) THEN
 #{
 	CUST.ODCM.check45A = "Y"
 #}
 ENDIF
-sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,"46A")
+sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,":46A:")
 print(sv_p)
 IF(sv_p != 0) THEN
 #{
 	CUST.ODCM.check46A = "Y"
 #}
 ENDIF
-sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,"47A")
+sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,":47A:")
 print(sv_p)
 IF(sv_p != 0) THEN
 #{
 	CUST.ODCM.check47A = "Y"
 #}
 ENDIF
-sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,"49G")
+sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,":49G:")
 print(sv_p)
 IF(sv_p != 0) THEN
 #{
 	CUST.ODCM.check49G = "Y"
 #}
 ENDIF
-sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,"49H")
+sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,":49H:")
 print(sv_p)
 IF(sv_p != 0) THEN
 #{
@@ -148,35 +148,35 @@ CUST.ODCM.check46B = ""
 CUST.ODCM.check47B = ""
 CUST.ODCM.check49M = ""
 CUST.ODCM.check49N = ""
-sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,"45B")
+sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,":45B:")
 print(sv_p)
 IF(sv_p != 0) THEN
 #{
         CUST.ODCM.check45B = "Y"
 #}
 ENDIF
-sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,"46B")
+sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,":46B:")
 print(sv_p)
 IF(sv_p != 0) THEN
 #{
         CUST.ODCM.check46B = "Y"
 #}
 ENDIF
-sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,"47B")
+sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,":47B:")
 print(sv_p)
 IF(sv_p != 0) THEN
 #{
         CUST.ODCM.check47B = "Y"
 #}
 ENDIF
-sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,"49M")
+sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,":49M:")
 print(sv_p)
 IF(sv_p != 0) THEN
 #{
         CUST.ODCM.check49M = "Y"
 #}
 ENDIF
-sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,"49N")
+sv_p = GETPOSITION(BANCS.INPUT.PaysysMsg,":49N:")
 print(sv_p)
 IF(sv_p != 0) THEN
 #{

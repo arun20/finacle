@@ -180,6 +180,7 @@ IMPORT customFields
 	### 5.1 ADD/COPY/ISSUE/ADVICE ###
 	IF(CUST.DATA.isNewEntity == "Y")THEN
 	#{
+		BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 		BANCS.INPUT.acfNum 		= CUST.DATA.slLmtId
 		BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.b2kEventAmt),"%2.2f")
 		BANCS.INPUT.earType 	= "A"
@@ -204,6 +205,7 @@ IMPORT customFields
 			GOTO CANCEL
 		#}
 		ENDIF
+		BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 		BANCS.INPUT.acfNum 		= CUST.DATA.slLmtId
 		BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.b2kEventAmt),"%2.2f")
 		BANCS.INPUT.earType 	= "R"
@@ -226,6 +228,7 @@ IMPORT customFields
 		IF((CDOUBLE(CUST.DATA.amountDiff) < 0) AND (CUST.DATA.funcCode != "R"))THEN
 		#{
 			CUST.DATA.amountDiff = -1 * CDOUBLE(CUST.DATA.amountDiff)
+			BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 			BANCS.INPUT.acfNum 		= CUST.DATA.slLmtId
 			BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.amountDiff),"%2.2f")
 			BANCS.INPUT.earType 	= "R"
@@ -237,6 +240,7 @@ IMPORT customFields
 			#}
 		ELSE
 			#{
+			BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 			BANCS.INPUT.acfNum 		= CUST.DATA.slLmtId
 			BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.amountDiff),"%2.2f")
 			IF (CUST.DATA.funcCode == "R") THEN

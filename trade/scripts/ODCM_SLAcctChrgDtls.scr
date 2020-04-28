@@ -70,6 +70,7 @@ IMPORT SLAcctChrgDtls
 		
 		IF((CUST.DATA.slLimitId != "")AND(CDOUBLE(CUST.DATA.dcAvailAmt) != 0))THEN
 		#{
+		    BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 			BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 			BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.dcAvailAmt),"%2.2f")
 			BANCS.INPUT.earType 	= "A"
@@ -88,7 +89,9 @@ IMPORT SLAcctChrgDtls
 		#}
 		ENDIF
 		PRINT(CUST.DATA.totalEarMark)
-		
+		#----------------------------------------------------------
+		#In case Issue is failed -> reverse earmark
+		#----------------------------------------------------------
 		### PERFORM DB OPERATIONS ###
 		sv_a = func_dbOps(BYREF CUST.DATA.errorFlg)
 		IF(sv_a != 0)THEN
@@ -137,6 +140,7 @@ IMPORT SLAcctChrgDtls
 				BANCS.INPUT.earType 	= "A"
 			#}
 			ENDIF
+			BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 			BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 			BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.amtDiff),"%2.2f")
 			BANCS.INPUT.currency 	= CUST.DATA.b2kCcy
@@ -204,6 +208,7 @@ IMPORT SLAcctChrgDtls
 		
 		IF((CUST.DATA.slLimitId != "")AND(CDOUBLE(CUST.DATA.nonBillUtilAmt) != 0) AND (CUST.DATA.funcCode != "U"))THEN
 		#{
+			BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 			BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 			BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.nonBillUtilAmt),"%2.2f")
 			BANCS.INPUT.earType 	= "A"
@@ -253,6 +258,7 @@ IMPORT SLAcctChrgDtls
 		
 		IF((CUST.DATA.slLimitId != "")AND(CDOUBLE(CUST.DATA.reinstByAmt) != 0))THEN
 		#{
+		    BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 			BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 			BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.reinstByAmt),"%2.2f")
 			BANCS.INPUT.earType 	= "A"
@@ -293,32 +299,16 @@ IMPORT SLAcctChrgDtls
 	IF(CUST.DATA.serviceName == "SRV_UncloseOutwardDcDtl")THEN
 	#{
 		### API CALLS ###
-		sub_getSlLimitId()c
+		sub_getSlLimitId()
 		PRINT(CUST.DATA.slLimitId)
 		PRINT(CUST.DATA.prevEarMark)
 		
-		#sub_getFieldValuesfromSRVStructB("1","CUST","DATA","dcOutGenDtl.dcAmtDtl.dcAvailAmt","dcAvailAmt")
-		#----------- Fixed Unclose dcAvailAmt = 0  ------------------------ 
-		    BANCS.INPARAM.BINDVARS = CUST.DATA.entityB2kId + "|"  + BANCS.STDIN.contextBankId
-			BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + CUST.DATA.entityB2kId + "|" +  BANCS.STDIN.contextBankId
-			PRINT(BANCS.INPARAM.BINDVARS)
-			sv_a = "eventAmt|select EVENT_AMT from tbaadm.dcem WHERE DC_B2KID = ?SVAR  AND BANK_ID = ?SVAR AND EVENT_TYPE='Z' "
-			sv_a = sv_a + "AND EVENT_SRL_NUM = (SELECT MAX(EVENT_SRL_NUM) FROM tbaadm.dcem WHERE DC_B2KID = ?SVAR AND BANK_ID = ?SVAR AND EVENT_TYPE='Z') AND ENTITY_CRE_FLG = 'Y'"
-			PRINT(sv_a)
-			sv_a = urhk_dbSelectWithBind(sv_a)
-			PRINT(sv_a)
-			IF(sv_a == 0)THEN
-			#{
-				CUST.DATA.dcAvailAmt = BANCS.OUTPARAM.eventAmt
-			#}
-			ENDIF
-			
-       #-----------------------------------------------------------
-
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA","dcOutGenDtl.dcAmtDtl.dcAvailAmt","dcAvailAmt")
 		PRINT(CUST.DATA.dcAvailAmt)
 		
 		IF((CUST.DATA.slLimitId != "")AND(CDOUBLE(CUST.DATA.dcAvailAmt) != 0))THEN
 		#{
+			BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 			BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 			BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.dcAvailAmt),"%2.2f")
 			BANCS.INPUT.earType 	= "A"
@@ -397,6 +387,7 @@ IMPORT SLAcctChrgDtls
 				CUST.DATA.prevEarMark = -1 * CDOUBLE(CUST.DATA.prevEarMark)
 			#}
 			ENDIF
+			BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 			BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 			BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.prevEarMark),"%2.2f")
 			PRINT(BANCS.INPUT.earType)
@@ -462,6 +453,7 @@ IMPORT SLAcctChrgDtls
 			#{
 				CUST.DATA.prevEarMark 	= -1 * CDOUBLE(CUST.DATA.prevEarMark)
 				### MANAGE EARMARK API ###
+				BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 				BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 				BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.prevEarMark),"%2.2f")
 				BANCS.INPUT.earType		= "A"
@@ -753,6 +745,7 @@ IMPORT SLAcctChrgDtls
 		
 		IF((CUST.DATA.prevslLimitId != "") AND(CDOUBLE(CUST.DATA.prevEarMark) != 0))THEN
 		#{
+			BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 			BANCS.INPUT.acfNum 		= CUST.DATA.prevslLimitId
 			BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.prevEarMark),"%2.2f")
 			BANCS.INPUT.currency 	= CUST.DATA.b2kCcy

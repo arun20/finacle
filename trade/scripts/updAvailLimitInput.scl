@@ -7,42 +7,104 @@
 FUNCTION xmlUpdLmtBodyDetails()
 #{
 	BANCS.INPUT.refType = "TFS"
+	
+	#--------------------------------------------------------
+	#FETCH Mid Rate FROM RATE LIST HISTORY
+	#--------------------------------------------------------
+    PRINT(BANCS.INPUT.currency) 
+	
+	BANCS.INPARAM.BINDVARS = BANCS.INPUT.currency + "|" + BANCS.INPUT.currency
+	PRINT(BANCS.INPARAM.BINDVARS)
+	
+	sv_a = "midRate|SELECT VAR_CRNCY_UNITS FROM TBAADM.RTH R WHERE RATECODE = 'MID' AND VAR_CRNCY_CODE = 'THB' AND FXD_CRNCY_CODE = ?SVAR "
+	sv_a = sv_a + " AND RCRE_TIME = (SELECT MAX(RCRE_TIME) FROM TBAADM.RTH WHERE RATECODE = 'MID' AND VAR_CRNCY_CODE = 'THB' AND FXD_CRNCY_CODE = ?SVAR AND TRUNC(RCRE_TIME) < TRUNC(SYSDATE))"
+	sv_a = urhk_dbSelectWithBind(sv_a)
+	sub_copyOutparamFieldB("midRate","CUST","DATA","midRate","1")
+	IF(BANCS.INPUT.currency == "THB")THEN
+	#{
+		CUST.DATA.midRate = 1
+	#}
+	ENDIF
+	
+	PRINT(CUST.DATA.midRate)
 
 	IF(TRIM(BANCS.INPUT.balance) != "")THEN
 	#{
-        	print(BANCS.INPUT.balance)
-        	BANCS.INPUT.balance = FORMAT$(CDOUBLE(BANCS.INPUT.balance),"%0.2f")
-        	print(BANCS.INPUT.balance)
+        	PRINT(BANCS.INPUT.balance)
+                #--------------------------------------------------------------------
+                #For single currency
+                #--------------------------------------------------------------------
+		#BANCS.INPUT.balanceTHB = CDOUBLE(BANCS.INPUT.balance) * CDOUBLE(CUST.DATA.midRate)
+        	#BANCS.INPUT.balanceTHB = FORMAT$(CDOUBLE(BANCS.INPUT.balanceTHB),"%0.2f")
+        	#PRINT(BANCS.INPUT.balanceTHB)
+                
+                #--------------------------------------------------------------------
+                #For multicle currency
+                #--------------------------------------------------------------------
+       		BANCS.INPUT.balance = FORMAT$(CDOUBLE(BANCS.INPUT.balance),"%0.2f")
+        	PRINT(BANCS.INPUT.balance)
 	#}
 	ENDIF
 
 	IF(TRIM(BANCS.INPUT.txnAmount) != "")THEN
 	#{
-		print(BANCS.INPUT.txnAmount)
-                BANCS.INPUT.txnAmount = FORMAT$(CDOUBLE(BANCS.INPUT.txnAmount),"%0.2f")
-                print(BANCS.INPUT.txnAmount)
+		PRINT(BANCS.INPUT.txnAmount)
+                #--------------------------------------------------------------------
+                #For single currency
+                #--------------------------------------------------------------------
+		#BANCS.INPUT.txnAmountTHB = CDOUBLE(BANCS.INPUT.txnAmount) * CDOUBLE(CUST.DATA.midRate)
+            	#BANCS.INPUT.txnAmountTHB = FORMAT$(CDOUBLE(BANCS.INPUT.txnAmountTHB),"%0.2f")
+            	#PRINT(BANCS.INPUT.txnAmountTHB)
+
+		#--------------------------------------------------------------------
+                #For multicle currency
+                #--------------------------------------------------------------------
+           	BANCS.INPUT.txnAmount = FORMAT$(CDOUBLE(BANCS.INPUT.txnAmount),"%0.2f")
+            	PRINT(BANCS.INPUT.txnAmount)
+
 	#}
 	ENDIF
 
 	IF(BANCS.INPUT.updTypeFlag == "UO")THEN
 	#{
 		BANCS.INPUT.txnAmount = "0.00"
+                #--------------------------------------------------------------------
+                #For single currency
+                #--------------------------------------------------------------------
+		#BANCS.INPUT.txnAmountTHB = "0.00"
 	#}
 	ENDIF
 	
+	BANCS.INPUT.midRate = CUST.DATA.midRate
+		
 	#------------------------------
 	#Forming the body xml tags
 	#------------------------------
 	sv_v = ""
-	sv_v = sv_v + "<limitParam>"
+        #------------------------------------------------------------------------
+        #For multiple currency
+        #------------------------------------------------------------------------
+        sv_v = sv_v + "<limitParam>"
 	sv_v = sv_v + "<acfNum>"+BANCS.INPUT.acfNum+"</acfNum>"
-	sv_v = sv_v + "<changeLimitAmount>"+BANCS.INPUT.balance+"</changeLimitAmount>"
+        sv_v = sv_v + "<changeLimitAmount>"+BANCS.INPUT.balance+"</changeLimitAmount>"
 	sv_v = sv_v + "<refNum>"+BANCS.INPUT.refNum+"</refNum>"
 	sv_v = sv_v + "<refType>"+BANCS.INPUT.refType+"</refType>"
 	sv_v = sv_v + "<currency>"+BANCS.INPUT.currency+"</currency>"
-	sv_v = sv_v + "<holdAmount>"+BANCS.INPUT.txnAmount+"</holdAmount>"
-	sv_v = sv_v + "<updTypeFlag>"+BANCS.INPUT.updTypeFlag+"</updTypeFlag>"
-	sv_v = sv_v + "</limitParam>"
+        sv_v = sv_v + "<holdAmount>"+BANCS.INPUT.txnAmount+"</holdAmount>"
+        sv_v = sv_v + "<updTypeFlag>"+BANCS.INPUT.updTypeFlag+"</updTypeFlag>"
+        sv_v = sv_v + "</limitParam>"
+        #------------------------------------------------------------------------
+	#For single currency
+        #------------------------------------------------------------------------
+       	#sv_v = sv_v + "<limitParam>"
+        #sv_v = sv_v + "<acfNum>"+BANCS.INPUT.acfNum+"</acfNum>"
+        #sv_v = sv_v + "<changeLimitAmount>"+BANCS.INPUT.balanceTHB+"</changeLimitAmount>"
+	#sv_v = sv_v + "<refNum>"+BANCS.INPUT.refNum+"</refNum>"
+	#sv_v = sv_v + "<refType>"+BANCS.INPUT.refType+"</refType>"
+	#sv_v = sv_v + "<currency>THB</currency>"
+	#sv_v = sv_v + "<holdAmount>"+BANCS.INPUT.txnAmountTHB+"</holdAmount>"
+	#sv_v = sv_v + "<updTypeFlag>"+BANCS.INPUT.updTypeFlag+"</updTypeFlag>"
+	#sv_v = sv_v + "</limitParam>"
 	PRINT(sv_v)
 	RETURN sv_v
 #}

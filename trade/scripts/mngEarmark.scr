@@ -178,6 +178,28 @@ IMPORT mngEarmarkInput
 		sv_u = urhk_setOrbOut("outputString|"+INTF.DATA.msgDescription)
 	#}
 	ENDIF
-
+	
+	#--------------------------------------------------------------
+	#Send to Limit Currency Log
+	#--------------------------------------------------------------
+	IF ( FIELDEXISTS(CUST.TBL.reqId) AND FIELDEXISTS(BANCS.INPUT.refNum) AND FIELDEXISTS(BANCS.INPUT.acfNum) AND FIELDEXISTS(BANCS.INPUT.midRate) AND FIELDEXISTS(BANCS.INPUT.holdAmount) ) THEN
+	#{
+		PRINT(CUST.TBL.reqId)
+		PRINT(BANCS.INPUT.refNum)
+		PRINT(BANCS.INPUT.acfNum)
+		PRINT(BANCS.INPUT.currency)
+		PRINT(BANCS.INPUT.midRate)
+		PRINT(BANCS.INPUT.holdAmount)
+		sv_x = CUST.TBL.reqId+"#mngEarmark#"+BANCS.INPUT.refNum+"#"+BANCS.INPUT.acfNum+"#"+BANCS.INPUT.currency+"#"+BANCS.INPUT.holdAmount+"#"+BANCS.INPUT.midRate+"#0.00#"+BANCS.INPUT.earType+"#"+BANCS.OUTPUT.successOrFailure+"#"+INTF.DATA.orgCode
+		sv_x = "/FCUAT2/BE/Finacle/FC/app/cust/fcaddon/lib/limitcurrencylog.sh '"+sv_x+"'"
+		print(sv_x)
+		sv_w = SYSTEM(sv_x)
+	#}
+	ELSE
+	#{
+	    PRINT("########### NO FIELDEXISTS FOR LIMIT CURRENCY #############")
+	#}
+    ENDIF
+	
 EXITSCRIPT
 END-->

@@ -109,9 +109,14 @@
 	print(CUST.DATA.dateFormat)
 	CUST.DATA.reportNameExtract= CUST.DATA.reportNameExtract + CUST.DATA.dateFormat + ".TXT"
 	
+	#sv_q = "recCount|select count(distinct g.acid) from tbaadm.gam g, tbaadm.htd h "
+	#sv_q = sv_q + "where g.acid=h.acid and h.TRAN_DATE >= TO_DATE('"+ CUST.DATA.startDate +"','DD-MM-YYYY')"
+	#sv_q = sv_q + " and h.TRAN_DATE <= TO_DATE('"+ CUST.DATA.endDateWithTime +"','DD-MM-YYYY HH24:MI:SS')"
+	#sv_q = sv_q + " and g.ACCT_CLS_FLG !='Y' and g.SCHM_TYPE in ('SBA','TDA')"
+
 	sv_q = "recCount|select count(distinct g.acid) from tbaadm.gam g, tbaadm.htd h "
-	sv_q = sv_q + "where g.acid=h.acid and h.TRAN_DATE >= TO_DATE('"+ CUST.DATA.startDate +"','DD-MM-YYYY')"
-	sv_q = sv_q + " and h.TRAN_DATE <= TO_DATE('"+ CUST.DATA.endDateWithTime +"','DD-MM-YYYY HH24:MI:SS')"
+	sv_q = sv_q + "where g.acid=h.acid and h.VALUE_DATE >= TO_DATE('"+ CUST.DATA.startDate +"','DD-MM-YYYY')"
+	sv_q = sv_q + " and h.VALUE_DATE <= TO_DATE('"+ CUST.DATA.endDateWithTime +"','DD-MM-YYYY HH24:MI:SS')"
 	sv_q = sv_q + " and g.ACCT_CLS_FLG !='Y' and g.SCHM_TYPE in ('SBA','TDA')"
 	PRINT(sv_q)
 	sv_r = urhk_dbSelectWithBind(sv_q)

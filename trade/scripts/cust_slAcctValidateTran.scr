@@ -109,7 +109,7 @@ IMPORT LibAuditB001
 				sv_g = FORMAT$(sv_z,"%d")
 
 				##################################
-				sv_d = sv_d + 7
+				sv_d = sv_d + 8
 				sv_f = FORMAT$(sv_d,"%d")
 				PRINT(sv_f)
 				IF (("BANCS").("INPUT").(HTM.DATA.pageName+"_FIELD_"+sv_f) == "NULL") THEN

@@ -108,7 +108,8 @@ IMPORT customFields
 
 		IF((CUST.DATA.menuId == "OAACPS") OR (CUST.DATA.menuId == "HOAACOD"))  THEN
 		#{
-			BANCS.INPUT.acfNum              = CUST.DATA.slLimitId
+		    BANCS.INPUT.refNum	   	= CUST.DATA.foracid
+			BANCS.INPUT.acfNum      = CUST.DATA.slLimitId
 			BANCS.INPUT.holdAmount  = FORMAT$(CDOUBLE(CUST.DATA.b2kEventAmt),"%2.2f")	
 			CUST.DATA.eventType = "O"
 			BANCS.INPUT.earType = "A"
@@ -122,7 +123,8 @@ IMPORT customFields
 
 		IF(((CUST.DATA.menuId == "OAACVPS") AND (CUST.DATA.serviceName =="SRV_CancelPCAcct")) OR ((CUST.DATA.menuId == "HOAACVOD") AND (CUST.DATA.serviceName =="SRV_CancelODAcct"))) THEN
 		#{
-			BANCS.INPUT.acfNum              = CUST.DATA.limitId
+			BANCS.INPUT.refNum	   	= CUST.DATA.foracid
+			BANCS.INPUT.acfNum      = CUST.DATA.limitId
 			BANCS.INPUT.holdAmount  = FORMAT$(CDOUBLE(CUST.DATA.b2kEventAmt),"%2.2f")
 			BANCS.INPUT.earType     = "R"
 			CUST.DATA.eventType = "X"
@@ -136,9 +138,10 @@ IMPORT customFields
 	
 		IF(((CUST.DATA.menuId == "OAACMPS") OR (CUST.DATA.menuId == "HOAACMOD")) AND (TRIM(CUST.DATA.slLimitId) != "")) THEN
 		#{
-			BANCS.INPUT.acfNum              = CUST.DATA.limitId
-			BANCS.INPUT.earType = "R"
-			BANCS.INPUT.holdAmount = CDOUBLE(CUST.DATA.prevEarMark)
+			BANCS.INPUT.refNum	   	= CUST.DATA.foracid
+			BANCS.INPUT.acfNum      = CUST.DATA.limitId
+			BANCS.INPUT.earType     = "R"
+			BANCS.INPUT.holdAmount  = CDOUBLE(CUST.DATA.prevEarMark)
 			IF(CUST.DATA.crncy != "") THEN
 			#{
 				BANCS.INPUT.currency    = CUST.DATA.crncy
@@ -162,10 +165,11 @@ IMPORT customFields
 				ENDIF
 			#}
 			ENDIF
-			BANCS.INPUT.earType = "A"
+			BANCS.INPUT.refNum	   	= CUST.DATA.foracid
+			BANCS.INPUT.earType     = "A"
 			BANCS.INPUT.holdAmount  = FORMAT$(CDOUBLE(CUST.DATA.b2kEventAmt),"%2.2f")
 			pRINT(BANCS.INPUT.holdAmount)
-			BANCS.INPUT.acfNum              = CUST.DATA.slLimitId	
+			BANCS.INPUT.acfNum      = CUST.DATA.slLimitId	
 			print(BANCS.INPUT.acfNum)
 		#}
 		ENDIF
@@ -282,7 +286,8 @@ IMPORT customFields
 			PRINT(CUST.DATA.b2kEventAmt)	
 			IF(CUST.DATA.serviceName == "SRV_CancelAcctSanctLimit") THEN
 			#{
-				BANCS.INPUT.acfNum = CUST.DATA.slLimitId
+				BANCS.INPUT.refNum	   	= CUST.DATA.foracid
+				BANCS.INPUT.acfNum      = CUST.DATA.slLimitId
 				BANCS.INPUT.holdAmount  = FORMAT$(CDOUBLE(CUST.DATA.prevEarMark),"%2.2f")
 				BANCS.INPUT.earType     = "R"
 				CUST.DATA.eventType = "X"
@@ -292,23 +297,24 @@ IMPORT customFields
 				#}
 				ENDIF
 				IF(BANCS.INPUT.holdAmount <= 0) THEN
-                                #{
-                                        GOTO NEXTINS
-                                #}
-                                ENDIF
+				#{
+						GOTO NEXTINS
+				#}
+				ENDIF
 			#}
 			ENDIF
 			IF((CUST.DATA.serviceName == "SRV_AddAcctSanctLimit") AND (TRIM(CUST.DATA.slLimitId) != "")) THEN
 			#{
-				BANCS.INPUT.acfNum = CUST.DATA.slLimitId				
-				CUST.DATA.eventType = "M"
-				BANCS.INPUT.earType = "A"
-				BANCS.INPUT.holdAmount = CDOUBLE(CUST.DATA.b2kEventAmt) - CDOUBLE(CUST.DATA.prevEntityAmt)
+				BANCS.INPUT.refNum	   	= CUST.DATA.foracid
+				BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId				
+				CUST.DATA.eventType 	= "M"
+				BANCS.INPUT.earType 	= "A"
+				BANCS.INPUT.holdAmount 	= CDOUBLE(CUST.DATA.b2kEventAmt) - CDOUBLE(CUST.DATA.prevEntityAmt)
 				IF(CUST.DATA.crncy != "") THEN
-                                #{
-                                        BANCS.INPUT.currency    = CUST.DATA.crncy
-                                #}
-                                ENDIF
+				#{
+						BANCS.INPUT.currency    = CUST.DATA.crncy
+				#}
+				ENDIF
 				IF(BANCS.INPUT.holdAmount <= 0) THEN
 				#{
 					CUST.DATA.totEarMark = BANCS.INPUT.holdAmount
@@ -335,7 +341,7 @@ IMPORT customFields
 					#{
 						PRINT(CDOUBLE(CUST.DATA.prevEarMark))
 						PRINT(CDOUBLE(BANCS.INPUT.holdAmount))
-							CUST.DATA.totEarMark = CDOUBLE(CUST.DATA.prevEarMark) + CDOUBLE(BANCS.INPUT.holdAmount)
+						CUST.DATA.totEarMark = CDOUBLE(CUST.DATA.prevEarMark) + CDOUBLE(BANCS.INPUT.holdAmount)
 					#}
 					ENDIF
 					

@@ -54,6 +54,8 @@ SUB mptoffsetdetCustomFields()
 		PRODMENU.CUSTFLDS.pmmMRHFlg = "Y"
 		PRODMENU.CUSTFLDS.pmmMRHLL = "pcOffsetDtl.offsetLL"
 		PRODMENU.CUSTFLDS.pmmMRHId = "intFlag"
+		PRODMENU.CUSTFLDS.pmmFrwkPageName = "mptoffsetdet"
+		PRODMENU.CUSTFLDS.pmmDateFormatWithDT = "Y"
 		sub_processCustomFieldsB()
 	#}
 	ENDIF

@@ -99,11 +99,34 @@ IMPORT customFields
 	PRINT(CUST.DATA.amendInd)
 	CUST.DATA.amendAmt = CDOUBLE(CUST.DATA.amendAmt)
 	PRINT(CUST.DATA.amendAmt)
+	CUST.DATA.markInvokeStatus = ""
+	CUST.DATA.eventOperType = ""
 	IF(((CUST.DATA.menuId == "OGM") OR (CUST.DATA.menuId == "IGM")) AND (CUST.DATA.b2kIdType == "")) THEN	
 	#{
+		IF(CUST.DATA.menuId == "OGM") THEN
+		#{
+			CUST.DATA.srvFieldNames = "bgMarkInvocationDtl.markInvokeStatus"
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "IGM") THEN
+		#{
+				CUST.DATA.srvFieldNames = "bgInMsg.bgMarkInvocationDtl.markInvokeStatus"
+		#}
+		ENDIF
+		CUST.DATA.srvFieldValues = "markInvokeStatus"
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA",CUST.DATA.srvFieldNames,CUST.DATA.srvFieldValues)
+		PRINT(CUST.DATA.markInvokeStatus)
 		CUST.DATA.b2kIdType = "BNKGR"
 	#}
 	ENDIF	
+	IF(CUST.DATA.menuId == "OGM") THEN
+	#{
+		CUST.DATA.srvFieldNames = "bgChargeDtl.eventOperType"
+		CUST.DATA.srvFieldValues = "eventOperType"
+		sub_getFieldValuesfromSRVStructB("1","CUST","DATA",CUST.DATA.srvFieldNames,CUST.DATA.srvFieldValues)
+		PRINT(CUST.DATA.eventOperType)
+	#}
+	ENDIF
 	### 4.FETCH PREVIOUS OPERATION VALUES ON THIS ENTITY ###
 	sub_getFieldValuesfromONSB("1","CUST","DATA","tfc_limit_details_FIELD_1","slLimitId","")
 	CUST.DATA.slLimitId	= TOUPPER(CUST.DATA.slLimitId)
@@ -151,6 +174,7 @@ IMPORT customFields
 	### 5.1 ADD/COPY/ISSUE/ADVICE ###
 	IF(CUST.DATA.isNewEntity == "Y")THEN
 	#{
+		BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 		BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 		BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.b2kEventAmt),"%2.2f")
 		BANCS.INPUT.earType 	= "A"
@@ -168,6 +192,7 @@ IMPORT customFields
 	#{
 		IF(CDOUBLE(CUST.DATA.prevEarMark) != 0) THEN
 		#{
+			BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 			BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 			BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.b2kEventAmt),"%2.2f")
 			BANCS.INPUT.earType 	= "R"
@@ -182,11 +207,12 @@ IMPORT customFields
 	ENDIF
 	### 5.3 MODIFY/AMEND/OTHERS ###
 	IF((CUST.DATA.isNewEntity != "Y") AND (CUST.DATA.funcCode != "X"))THEN
-	#{
+	#{	
 		IF((CUST.DATA.amendInd != "") AND (CUST.DATA.funcCode != "M"))THEN
 		#{
 			IF(CUST.DATA.amendInd == "E")THEN
 			#{
+				BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 				BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 				BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.amendAmt),"%2.2f")
 				BANCS.INPUT.earType 	= "A"
@@ -195,6 +221,7 @@ IMPORT customFields
 			ENDIF
 			IF(CUST.DATA.amendInd == "R")THEN
 			#{
+				BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 				BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 				BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.amendAmt),"%2.2f")
 				BANCS.INPUT.earType 	= "R"
@@ -206,7 +233,8 @@ IMPORT customFields
 		#{
 			IF((TRIM(CUST.DATA.slLimitId) != "" )AND(CDOUBLE(CUST.DATA.prevEarMark) != 0) AND (CUST.DATA.funcCode == "M") AND (CUST.DATA.amendInd != "R"))THEN
 			#{
-				BANCS.INPUT.acfNum              = CUST.DATA.slLimitId
+				BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
+				BANCS.INPUT.acfNum      = CUST.DATA.slLimitId
 				BANCS.INPUT.holdAmount  = FORMAT$(CDOUBLE(CUST.DATA.prevEntityAmt),"%2.2f")
 				BANCS.INPUT.earType     = "R"
 				BANCS.INPUT.currency    = CUST.DATA.b2kCcy
@@ -221,6 +249,7 @@ IMPORT customFields
 				CUST.DATA.prevEarMark = "0.00"
 			#}
 			ENDIF
+			BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 			BANCS.INPUT.acfNum 	= CUST.DATA.slLimitId
 			BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.b2kEventAmt),"%2.2f")
 			BANCS.INPUT.earType 	= "A"
@@ -229,12 +258,12 @@ IMPORT customFields
 		ENDIF
 	#}
 	ENDIF
-	IF(CUST.DATA.funcCode == "N") THEN
+	IF((CUST.DATA.funcCode == "N") OR (CUST.DATA.eventOperType == "N")) THEN
 	#{
 		BANCS.INPUT.holdAmount = "0"
 	#}
 	ENDIF
-	IF((TRIM(CUST.DATA.slLimitId) != "" )AND(CDOUBLE(BANCS.INPUT.holdAmount) != 0) AND (CUST.DATA.amendInd != "R") AND (CUST.DATA.funcCode != "V"))THEN
+	IF((TRIM(CUST.DATA.slLimitId) != "" )AND(CDOUBLE(BANCS.INPUT.holdAmount) != 0) AND (CUST.DATA.amendInd != "R") AND (CUST.DATA.funcCode != "V") AND (CUST.DATA.markInvokeStatus != "G"))THEN
 	#{
 		CALL("mngEarmark.scr")
 		IF(FIELDEXISTS(INTF.DATA.orgCode))THEN
@@ -307,7 +336,7 @@ IMPORT customFields
 			CUST.DATA.chrgSrlNum = 0
 		#}
 		ENDIF
-		IF(((CUST.DATA.menuId == "OGM") OR (CUST.DATA.menuId == "IGM")) AND (CUST.DATA.funcCode == "N"))  THEN
+		IF(((CUST.DATA.menuId == "OGM") OR (CUST.DATA.menuId == "IGM")) AND ((CUST.DATA.funcCode == "N") OR (CUST.DATA.eventOperType == "N")))  THEN
 		#{
 
 			sub_getFieldValuesfromONSB("1","CUST","DATA","FRWK_OGMINVOCDET_FIELD_1","slAcctId","")
@@ -343,7 +372,7 @@ IMPORT customFields
 			ENDIF
 		#}
 		ENDIF
-		IF((CINT(CUST.DATA.chrgSrlNum) == 0) AND (CUST.DATA.funcCode != "N"))THEN 
+		IF((CINT(CUST.DATA.chrgSrlNum) == 0) AND ((CUST.DATA.funcCode != "N") AND (CUST.DATA.eventOperType != "N")))THEN 
 		#{
 			### INSERT INTO CUSTOM.C_TFCT ###
 			CUST.DATA.insertValues = CUST.DATA.entityB2kId  + "|" + CUST.DATA.b2kIdType + "|" + CUST.DATA.funcCode + "|" + CUST.DATA.eventSrlNum

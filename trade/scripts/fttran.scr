@@ -77,22 +77,33 @@
                 sv_a = sv_a + "a.lbs_account_branch IN ( '790') "
                 sv_a = sv_a + "AND a.LBS_ACCOUNT_ID not in ('SUSPENSE','0000000000','000000000000','NONE') "
                 #####  Comment the below line to enable Bond acounting from Treasury to silverlake #######
-                sv_a = sv_a + "AND a.dealtype not in ('SECBS','SECHDG') "
+                #sv_a = sv_a + "AND a.dealtype not in ('SECBS','SECHDG') "
                 ##########################################################################################
 		sv_a = sv_a + "AND a.amount != 0 "
                 sv_a = sv_a + "AND a.entity_id = 'LHB' "
                 #sv_a = sv_a + "AND a.VALUEDATE > '20-APR-2017' "
                 sv_a = sv_a + "AND a.VALUEDATE > TO_DATE(?SVAR, 'DD-MM-YYYY') "
-                sv_a = sv_a + "AND a.dealsubtype not in ('BOOTH', 'FCORE') "
+                #sv_a = sv_a + "AND a.dealsubtype not in ('BOOTH', 'FCORE', 'BRANCH') "
                 sv_a = sv_a + "AND a.lbs_account_id != 'NONE' "
                 # For performance you can add condition to select only last few days records
                 # sv_a = sv_a + "and trantime > sysdate - 7"
                 # and then add a index on trantime in gl_trans
+                # add filter out condition BOND Migration Deals
+                sv_a = sv_a + "AND not exists (select 1 from BOND_MIG_DEALS@FCFTADM "
+		sv_a = sv_a + "WHERE dealnumber = a.dealnumber ) "
+				#=====================================================================
+				# Update by Kanchit.J
+				# UPdated Date : 10/04/2020
+				#=====================================================================
+				#sv_a = sv_a + "AND  a.dealtype !='CASH' and a.dealsubtype !='ADJNOS' "
+				#=====================================================================
                 sv_a = sv_a + "AND not exists (select 1 from TBA_TRAN_UPLD_TBL b "
                 sv_a = sv_a + "where b.BANK_ID = ?SVAR AND "
                 sv_a = sv_a + "b.upload_ref_no = a.jnlref "
                 sv_a = sv_a + "AND   b.upload_type = 'FT'||a.jnlsource "
                 sv_a = sv_a + "AND   b.srl_num = LPAD(a.jnlline,4,' '))) "
+
+
                print(sv_a) 
 		BANCS.INPARAM.BINDVARS = BANCS.STDIN.contextBankId+ "|" + sv_d + "|" + BANCS.STDIN.contextBankId
                 sv_r = urhk_dbSqlWithBind(sv_a)
@@ -210,7 +221,7 @@
                                 MTT.PartTranDetails.PTranBusinessType="FT"
 
                                 sv_r = urhk_MTTS_DefinePartTran(MTT.InputDetails.UploadSrlNum)
-                              # sv_z= urhk_b2k_printrepos("MTT")
+                                sv_z= urhk_b2k_PRINTRepos("MTT")
 
                                 NextRecord:
                                                 B2KTEMP.TEMPSTD.PrevUploadRefNo = MTT.InputDetails.UploadRefNo
@@ -257,5 +268,3 @@
 
 
 END-->
-
-

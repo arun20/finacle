@@ -53,6 +53,9 @@ SUB meobLimitCustFlds()
 	PRODMENU.CUSTFLDS.modTable 	= "CUSTOM.C_FBM_EXT_MOD_TBL"
 	PRODMENU.CUSTFLDS.keyFields = "SOL_ID|BANK_ID|BILL_ID|DEL_FLG"
 	PRODMENU.CUSTFLDS.keyValues = ""	
+	PRODMENU.CUSTFLDS.keyFieldsColumnDataType = ""
+	PRODMENU.CUSTFLDS.keyFieldsColumnFormat = ""
+	
 	
 	PRINT(PRODMENU.CUSTFLDS.funcMode)
 	PRINT("TEST")

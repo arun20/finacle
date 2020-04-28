@@ -111,7 +111,7 @@
 		PRINT(CUST.DATA.tranAmt)
 		
 		### GET CUSTOM FIELD VALUES FOR EACH RECORD FROM ONS BEGIN ###
-		CUST.DATA.slAcctIdPos = (CINT(CUST.DATA.noOfFldsPerRec) * CINT(CUST.DATA.chrgSrlNum)) - 2
+		CUST.DATA.slAcctIdPos = (CINT(CUST.DATA.noOfFldsPerRec) * CINT(CUST.DATA.chrgSrlNum)) - 3
 		CUST.DATA.ONSFields   = "tfc_charge_details_FIELD_" + CUST.DATA.slAcctIdPos
 		PRINT(CUST.DATA.ONSFields)
 		CUST.DATA.outputFields = "slAcctId"
@@ -244,7 +244,7 @@
 		PRINT(CUST.DATA.tranAmt)
 		
 		### GET CUSTOM FIELD VALUES FOR EACH RECORD FROM ONS BEGIN ###
-		CUST.DATA.slAcctIdPos = (CINT(CUST.DATA.noOfFldsPerRec) * CINT(CUST.DATA.chrgSrlNum)) - 2
+		CUST.DATA.slAcctIdPos = (CINT(CUST.DATA.noOfFldsPerRec) * CINT(CUST.DATA.chrgSrlNum)) - 3
 		CUST.DATA.ONSFields   = "tfc_charge_details_FIELD_" + CUST.DATA.slAcctIdPos
 		PRINT(CUST.DATA.ONSFields)
 		CUST.DATA.outputFields = "slAcctId"
@@ -323,6 +323,56 @@
 	ENDIF
 	IF(CINT(CUST.DATA.drCount) !=0)THEN
 	#{
+		
+		### 3.GET SL TRAN SEQUENCE ###
+		CUST.DATA.txnSeq = ""
+		sv_a = func_getslTranSeq(BYREF CUST.DATA.txnSeq)
+		PRINT(sv_a)
+		IF(sv_a != 0)THEN
+		#{
+			CUST.DATA.errorFlg = "Y"
+			CUST.DATA.errorMsg = "Generation of Transaction Sequence Failed."
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+		PRINT(CUST.DATA.txnSeq)
+		
+		CUST.DATA.chkTxnSeq = ""
+		sv_a = func_getslTranSeq(BYREF CUST.DATA.chkTxnSeq)
+		PRINT(sv_a)
+		IF(sv_a != 0)THEN
+		#{
+			CUST.DATA.errorFlg = "Y"
+			CUST.DATA.errorMsg = "Generation of Transaction Sequence Failed."
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+		PRINT(CUST.DATA.chkTxnSeq)
+		
+		### 4.INPUTS FOR API ###
+		sub_copyOptionalFieldB("inpDate","CUST","DATA","inpDate",BANCS.STDIN.BODDate)
+		BANCS.INPARAM.BINDVARS = LEFT$(BANCS.STDIN.BODDate,10)
+		sv_a = "inpDate|SELECT TO_CHAR(TO_DATE(?SVAR,'DD-MM-YYYY'),'YYYY-MM-DD') FROM DUAL"
+		sv_a = urhk_dbSelectWithBind(sv_a)
+		sub_copyOutparamFieldB("inpDate","CUST","DATA","inpDate","inpDate")
+		PRINT(CUST.DATA.inpDate)
+		BANCS.INPUT.tellerId 	= BANCS.STDIN.userId
+		BANCS.INPUT.txnSeq 		= CUST.DATA.txnSeq
+		BANCS.INPUT.chkTxnDate 	= CUST.DATA.inpDate
+		BANCS.INPUT.chkTxnSeq 	= CUST.DATA.chkTxnSeq
+		CALLSCRIPTIFEXIST("InqTransferStatus.scr")
+		IF(FIELDEXISTS(INTF.DATA.orgCode))THEN
+		#{
+			IF(INTF.DATA.orgCode != "000")THEN
+			#{
+				CUST.DATA.errorMsg = INTF.DATA.orgCode+"-"+INTF.DATA.ErrorDesc
+				CUST.DATA.errorFlg = "Y"
+				GOTO ENDOFSCRIPT
+			#}
+			ENDIF
+		#}
+		ENDIF
+		
 		BANCS.INPUT.direction 		= "D"
 		BANCS.INPUT.reversalFlag 	= ""
 		BANCS.INPUT.reversalTxnSeq 	= "0"

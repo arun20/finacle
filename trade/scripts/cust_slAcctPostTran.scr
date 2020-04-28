@@ -465,8 +465,24 @@ ENDIF
 			print(sv_w)
 			sv_w = CINT(HTM.DATA.debitTran)
 			print(sv_w)
-
-			IF (sv_w > 0) THEN
+            #----------- Fixed Duplicate-Verify ------------------------ 
+			HTM.DATA.verifyDrFlg = "N"
+			BANCS.INPARAM.BINDVARS = HTM.DATA.tranId + "|" +  BANCS.STDIN.contextBankId + "|" + MID$(HTM.DATA.tranDate,0,10)
+			PRINT(BANCS.INPARAM.BINDVARS)
+			sv_s = "verifyDrFlg|SELECT DECODE(COUNT(0),0,'N','Y') AS V_FLG FROM TBAADM.DTD WHERE 1=1 "
+			sv_s = sv_s + " AND TRIM(TRAN_ID) = TRIM(?SVAR) AND BANK_ID = ?SVAR AND TRAN_DATE = TO_DATE(?SVAR,'DD-MM-YYYY') "
+			sv_s = sv_s + " AND PART_TRAN_TYPE = 'D' AND PSTD_FLG = 'Y' AND DEL_FLG = 'N' AND LCHG_USER_ID != 'SYSTEM' GROUP BY TRAN_ID,TRAN_DATE,BANK_ID "	
+			PRINT(sv_s)
+			sv_t = urhk_dbSelectWithBind(sv_s)
+			PRINT(sv_t)
+			IF(sv_t == 0)THEN
+			#{
+				HTM.DATA.verifyDrFlg = BANCS.OUTPARAM.verifyDrFlg
+			#}
+			ENDIF	
+            #-----------------------------------------------------------
+			
+			IF ((sv_w > 0) AND (HTM.DATA.verifyDrFlg == "N")) THEN 
 			#{
 				#--------------------------------------------------------------------------------------------------
 				#  Getting multirec inputs
@@ -514,8 +530,24 @@ ENDIF
 			print(sv_w)
 			sv_w = CINT(HTM.DATA.creditTran)
 			print(sv_w)
+			#----------- Fixed Duplicate-Verify ------------------------ 
+			HTM.DATA.verifyCrFlg = "N"
+			BANCS.INPARAM.BINDVARS = HTM.DATA.tranId + "|" +  BANCS.STDIN.contextBankId + "|" + MID$(HTM.DATA.tranDate,0,10)
+			PRINT(BANCS.INPARAM.BINDVARS)
+			sv_s = "verifyCrFlg|SELECT DECODE(COUNT(0),0,'N','Y') AS V_FLG FROM TBAADM.DTD WHERE 1=1 "
+			sv_s = sv_s + " AND TRIM(TRAN_ID) = TRIM(?SVAR) AND BANK_ID = ?SVAR AND TRAN_DATE = TO_DATE(?SVAR,'DD-MM-YYYY') "
+			sv_s = sv_s + " AND PART_TRAN_TYPE = 'C' AND PSTD_FLG = 'Y' AND DEL_FLG = 'N' AND LCHG_USER_ID != 'SYSTEM' GROUP BY TRAN_ID,TRAN_DATE,BANK_ID "	
+			PRINT(sv_s)
+			sv_t = urhk_dbSelectWithBind(sv_s)
+			PRINT(sv_t)
+			IF(sv_t == 0)THEN
+			#{
+				HTM.DATA.verifyCrFlg = BANCS.OUTPARAM.verifyCrFlg
+			#}
+			ENDIF	
+            #-----------------------------------------------------------
 
-			IF (sv_w > 0) THEN
+			IF ((sv_w > 0) AND (HTM.DATA.verifyCrFlg == "N")) THEN
 			#{
 				#--------------------------------------------------------------------------------------------------
 				#  Getting multirec inputs

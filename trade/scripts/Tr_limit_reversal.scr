@@ -55,7 +55,7 @@ IMPORT updAvailLimitInput
 
 	sv_q = "tranAmt,tranCcy,acid|select d.TRAN_AMT,d.TRAN_CRNCY_CODE,d.ACID from tbaadm.dtd d where trim(d.tran_id)=trim('"+ CUST.DATA.tranId +"')" 
 	sv_q = sv_q + " and d.tran_date = to_date('"+ CUST.DATA.tranDate +"','DD-MM-YYYY') and d.BANK_ID = '"+ BANCS.STDIN.contextBankId +"'"
-	sv_q = sv_q + " and d.del_flg = 'N' and d.PART_TRAN_TYPE='C' and d.acid in (select acid from tbaadm.gam g  where g.acid=d.acid and g.foracid like 'TR%')"
+	        sv_q = sv_q + " and d.del_flg = 'N' and d.PART_TRAN_TYPE='C' and d.PSTD_FLG = 'N' and d.acid in (select acid from tbaadm.gam g  where g.acid=d.acid and g.foracid like 'TR%')"
 	PRINT(sv_q)
 	sv_r = urhk_dbSelectWithBind(sv_q)
 	PRINT(sv_r)	

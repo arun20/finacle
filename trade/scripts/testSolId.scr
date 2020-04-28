@@ -1,0 +1,63 @@
+<--START
+	TRACE ON
+	
+	IF (REPEXISTS("CUST") == 0) THEN
+	#{
+		CREATEREP("CUST")
+	#}
+	ENDIF
+
+	IF (CLASSEXISTS("CUST", "DATA") == 0) THEN
+	#{
+		CREATECLASS("CUST", "DATA", 5)
+	#}
+	ENDIF
+	
+	print(BANCS.STDIN.mySolId)
+	print(BANCS.STDIN.homeSolId)
+	
+	#lv_u = "filepath1,filepath2|SELECT substr(SL_REMARKS,0,99),substr(SL_REMARKS,99)"
+	#lv_u = lv_u + " FROM TBAADM.C_DTD_P_EXT"
+	#lv_u = lv_u + " WHERE TRIM(TRAN_ID) = 'LH2' AND TRAN_DATE = TO_DATE('30-10-2019','DD-MM-YYYY')"
+	#lv_u = lv_u + " AND TRIM(PART_TRAN_SRL_NUM) = '1' AND PART_TRAN_TYPE = 'D'   AND BANK_ID = '01'"
+    #
+	#lv_z = urhk_dbSelectWithBind(lv_u)
+	#IF (lv_z == 0) THEN
+	##{
+	#	CUST.DATA.filepath1 = BANCS.OUTPARAM.filepath1
+	#	CUST.DATA.filepath2 = BANCS.OUTPARAM.filepath2
+	##}
+	#ENDIF
+	#print(CUST.DATA.filepath1)
+	#print(CUST.DATA.filepath2)
+	#lv_u = "filepath|SELECT SL_REMARKS"
+	#lv_u = lv_u + " FROM CUSTOM.C_DTD_P_EXT"
+	#lv_u = lv_u + " WHERE TRIM(TRAN_ID) = 'LH2' AND TRAN_DATE = TO_DATE('30-10-2019','DD-MM-YYYY')"
+	#lv_u = lv_u + " AND TRIM(PART_TRAN_SRL_NUM) = '1' AND PART_TRAN_TYPE = 'D'   AND BANK_ID = '01'"
+    #
+	#lv_z = urhk_dbSelectWithBind(lv_u)
+	#IF (lv_z == 0) THEN
+	##{
+	#	CUST.DATA.filepath = BANCS.OUTPARAM.filepath
+	##}
+	#ENDIF
+	#print(CUST.DATA.filepath)
+	CUST.DATA.filepath =""
+	
+	lv_u = "filepath|select entry_date from (select ENTRY_SYS_DATE as entry_date from tbaadm.fbh where BILL_FUNC in ('G',?SVAR) and BILL_ID ='IBF19000050'"
+	lv_u = lv_u + "  order by ENTRY_SYS_DATE desc) where rownum='1' "
+
+	BANCS.INPARAM.BINDVARS="#"
+	lv_z = urhk_dbSelectWithBind(lv_u)
+	print(lv_z)
+	IF (lv_z == 0) THEN
+	#{
+		CUST.DATA.filepath = BANCS.OUTPARAM.filepath
+	#}
+	ENDIF
+	print(CUST.DATA.filepath)
+		
+	exitscript
+
+TRACE OFF
+END-->

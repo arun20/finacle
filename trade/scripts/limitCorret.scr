@@ -14,10 +14,10 @@ IMPORT updAvailLimitInput
 	BANCS.INPUT.holdAmount 	= "0"
 	BANCS.INPUT.refType 	= "TFS" ### 'TFS - Trade finance/TSS - Treasury
 	BANCS.INPUT.txnAmount  	= "0"
-	BANCS.INPUT.refNum	   	= "TRL19000131"
-	BANCS.INPUT.acfNum	   	= "33004404F01USD"
-	BANCS.INPUT.balance    	= "70000"
-	BANCS.INPUT.currency   	= "USD"
+	BANCS.INPUT.refNum	   	= "TRL20000073"
+	BANCS.INPUT.acfNum	   	= "65000464ILCTHB"
+	BANCS.INPUT.balance    	= -12669571.15
+	BANCS.INPUT.currency   	= "THB"
 	BANCS.INPUT.updTypeFlag	= "UO"
 	
 	###BANCS.INPUT.updTypeFlag	= "RU","UO"

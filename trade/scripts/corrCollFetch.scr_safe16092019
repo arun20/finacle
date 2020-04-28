@@ -1,0 +1,34 @@
+IMPORT LibCommonB001
+<--START
+TRACE ON
+	sub_createRepClassB("CUST","DATA")
+	### INPUT VARIABLES FROM MRT ###
+	sub_copyOptionalFieldB("corr_coll_bank_code","CUST","DATA","corr_coll_bank_code","")
+	PRINT(CUST.DATA.corr_coll_bank_code)
+	sub_copyOptionalFieldB("corr_coll_br_code","CUST","DATA","corr_coll_br_code","")
+	PRINT(CUST.DATA.corr_coll_br_code)
+	CUST.DATA.corrCollBrName = ""
+	CUST.DATA.corrCollBrBIC = ""
+	sv_q = "corrCollBrName,corrCollBrBIC|"
+	sv_q = sv_q + "SELECT BR_NAME,BANK_IDENTIFIER FROM TBAADM.BCT C,TBAADM.BRBIC R "
+	sv_q = sv_q + "WHERE R.BRANCH_CODE = C.BR_CODE AND R.BANK_CODE = C.BANK_CODE AND BR_CODE = ?SVAR AND C.BANK_CODE = ?SVAR AND ROWNUM=1"
+	PRINT(sv_q)
+        BANCS.INPARAM.BINDVARS = CUST.DATA.corr_coll_br_code + "|" + CUST.DATA.corr_coll_bank_code
+        print(BANCS.INPARAM.BINDVARS)
+	sv_d=urhk_dbSelectWithBind(sv_q)
+	print(sv_d)
+	IF (sv_d == 0) THEN
+	#{
+		CUST.DATA.corrCollBrName = BANCS.OUTPARAM.corrCollBrName
+		CUST.DATA.corrCollBrBIC = BANCS.OUTPARAM.corrCollBrBIC
+	#}
+	ENDIF
+	### OUTPUT VARIABLES TO MRT ###
+	BANCS.OUTPUT.corrCollBrName = CUST.DATA.corrCollBrName
+	BANCS.OUTPUT.corrCollBrBIC = CUST.DATA.corrCollBrBIC
+	PRINT(BANCS.OUTPUT.corrCollBrName)
+	PRINT(BANCS.OUTPUT.corrCollBrBIC)
+
+	sub_deleteRepClassB("CUST","DATA")
+TRACE OFF
+END-->

@@ -1,0 +1,280 @@
+############################################################################################################
+# Name of the file       :  sarp33mn001_custval.scr
+# Description            : Validations for all the input paramaters
+# Input parameters       :  setId, schmCode , fromDate,todate,accId
+# Output parameters      :  NA
+# Called Script          :  NA
+# Calling Script         :  NA
+# Reference              :  
+# Modification History   :
+# S.No.		           Date                 Name			      Description 
+# -----		----           -----			-----------                
+#   1.00          14-JUN-2013           Harsha Sudarshan     validations
+############################################################################################################
+<--START
+#TRACE ON
+LIBNAME CUSTOMSO
+#===============================================
+# Creating Required Repository
+#===============================================
+IF (REPEXISTS("CUST") == 0 ) THEN
+#{
+	CREATEREP("CUST")
+#}
+ENDIF
+IF (CLASSEXISTS("CUST","DATA") == 0) THEN
+#{
+	CREATECLASS("CUST","DATA",5)
+#}
+ENDIF
+#=====================================================================*
+# Getting the BOD date 
+#=====================================================================*
+sv_r = urhk_B2k_PRINTRepos("BANCS")
+PRINT(sv_r)
+CUST.DATA.tempErrMessage = ""
+CUST.DATA.bankId = BANCS.STDIN.contextBankId 
+#======================================================================*
+# Getting the Request date from frontend 
+#======================================================================*
+CUST.DATA.inpSetId = TOUPPER(BANCS.FINRPTCRIT.P_setId)
+CUST.DATA.inpSchmCode = TOUPPER(BANCS.FINRPTCRIT.P_schmCode)
+CUST.DATA.fromDate  = BANCS.FINRPTCRIT.P_fromDate
+CUST.DATA.toDate  = BANCS.FINRPTCRIT.P_toDate
+CUST.DATA.accId = BANCS.FINRPTCRIT.P_accId
+IF(CUST.DATA.inpSetId == "")THEN
+#{
+	BANCS.INPUT.msgId = "CMSG000772" 
+	CUST.DATA.fieldName="P_setId"
+	GOTO SHOWERR 
+#}
+ENDIF
+
+IF(CUST.DATA.fromDate== "") THEN
+#{
+	BANCS.INPUT.msgId = "CMSG000772" 
+	CUST.DATA.fieldName="P_fromDate"
+	GOTO SHOWERR 
+#}
+ENDIF
+
+IF(CUST.DATA.toDate== "") THEN
+#{
+	BANCS.INPUT.msgId = "CMSG000772" 
+	CUST.DATA.fieldName="P_toDate"
+	GOTO SHOWERR 
+#}
+ENDIF
+
+IF((CUST.DATA.inpSchmCode == "") AND (CUST.DATA.accId == ""))THEN
+#{
+	BANCS.INPUT.msgId = "CMSG000073" 
+	CUST.DATA.fieldName="P_schmCode"
+	GOTO SHOWERR 
+#}
+ENDIF
+
+IF((CUST.DATA.inpSchmCode != "") AND (CUST.DATA.accId != ""))THEN
+#{
+	BANCS.INPUT.msgId = "CMSG000073" 
+	CUST.DATA.fieldName="P_schmCode"
+	GOTO SHOWERR 
+#}
+ENDIF
+
+
+
+
+#======================================================================*
+# validate the setId
+#======================================================================*
+IF(CUST.DATA.inpSetId != "")THEN
+#{
+	print(CUST.DATA.inpSetId)
+	sv_s = ""
+	sv_s = sv_s + "setcount|"
+	sv_s = sv_s + "SELECT count(1) "
+	sv_s = sv_s + "FROM  TBAADM.SST "
+	sv_s = sv_s + "WHERE SST.SET_ID = ?SVAR "
+	sv_s = sv_s + "AND SST.DEL_FLG = 'N' "
+	sv_s = sv_s + "AND SST.BANK_ID = ?SVAR "
+
+	BANCS.INPARAM.BINDVARS = CUST.DATA.inpSetId + "|" + CUST.DATA.bankId
+
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	#print(sv_d)
+	IF(sv_d!=0)THEN
+	#{
+		BANCS.INPUT.msgId = "CMSG000094" 
+		CUST.DATA.fieldName ="P_setId" 
+		GOTO SHOWERR 
+	#}
+	ENDIF
+	CUST.DATA.setcount = BANCS.OUTPARAM.setcount
+	#=====================================================================*
+	#   Throwing error message if scheme code is not valid
+	#=====================================================================*
+	IF (CUST.DATA.setcount == 0)THEN
+	#{
+	      BANCS.INPUT.msgId = "CMSG000094"
+	      CUST.DATA.fieldName ="P_setId"
+	      GOTO SHOWERR
+
+	#}
+	ENDIF
+
+
+#}
+ENDIF
+
+#======================================================================*
+# Validate the scheme code
+#======================================================================*
+IF(CUST.DATA.inpSchmCode != "")THEN
+#{
+	print(CUST.DATA.inpSchmCode)
+	sv_s = ""
+	sv_s = sv_s + "schmcount|"
+	sv_s = sv_s + "SELECT count(1) "
+	sv_s = sv_s + "FROM  TBAADM.GSP "
+	sv_s = sv_s + "WHERE GSP.SCHM_CODE = ?SVAR "
+	sv_s = sv_s + "AND GSP.DEL_FLG = 'N' "
+	sv_s = sv_s + "AND GSP.BANK_ID = ?SVAR "
+
+	BANCS.INPARAM.BINDVARS = CUST.DATA.inpSchmCode + "|" + CUST.DATA.bankId
+
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	#print(sv_d)
+	IF(sv_d!=0)THEN
+	#{
+		BANCS.INPUT.msgId = "CMSG000499" 
+		CUST.DATA.fieldName ="P_setId" 
+		GOTO SHOWERR 
+	#}
+	ENDIF
+	CUST.DATA.schmcount = BANCS.OUTPARAM.schmcount
+	#=====================================================================*
+	#   Throwing error message if scheme code is not valid
+	#=====================================================================*
+	IF (CUST.DATA.schmcount == 0)THEN
+	#{
+	      BANCS.INPUT.msgId = "CMSG000499"
+	      CUST.DATA.fieldName ="P_schmCode"
+	      GOTO SHOWERR
+
+	#}
+	ENDIF
+
+
+#}
+ENDIF
+
+#======================================================================*
+# Validate the dates
+#======================================================================*
+BANCS.INPARAM.parLevel = "BNKL"
+BANCS.INPARAM.modName = "CASA"
+
+sv_k = urtn_getCPARAM("ONE_MONTH_DIFF")
+#print(sv_k)
+IF (sv_k == 0) THEN
+#{
+       CUST.DATA.oneMonthDiffCparam = BANCS.OUTPUT.parVal
+#}
+ELSE
+#{
+        BANCS.INPUT.msgId = "CMSG000014"
+        GOTO ERR
+        
+#}
+ENDIF
+#PRINT(CUST.DATA.oneMonthDiffCparam)
+
+#=====================================================================*
+#Date Validation 
+#=====================================================================*
+BANCS.INPARAM.date2 = CUST.DATA.fromDate
+BANCS.INPARAM.date1 = CUST.DATA.toDate
+sv_e = urhk_B2k_dateDiff("")
+#print(BANCS.OUTPARAM.dateDiff)
+CUST.DATA.valDateDiff=BANCS.OUTPARAM.dateDiff
+IF(CINT(CUST.DATA.valDateDiff) >CINT(CUST.DATA.oneMonthDiffCparam ) ) THEN
+#{
+        BANCS.INPUT.msgId = "CMSG000579"
+	CUST.DATA.fieldName ="P_fromDate"
+	GOTO SHOWERR
+    
+#}
+ENDIF
+
+#======================================================================*
+# Validate the account id
+#======================================================================*
+IF(CUST.DATA.accId != "")THEN
+#{
+	print(CUST.DATA.accId)
+	sv_s = ""
+	sv_s = sv_s + "accCount|"
+	sv_s = sv_s + "SELECT count(1) "
+	sv_s = sv_s + "FROM  TBAADM.GAM "
+	sv_s = sv_s + "WHERE GAM.FORACID = ?SVAR "
+	sv_s = sv_s + "AND GAM.DEL_FLG = 'N' "
+	sv_s = sv_s + "AND GAM.BANK_ID = ?SVAR "
+
+	BANCS.INPARAM.BINDVARS = CUST.DATA.accId + "|" + CUST.DATA.bankId
+
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	#print(sv_d)
+	IF(sv_d!=0)THEN
+	#{
+		BANCS.INPUT.msgId = "CMSG000499" 
+		CUST.DATA.fieldName ="P_accId" 
+		GOTO SHOWERR 
+	#}
+	ENDIF
+	CUST.DATA.accCount = BANCS.OUTPARAM.accCount
+	#=====================================================================*
+	#   Throwing error message if account Id is not valid
+	#=====================================================================*
+	IF (CUST.DATA.accCount == 0)THEN
+	#{
+	      BANCS.INPUT.msgId = "CMSG000269"
+	      CUST.DATA.fieldName ="P_accId"
+	      GOTO SHOWERR
+
+	#}
+	ENDIF
+#}
+ENDIF
+
+
+
+GOTO ENDOFSCRIPT
+#======================================================================*
+# Error Handling
+#======================================================================*
+SHOWERR:  
+		CALL("getMsgDesc.scr")  
+		CUST.DATA.errMessage = BANCS.OUTPUT.msgDesc  
+		sv_u = urhk_FINRPT_SetErr(CUST.DATA.fieldName+"|"+ CUST.DATA.errMessage +" ")
+		GOTO ENDOFSCRIPT
+ERR :
+	CALL("getMsgDesc.scr")
+	CUST.DATA.errMessage = BANCS.OUTPUT.msgDesc
+	sv_u = urhk_FINRPT_SetErr(CUST.DATA.fieldName+"|"+ CUST.DATA.errMessage +" ")
+	GOTO ENDOFSCRIPT
+
+ENDOFSCRIPT:
+IF (CLASSEXISTS("CUST", "DATA") != 0) THEN
+#{
+	DELETECLASS("CUST", "DATA")
+#}
+ENDIF
+IF (REPEXISTS("CUST") != 0) THEN
+#{
+	DELETEREP("CUST")
+#}
+ENDIF
+TRACE OFF
+EXITSCRIPT
+END-->

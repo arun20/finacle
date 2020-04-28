@@ -240,6 +240,7 @@ WHILE(sv_n < MIIB.CUSTOM.totRec)
 DO
 
 ONS.CUSTOM.custDataOut = sv_o
+print(ONS.CUSTOM.custDataOut)
 
 ENDOFSCRIPT:
 #{

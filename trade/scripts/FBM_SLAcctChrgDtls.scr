@@ -153,10 +153,11 @@ IMPORT customFields
 	### 5.1 ADD/COPY/ISSUE/ADVICE ###
 	IF((CUST.DATA.funcCode == "M") AND (CUST.DATA.billFuncCode== "P") AND (TRIM(CUST.DATA.slLimitId) != "") AND (CDOUBLE(CUST.DATA.prevEarMark) != 0)) THEN
 	#{
-		BANCS.INPUT.acfNum = CUST.DATA.slLimitId
-		BANCS.INPUT.holdAmount = FORMAT$(CDOUBLE(CUST.DATA.prevEntityAmt),"%2.2f")
-		BANCS.INPUT.earType = "R"
-		BANCS.INPUT.currency = CUST.DATA.b2kCcy
+		BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
+		BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
+		BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.prevEntityAmt),"%2.2f")
+		BANCS.INPUT.earType 	= "R"
+		BANCS.INPUT.currency 	= CUST.DATA.b2kCcy
 		CALL("mngEarmark.scr")
 		IF(FIELDEXISTS(INTF.DATA.orgCode))THEN
 		#{
@@ -174,7 +175,8 @@ IMPORT customFields
 	ENDIF
 	IF((CUST.DATA.isNewEntity == "Y") OR (CUST.DATA.funcCode == "P") OR ((CUST.DATA.funcCode == "M") AND (CUST.DATA.billFuncCode== "P"))) THEN
 	#{
-		BANCS.INPUT.acfNum              = CUST.DATA.slLimitId
+		BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
+		BANCS.INPUT.acfNum      = CUST.DATA.slLimitId
 		BANCS.INPUT.holdAmount  = FORMAT$(CDOUBLE(CUST.DATA.b2kEventAmt),"%2.2f")
 		BANCS.INPUT.earType     = "A"
 		BANCS.INPUT.currency    = CUST.DATA.b2kCcy
@@ -184,6 +186,7 @@ IMPORT customFields
 	IF(CUST.DATA.funcCode == "V")THEN
 	#{
 		### EARMARK REMOVED IN PREPROCESS SRV ###
+		BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 		BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 		BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.b2kEventAmt),"%2.2f")
 		BANCS.INPUT.earType 	= "R"
@@ -193,6 +196,7 @@ IMPORT customFields
 	### 5.2 CANCEL ###
 	IF(CUST.DATA.funcCode == "X")THEN
 	#{
+		BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
 		BANCS.INPUT.acfNum 		= CUST.DATA.slLimitId
 		BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.b2kEventAmt),"%2.2f")
 		BANCS.INPUT.earType 	= "R"

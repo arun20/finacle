@@ -1,0 +1,398 @@
+# ----------------------------------------------------------------
+# Script For Creating Risk Eventss from FC Cash Flows..
+# ----------------------------------------------------------------
+<--start
+
+trace on
+IF(CLASSEXISTS("BANCS","FTRISK") == 0) THEN
+#{
+        CREATECLASS("BANCS","FTRISK",5)
+#}
+ENDIF
+IF(REPEXISTS("FTRISK") == 0) THEN
+#{
+        CREATEREP("FTRISK")
+#}
+ENDIF
+ 
+IF(CLASSEXISTS("FTRISK","TODAY") == 0) THEN
+#{
+        CREATECLASS("FTRISK","TODAY",5)
+#}
+ENDIF
+
+print(BANCS.INPUT.sol_id)
+print(BANCS.INPUT.crncy_code)
+print(BANCS.INPUT.gl_sub_head_code)
+print(BANCS.INPUT.schm_type)
+print(BANCS.STDIN.contextBankId)
+
+BANCS.FTRISK.TODAY = left$(BANCS.STDIN.BODDate, 10)
+
+################################  For Liquidity  #########################################
+
+########################################################################################
+# CHANGED THE LOGIC TO GIVE INDIVIDUAL ENTRIES INSTEAD OF SUMMATION AT GL SUBHEAD CODE #
+# INSTEAD oF CLR_BAL_AMT + FUTURE_BAL_AMT, ONLY CLR_BAL_AMT IS USED FOR FLOW AMOUNT    #
+########################################################################################
+
+if ((BANCS.INPUT.schm_type == "TDA") or (BANCS.INPUT.schm_type == "TUA")) then
+	
+	sv_a = "flow_amt"
+#	sv_a = sv_a + "|select sum(GAM.clr_bal_amt + GAM.future_bal_amt) "
+	sv_a = sv_a + "|select (GAM.clr_bal_amt ) "
+	sv_a = sv_a + " from GAM "
+	sv_a = sv_a + " where "
+	sv_a = sv_a + " GAM.BANK_ID = '" + BANCS.STDIN.contextBankId + "' AND "
+	sv_a = sv_a + " GAM.sol_id = '" + BANCS.INPUT.sol_id + "'" 
+	sv_a = sv_a + " and   GAM.gl_sub_head_code = '" + BANCS.INPUT.gl_sub_head_code + "'"
+	sv_a = sv_a + " and   GAM.schm_type = '" + BANCS.INPUT.schm_type + "'"
+	sv_a = sv_a + " and   GAM.acct_crncy_code = '" + BANCS.INPUT.crncy_code + "'"
+	sv_a = sv_a + " and   GAM.acct_cls_flg != 'Y' "
+
+	sv_b = urhk_dbCursorOpen(sv_a)
+
+	print(sv_b)
+	if (sv_b != 0) then
+		BANCS.OUTPUT.successOrFailure = "F"
+		BANCS.OUTPUT.errormsg = "Delete HOST_RISK_EVENT failed"
+	endif
+
+	sv_m = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+	print(sv_m)
+	sv_r = urhk_dbCursorFetch(sv_m)
+	print(sv_r)
+
+	while (sv_r == 0)
+		if (CDOUBLE(BANCS.OUTPARAM.flow_amt) != 0) then
+			BANCS.FTRISK.iq_date = BANCS.FTRISK.TODAY
+			print(BANCS.FTRISK.iq_date)
+			BANCS.FTRISK.type = "OTHR"
+			print(BANCS.FTRISK.type)
+			BANCS.FTRISK.principal_amount = BANCS.OUTPARAM.flow_amt
+			print(BANCS.FTRISK.principal_amount)
+			BANCS.FTRISK.function = "TRANS"
+			print(BANCS.FTRISK.function)
+			BANCS.FTRISK.balance_sheet_type = "LIAB"
+			print(BANCS.FTRISK.balance_sheet_type)
+			BANCS.FTRISK.start_date = ""
+			print(BANCS.FTRISK.start_date)
+			sv_r = urhk_UpdateFTRiskEvent("")
+			print(sv_r)
+		endif
+		sv_r = urhk_dbCursorFetch(sv_m)
+	do
+        sv_r = urhk_dbCursorClose(sv_m)
+
+	sv_a = "flow_amt,flow_date,flow_type"
+#	sv_a = sv_a + "|select sum(TDT.flow_amt),"
+	sv_a = sv_a + "|select (TDT.flow_amt),"
+	sv_a = sv_a + " to_char(TDT.flow_date,'DD-MM-YYYY') ,"
+	sv_a = sv_a + " decode(flow_code,'PI','I','II','I','NI','I',"
+	sv_a = sv_a + " 'CI','I','IA','I','PE','I','O')"
+	sv_a = sv_a + " from TDT, GAM "
+	sv_a = sv_a + " where "
+	sv_a = sv_a + " TDT.BANK_ID = '" + BANCS.STDIN.contextBankId + "' AND "
+	sv_a = sv_a + " GAM.BANK_ID = '" + BANCS.STDIN.contextBankId + "' AND "
+	sv_a = sv_a + " GAM.sol_id = '" + BANCS.INPUT.sol_id + "'" 
+	sv_a = sv_a + " and   GAM.gl_sub_head_code = '" + BANCS.INPUT.gl_sub_head_code + "'"
+	sv_a = sv_a + " and   GAM.schm_type = '" + BANCS.INPUT.schm_type + "'"
+	sv_a = sv_a + " and   GAM.acct_crncy_code = '" + BANCS.INPUT.crncy_code + "'"
+	
+	#Query Changed to remove error caused by use of to_char
+	
+	sv_a = sv_a + " and   TDT.flow_date > TO_DATE('" + BANCS.FTRISK.TODAY + "','DD-MM-YYYY HH24:MI:SS') "
+	sv_a = sv_a + " and   GAM.acct_cls_flg != 'Y' "
+	sv_a = sv_a + " and   GAM.acid = TDT.acid " 
+	sv_a = sv_a + " and   flow_code not in ('II','CI') "
+#	sv_a = sv_a + " group by TDT.flow_date, decode(flow_code,'PI','I','II','I','NI','I',"
+#	sv_a = sv_a + " 'CI','I','IA','I','PE','I','O')"
+	sv_r = urhk_dbCursorOpen(sv_a)
+	print(sv_r)
+	if(sv_r != 0) then
+		BANCS.OUTPUT.successOrFailure = "F"
+		BANCS.OUTPUT.errormsg = "Could not open TDT cursor"
+		exitscript
+	endif
+
+	sv_m = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+	print(sv_m)
+	sv_r = urhk_dbCursorFetch(sv_m)
+	print(sv_r)
+	sv_c = 1000
+	while (sv_r == 0)
+		BANCS.FTRISK.iq_date = BANCS.OUTPARAM.flow_date
+		sv_l = CDOUBLE(BANCS.OUTPARAM.flow_amt)
+		if (BANCS.OUTPARAM.flow_type == "O") then
+			sv_l =  -1 * sv_l
+			BANCS.FTRISK.principal_amount = sv_l
+		else
+			BANCS.FTRISK.principal_amount = sv_l
+		endif
+		BANCS.FTRISK.type = "OTHR"
+		BANCS.FTRISK.function = "TRANS"
+		BANCS.FTRISK.balance_sheet_type = "LIAB"
+		BANCS.FTRISK.start_date = ""
+		sv_r = urhk_UpdateFTRiskEvent("")
+		print(sv_r)
+		sv_r = urhk_dbCursorFetch(sv_m)
+	do
+	sv_r = urhk_dbCursorClose(sv_m)
+endif
+
+if (BANCS.INPUT.schm_type == "PCA") then
+
+	sv_a = "flow_amt,flow_date"
+	sv_a = sv_a + "|select sum(GAM.clr_bal_amt + GAM.future_bal_amt), "
+	sv_a = sv_a + " to_char(NVL(CAM.ext_due_date, CAM.due_date),'DD-MM-YYYY') "
+	sv_a = sv_a + " from GAM,CAM "
+    sv_a = sv_a + " where "
+	sv_a = sv_a + " GAM.BANK_ID = '" + BANCS.STDIN.contextBankId + "' AND "
+	sv_a = sv_a + " CAM.BANK_ID = '" + BANCS.STDIN.contextBankId + "' AND "
+	sv_a = sv_a + " GAM.sol_id = '" + BANCS.INPUT.sol_id + "'" 
+	sv_a = sv_a + " and   GAM.gl_sub_head_code = '" + BANCS.INPUT.gl_sub_head_code + "'"
+	sv_a = sv_a + " and   GAM.schm_type = '" + BANCS.INPUT.schm_type + "'"
+	sv_a = sv_a + " and   GAM.acct_crncy_code = '" + BANCS.INPUT.crncy_code + "'"
+	sv_a = sv_a + " and   GAM.acid = CAM.acid"
+	sv_a = sv_a + " and   CAM.rpc_acct_flg != 'Y'"
+	sv_a = sv_a + " and   GAM.acct_cls_flg != 'Y' "
+	sv_a = sv_a + " group by NVL(CAM.ext_due_date, CAM.due_date) "
+	sv_a = sv_a + " having sum(GAM.clr_bal_amt + GAM.future_bal_amt) < 0 and "
+	sv_a = sv_a + " NVL(CAM.ext_due_date, CAM.due_date) > "
+	sv_a = sv_a + " to_date('" + BANCS.FTRISK.TODAY + "', 'DD-MM-YYYY') "
+
+	sv_r = urhk_dbCursorOpen(sv_a)
+	if(sv_r != 0) then
+		BANCS.OUTPUT.successOrFailure = "F"
+		BANCS.OUTPUT.errormsg = "Could not open TDT cursor"
+		exitscript
+	endif
+
+	sv_m = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+	sv_r = urhk_dbCursorFetch(sv_m)
+	sv_t = CDOUBLE("0")
+	while (sv_r == 0)
+		BANCS.FTRISK.iq_date = BANCS.OUTPARAM.flow_date
+		sv_l = CDOUBLE(BANCS.OUTPARAM.flow_amt)
+		BANCS.FTRISK.principal_amount = -1 * sv_l
+		BANCS.FTRISK.type = "OTHR"
+		BANCS.FTRISK.function = "TRANS"
+		BANCS.FTRISK.balance_sheet_type = "ASST"
+		BANCS.FTRISK.start_date = ""
+		sv_r = urhk_UpdateFTRiskEvent("")
+	
+		sv_t = sv_t - sv_l
+		sv_r = urhk_dbCursorFetch(sv_m)
+	do
+	sv_r = urhk_dbCursorClose(sv_m)
+
+	if (sv_t != 0) then
+		BANCS.FTRISK.iq_date = BANCS.FTRISK.TODAY
+		BANCS.FTRISK.principal_amount = sv_t
+		BANCS.FTRISK.type = "OTHR"
+		BANCS.FTRISK.function = "TRANS"
+		BANCS.FTRISK.balance_sheet_type = "ASST"
+		BANCS.FTRISK.start_date = ""
+		sv_r = urhk_UpdateFTRiskEvent("")
+	endif
+
+	sv_a = "flow_amt,flow_date"
+	sv_a = sv_a + "|select sum(DISB.outstanding_amt), to_char(NVL(DISB.ext_due_date, DISB.due_date),'DD-MM-YYYY') "
+	sv_a = sv_a + " from DISB,GAM "
+	sv_a = sv_a + " where "
+	sv_a = sv_a + " DISB.BANK_ID = '" + BANCS.STDIN.contextBankId + "' AND "
+	sv_a = sv_a + " GAM.BANK_ID = '" + BANCS.STDIN.contextBankId + "' AND "
+	sv_a = sv_a + " GAM.sol_id = '" + BANCS.INPUT.sol_id + "'" 
+	sv_a = sv_a + " and   GAM.gl_sub_head_code = '" + BANCS.INPUT.gl_sub_head_code + "'"
+	sv_a = sv_a + " and   GAM.schm_type = '" + BANCS.INPUT.schm_type + "'"
+	sv_a = sv_a + " and   GAM.acct_crncy_code = '" + BANCS.INPUT.crncy_code + "'"
+	sv_a = sv_a + " and   GAM.acid = DISB.rpc_acid"
+	sv_a = sv_a + " and   GAM.acct_cls_flg != 'Y' "
+	sv_a = sv_a + " group by NVL(DISB.ext_due_date, DISB.due_date) "
+	sv_a = sv_a + " having sum(DISB.outstanding_amt) > 0 and "
+	sv_a = sv_a + " NVL(DISB.ext_due_date, DISB.due_date) > to_date('" 
+	sv_a = sv_a + BANCS.FTRISK.TODAY + "', 'DD-MM-YYYY') "
+
+	sv_r = urhk_dbCursorOpen(sv_a)
+	if(sv_r != 0) then
+		BANCS.OUTPUT.successOrFailure = "F"
+		BANCS.OUTPUT.errormsg = "Could not open TDT cursor"
+		exitscript
+	endif
+	sv_m = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+	sv_t = CDOUBLE("0")
+	sv_r = urhk_dbCursorFetch(sv_m)
+	while (sv_r == 0)
+		BANCS.FTRISK.iq_date = BANCS.OUTPARAM.flow_date
+		sv_l = CDOUBLE(BANCS.OUTPARAM.flow_amt)
+		BANCS.FTRISK.principal_amount = sv_l
+		BANCS.FTRISK.type = "OTHR"
+		BANCS.FTRISK.function = "TRANS"
+		BANCS.FTRISK.balance_sheet_type = "ASST"
+		BANCS.FTRISK.start_date = ""
+		BANCS.FTRISK.additional_text_1 = "RPC"
+		sv_r = urhk_UpdateFTRiskEvent("")
+
+		sv_t = sv_t - sv_l
+		sv_r = urhk_dbCursorFetch(sv_m)
+	do
+	sv_r = urhk_dbCursorClose(sv_m)
+
+	BANCS.FTRISK.iq_date = BANCS.FTRISK.TODAY
+	BANCS.FTRISK.principal_amount = sv_t
+	BANCS.FTRISK.type = "OTHR"
+	BANCS.FTRISK.function = "TRANS"
+	BANCS.FTRISK.balance_sheet_type = "ASST"
+	BANCS.FTRISK.additional_text_1 = "RPC"
+	BANCS.FTRISK.start_date = ""
+	sv_r = urhk_UpdateFTRiskEvent("")
+
+endif
+
+if (BANCS.INPUT.schm_type == "FBA") then
+
+	sv_a = "flow_amt,flow_date"
+	sv_a = sv_a + "|select sum(FBM.bp_liab), "
+	sv_a = sv_a + " to_char(FBM.due_date,'DD-MM-YYYY') "
+	sv_a = sv_a + " from FBM,GAM "
+	sv_a = sv_a + " where "
+	sv_a = sv_a + " FBM.BANK_ID = '" + BANCS.STDIN.contextBankId + "' AND "
+	sv_a = sv_a + " GAM.BANK_ID = '" + BANCS.STDIN.contextBankId + "' AND "
+	sv_a = sv_a + " GAM.sol_id = '" + BANCS.INPUT.sol_id + "'"
+	sv_a = sv_a + " and   GAM.gl_sub_head_code = '" + BANCS.INPUT.gl_sub_head_code + "'"
+	sv_a = sv_a + " and   GAM.schm_type = '" + BANCS.INPUT.schm_type + "'"
+	sv_a = sv_a + " and   GAM.acct_crncy_code='" + BANCS.INPUT.crncy_code + "'"
+	sv_a = sv_a + " and   GAM.acid = FBM.bp_acid"
+	sv_a = sv_a + " and   GAM.acct_cls_flg != 'Y' "
+	sv_a = sv_a + " and   GAM.acct_cls_flg != 'Y' "
+	sv_a = sv_a + " and   FBM.delinked_date is null "
+	sv_a = sv_a + " group by FBM.due_date "
+	sv_a = sv_a + " having sum(FBM.bp_liab) > 0 "
+	sv_a = sv_a + " and   FBM.due_date > "
+	sv_a = sv_a + " to_date('" + BANCS.FTRISK.TODAY + "', 'DD-MM-YYYY') "
+	sv_r = urhk_dbCursorOpen(sv_a)
+	if(sv_r != 0) then
+		BANCS.OUTPUT.successOrFailure = "F"
+		BANCS.OUTPUT.errormsg = "Could not open FBM cursor"
+		exitscript
+	endif
+
+	sv_m = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+	sv_t = CDOUBLE("0")
+	sv_r = urhk_dbCursorFetch(sv_m)
+	while (sv_r == 0)
+		BANCS.FTRISK.iq_date = BANCS.OUTPARAM.flow_date
+		sv_l = CDOUBLE(BANCS.OUTPARAM.flow_amt)
+		BANCS.FTRISK.principal_amount = sv_l
+		BANCS.FTRISK.type = "OTHR"
+		BANCS.FTRISK.function = "TRANS"
+		BANCS.FTRISK.balance_sheet_type = "ASST"
+		BANCS.FTRISK.start_date = ""
+		sv_r = urhk_UpdateFTRiskEvent("")
+		sv_t = sv_t - sv_l
+		sv_r = urhk_dbCursorFetch(sv_m)
+	do
+	sv_r = urhk_dbCursorClose(sv_m)
+
+	if (sv_t != 0) then
+		BANCS.FTRISK.iq_date = BANCS.FTRISK.TODAY
+		BANCS.FTRISK.principal_amount = sv_t
+		BANCS.FTRISK.type = "OTHR"
+		BANCS.FTRISK.function = "TRANS"
+		BANCS.FTRISK.balance_sheet_type = "ASST"
+		BANCS.FTRISK.start_date = ""
+		sv_r = urhk_UpdateFTRiskEvent("")
+	endif
+
+endif
+
+BANCS.FTRISK.use_acct_bal = "N"
+
+if (BANCS.INPUT.schm_type == "SBA") then
+	BANCS.FTRISK.use_acct_bal = "Y"
+endif
+
+if (BANCS.INPUT.schm_type == "CCA") then
+	BANCS.FTRISK.use_acct_bal = "Y"
+endif
+
+if (BANCS.INPUT.schm_type == "ODA") then
+	BANCS.FTRISK.use_acct_bal = "Y"
+endif
+
+if (BANCS.INPUT.schm_type == "CAA") then
+	BANCS.FTRISK.use_acct_bal = "Y"
+endif
+
+########################################################################################
+# CHANGED THE LOGIC TO GIVE INDIVIDUAL ENTRIES INSTEAD OF SUMMATION AT GL SUBHEAD CODE #
+# INSTEAD oF CLR_BAL_AMT + FUTURE_BAL_AMT, ONLY CLR_BAL_AMT IS USED FOR FLOW AMOUNT    #
+########################################################################################
+if (BANCS.FTRISK.use_acct_bal == "Y" ) then
+	print("Processing...")
+	sv_a = "flow_amt"
+#	sv_a = sv_a + "|select (GAM.clr_bal_amt + GAM.future_bal_amt) "
+	sv_a = sv_a + "|select (GAM.clr_bal_amt) "
+	sv_a = sv_a + " from GAM "
+	sv_a = sv_a + " where "
+	sv_a = sv_a + " GAM.BANK_ID = '" + BANCS.STDIN.contextBankId + "' AND "
+	sv_a = sv_a + " GAM.sol_id = '" + BANCS.INPUT.sol_id + "'" 
+	sv_a = sv_a + " and   GAM.gl_sub_head_code = '" + BANCS.INPUT.gl_sub_head_code + "'"
+	sv_a = sv_a + " and   GAM.schm_type = '" + BANCS.INPUT.schm_type + "'"
+	sv_a = sv_a + " and   GAM.acct_crncy_code = '" + BANCS.INPUT.crncy_code + "'"
+	sv_a = sv_a + " and   GAM.acct_cls_flg != 'Y' "
+
+	sv_b = urhk_dbCursorOpen(sv_a)
+	if (sv_b != 0) then
+		BANCS.OUTPUT.successOrFailure = "F"
+		BANCS.OUTPUT.errormsg = "Delete HOST_RISK_EVENT failed"
+		exitscript
+	endif
+
+	sv_m = BANCS.OUTPARAM.DB_CURSOR_NUMBER 
+	sv_r = urhk_dbCursorFetch(sv_m)
+	while(sv_r == 0)
+		sv_l = CDOUBLE(BANCS.OUTPARAM.flow_amt)
+		print(sv_l)
+
+		if (sv_l != 0) then
+			BANCS.FTRISK.iq_date = BANCS.FTRISK.TODAY
+			print(BANCS.FTRISK.iq_date)
+			BANCS.FTRISK.type = "OTHR"
+			print(BANCS.FTRISK.type)
+			BANCS.FTRISK.principal_amount = sv_l
+			print(BANCS.FTRISK.principal_amount)
+			BANCS.FTRISK.function = "TRANS"
+			if (sv_l < 0) then
+				BANCS.FTRISK.balance_sheet_type = "ASST"
+			else
+				BANCS.FTRISK.balance_sheet_type = "LIAB"
+			endif	
+			print(BANCS.FTRISK.balance_sheet_type)
+			BANCS.FTRISK.start_date = ""
+			sv_r = urhk_UpdateFTRiskEvent("")
+			print(sv_r)	
+
+			BANCS.FTRISK.iq_date = "31-12-2099"
+			print(BANCS.FTRISK.iq_date)
+			BANCS.FTRISK.type = "OTHR"
+			sv_l = -1 * sv_l
+			BANCS.FTRISK.principal_amount = sv_l
+			BANCS.FTRISK.function = "TRANS"
+			if (sv_l < 0) then
+				BANCS.FTRISK.balance_sheet_type = "LIAB"
+			else
+				BANCS.FTRISK.balance_sheet_type = "ASST"
+			endif	
+			BANCS.FTRISK.start_date = ""
+			sv_r = urhk_UpdateFTRiskEvent("")
+			print(sv_r)
+		endif
+		sv_r = urhk_dbCursorFetch(sv_m)
+	do
+	sv_r = urhk_dbCursorClose(sv_m)
+endif
+
+sv_r = urhk_dbSqlWithBind("COMMIT")
+trace off
+end-->

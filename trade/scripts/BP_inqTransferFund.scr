@@ -75,7 +75,7 @@ TRACE ON
 			ENDIF
 			BANCS.INPARAM.BINDVARS = CUST.DATA.tranId
 			sv_s = "trnAmt|SELECT TRAN_AMT FROM TBAADM.DCTD_ACLI WHERE TRAN_ID = ?SVAR AND PSTD_FLG ='Y' AND PART_TRAN_TYPE ='D'"
-			sv_s = sv_s + " AND TRAN_DATE =(SELECT DC_CLS_DATE FROM TBAADM.GCT) AND TRAN_PARTICULAR LIKE '%" + CUST.DATA.entity + "%'  AND ROWNUM<2"
+		        	sv_s = sv_s + " AND TRAN_DATE =(SELECT DC_CLS_DATE FROM TBAADM.GCT) AND TRAN_PARTICULAR LIKE '%" + CUST.DATA.entity + "%' AND ROWNUM<2"
 			sv_a = urhk_dbSelectWithBind(sv_s)
 			IF(sv_a != 0) THEN
 			#{
@@ -87,8 +87,9 @@ TRACE ON
 			PRINT(CUST.DATA.ActNum)
 			PRINT(CUST.DATA.trnAmt)
 			BANCS.INPARAM.BINDVARS = CUST.DATA.trnAmt + "|" + CUST.DATA.ActNum + "|" + BANCS.STDIN.contextBankId
-			sv_s = "tmCount|SELECT COUNT(1) FROM TBAADM.DCTD_ACLI WHERE TRAN_SUB_TYPE !='IC' AND TRAN_AMT = ?SVAR"
-			sv_s = sv_s + " AND GL_SUB_HEAD_CODE ='37258' AND (TRAN_PARTICULAR LIKE '%" +CUST.DATA.ActNum + "%' OR REF_NUM = ?SVAR) AND BANK_ID = ?SVAR"
+			sv_s = "tmCount|SELECT COUNT(1) FROM TBAADM.DCTD_ACLI WHERE TRAN_SUB_TYPE not in ('IC') AND PSTD_FLG = 'Y' AND TRAN_AMT = ?SVAR"
+			        sv_s = sv_s + " AND GL_SUB_HEAD_CODE in ('37258') AND (TRAN_PARTICULAR LIKE '%" +CUST.DATA.ActNum + "%' OR REF_NUM = ?SVAR) AND BANK_ID = ?SVAR"
+                        #sv_s = sv_s + " AND ENTRY_USER_ID <> (select distinct LCHG_USER_ID from tbaadm.bjm where job_id = 'INTSL' and trunc(lchg_time) = trunc(sysdate))"
 			print(sv_s)
 			sv_a = urhk_dbSelectWithBind(sv_s)
 			print(sv_a)
@@ -100,7 +101,9 @@ TRACE ON
 				#{
 					CUST.DATA.result = "Manually Processed"
 					CUST.DATA.listFile = CUST.DATA.ActNum + "	|" + CUST.DATA.trnAmt + "	|" + CUST.DATA.result
-					sv_p = SYSTEM("echo '" + CUST.DATA.listFile + "'>> " + CUST.DATA.resultFile)
+					#sv_p = SYSTEM("echo '" + CUST.DATA.listFile + "'>> " + CUST.DATA.resultFile)
+					print("Manually Processed")
+					print(CUST.DATA.ActNum)
 					GOTO NEXTREC
 				#}
 				ENDIF

@@ -1,0 +1,10 @@
+<--START
+	TRACE ON
+
+	sv_x = "Req_999999#100.0000#USD#30.0345"		
+        sv_x = "/FCUAT2/BE/Finacle/FC/app/cust/fcaddon/lib/limitcurrencylog.sh '"+sv_x+"'"
+		print(sv_x)
+		sv_w = SYSTEM(sv_x)
+
+TRACE OFF
+END-->

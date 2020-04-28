@@ -1,0 +1,22 @@
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+TRACE ON
+	sub_createRepClassB("CUST","DATA")
+	PRINT(BANCS.INPUT.SendersRef)
+	PRINT(BANCS.INPUT.PartShipment)
+	PRINT(BANCS.INPUT.TranShipment)
+	BANCS.OUTPARAM.partShpmtFlg = ""
+	BANCS.OUTPUT.partShpmtFlg = ""
+	BANCS.OUTPARAM.tranShpmtFlg = ""
+	BANCS.OUTPUT.tranShpmtFlg = ""
+	sv_s = "partShpmtFlg,tranShpmtFlg|"
+	sv_s = "SELECT PARTSHIPMENT_FLG,TRANSHIPMENT_FLG FROM TBAADM.DCMM WHERE DC_REF_NUM = '" + BANCS.INPUT.SendersRef + "'"
+	print(sv_s)
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	print(sv_d)
+	BANCS.OUTPUT.partShpmtFlg = BANCS.OUTPARAM.partShpmtFlg
+	BANCS.OUTPUT.tranShpmtFlg = BANCS.OUTPARAM.tranShpmtFlg
+	PRINT(BANCS.OUTPUT.tranShpmtFlg)
+	PRINT(BANCS.OUTPUT.partShpmtFlg)
+END-->

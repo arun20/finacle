@@ -8,7 +8,7 @@ IMPORT mptoffsetdet
 <--START
 	# Script body goes here
 	TRACE ON
-
+	#	BANCS.INPUT.pmmFrwkPageName = "mptoffsetdet"
 	sub_mptoffsetdetCustomFields()
 
 	EXITSCRIPT

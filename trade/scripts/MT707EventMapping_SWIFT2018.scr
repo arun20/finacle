@@ -120,6 +120,20 @@ IF(sv_d == 0) THEN
 	print(BANCS.OUTPUT.d71text)
 #}
 ENDIF
+BANCS.OUTPARAM.a52text = ""
+BANCS.OUTPUT.a52text = ""
+sv_s = "a52text|select b.BANK_IDENTIFIER from tbaadm.dcmm d, tbaadm.brbic b "
+sv_s = sv_s + " where d.ISSU_BANK_CODE=b.BANK_CODE AND d.ISSU_BRANCH_CODE=b.BRANCH_CODE AND d.PAYSYS_ID=b.PAYSYS_ID"
+sv_s = sv_s + " AND DC_REF_NUM = '" + BANCS.INPUT.SendersRef + "' AND ROWNUM<2"
+print(sv_s)
+sv_d = urhk_dbSelectWithBind(sv_s)
+print(sv_d)
+IF(sv_d == 0) THEN
+#{
+	BANCS.OUTPUT.a52text = BANCS.OUTPARAM.a52text
+	print(BANCS.OUTPUT.a52text)
+#}
+ENDIF
 ###############################################################
 sv_m = sv_m + ":271:" + "E:" + "1" + "|"
 sv_m = sv_m + ":272:" + "E:" + "1" + "|"
@@ -142,24 +156,57 @@ else
         sv_m = sv_m + ":40a1:" + "E:" + "" + "|"
 endif
 #
+
+#------------- Fixed By Arun ----------------------------------------------
+#if (BANCS.INPUT.IssueBankPartyIdentifier == "") then
+#	if (BANCS.OUTPUT.a52text != "") then
+#		sv_m = sv_m + ":52a1:" + "E:" + BANCS.OUTPUT.a52text + "|"
+#	else
+#		sv_m = sv_m + ":52a1:" + "E:" + "" + "|"
+#	endif
+#endif
+#if (BANCS.INPUT.IssueBankBIC == "") then
+#	sv_m = sv_m + ":52a2:" + "E:" + "" + "|"
+#endif
+#--------------------------------------------------------------------------
 if (BANCS.INPUT.IssueBankPartyIdentifier == "") then
-	sv_m = sv_m + ":52a1:" + "E:" + "" + "|"
-endif
-if (BANCS.INPUT.IssueBankBIC == "") then
-	sv_m = sv_m + ":52a2:" + "E:" + "" + "|"
-endif
-#
-if (BANCS.INPUT.IssueBankBIC != "") then
-	if (BANCS.INPUT.IssueBankPartyIdentifier != "") then
-		sv_m = sv_m + ":52a1:" + "E:" + BANCS.INPUT.IssueBankPartyIdentifier + "|"
-	else
-		sv_m = sv_m + ":52a1:" + "E:" + "" + "|"
-	endif
-	if (BANCS.INPUT.IssueBankBIC != "") then
-		sv_m = sv_m + ":52a2:" + "E:" + BANCS.INPUT.IssueBankBIC + "|"
+	if (BANCS.OUTPUT.a52text != "") then
+		sv_m = sv_m + ":52a2:" + "E:" + BANCS.OUTPUT.a52text + "|"
 	else
 		sv_m = sv_m + ":52a2:" + "E:" + "" + "|"
 	endif
+endif
+if (BANCS.INPUT.IssueBankBIC == "") then
+	sv_m = sv_m + ":52a1:" + "E:" + "" + "|"
+endif
+
+#------------------------------------------------------------------------------
+
+#
+if (BANCS.INPUT.IssueBankBIC != "") then
+        #------------- Fixed By Arun ------------------------------------------
+	#if (BANCS.INPUT.IssueBankPartyIdentifier != "") then
+	#	sv_m = sv_m + ":52a1:" + "E:" + BANCS.INPUT.IssueBankPartyIdentifier + "|"
+	#else
+	#	sv_m = sv_m + ":52a1:" + "E:" + "" + "|"
+	#endif
+	#if (BANCS.INPUT.IssueBankBIC != "") then
+	#	sv_m = sv_m + ":52a2:" + "E:" + BANCS.INPUT.IssueBankBIC + "|"
+	#else
+	#	sv_m = sv_m + ":52a2:" + "E:" + "" + "|"
+	#endif
+        #----------------------------------------------------------------------
+        if (BANCS.INPUT.IssueBankPartyIdentifier != "") then
+		sv_m = sv_m + ":52a2:" + "E:" + BANCS.INPUT.IssueBankPartyIdentifier + "|"
+	else
+		sv_m = sv_m + ":52a2:" + "E:" + "" + "|"
+	endif
+	if (BANCS.INPUT.IssueBankBIC != "") then
+		sv_m = sv_m + ":52a1:" + "E:" + BANCS.INPUT.IssueBankBIC + "|"
+	else
+		sv_m = sv_m + ":52a1:" + "E:" + "" + "|"
+	endif
+        #------------------------------------------------------------------------ 
 else
 	if (BANCS.INPUT.IssueBankPartyIdentifier != "") then
 		sv_m = sv_m + ":52d1:" + "E:" + BANCS.INPUT.IssueBankPartyIdentifier+ "|"
@@ -379,9 +426,14 @@ BANCS.INPUT.AvailableWith = ltrim(rtrim(BANCS.INPUT.AvailableWith))
 	sv_m = sv_m + ":41d5:" + "E:" + "" + "|"
 	endif
 #
+	IF(FIELDEXISTS(BANCS.INPUT.tag42c1))THEN
+	#{
+		BANCS.OUTPUT.c42fromMenu = BANCS.INPUT.tag42c1 
+	#}
+	ENDIF
 	IF(FIELDEXISTS(BANCS.INPUT.tag42c2))THEN
 	#{
-		BANCS.OUTPUT.c42fromMenu = BANCS.INPUT.tag42c1 + BANCS.INPUT.tag42c2
+		BANCS.OUTPUT.c42fromMenu = BANCS.OUTPUT.c42fromMenu + BANCS.INPUT.tag42c2
 	#}
 	ENDIF	
 	IF(FIELDEXISTS(BANCS.INPUT.tag42c3))THEN

@@ -56,19 +56,11 @@ IMPORT CIFCommonFunctions
 	#=====================================================
 	# Treasury Customer Flag Validation
 	#=====================================================
-	IF((INTF.DATA.tradeCustFlag == "Y") OR (INTF.DATA.treasuryCustFlag == "Y")) THEN
-	#{
-		#=====================================================
-		# Calling sub routine to get CIF details
-		#=====================================================
-		sub_getCIFDetails("INTF","DATA")
-	#}
-	ELSE
-	#{
-		INTF.DATA.errorMsg = "Customer not availed for TF/TS"
-		GOTO SENDERROR
-	#}
-	ENDIF
+	#=====================================================
+	# Calling sub routine to get CIF details
+	#=====================================================
+	sub_getCIFDetails("INTF","DATA")
+	
 	
 	#=====================================================
 	# Service Id selection based on Customer Type

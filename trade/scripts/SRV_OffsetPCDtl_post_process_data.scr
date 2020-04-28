@@ -3,7 +3,7 @@ IMPORT LibCommonB002
 
 <--START
 TRACE ON
-	ONS.CUSTOM.custDataIn = func_replaceStringB(ONS.CUSTOM.custDataIn,"mptoffsetdet","FRWK_MPTOFFSETDET")
+	#ONS.CUSTOM.custDataIn = func_replaceStringB(ONS.CUSTOM.custDataIn,"mptoffsetdet","FRWK_MPTOFFSETDET")
 	PRINT(ONS.CUSTOM.custDataIn)
 	CALLSCRIPTIFEXIST("mptoffsetdet.scr")
 	

@@ -1,0 +1,57 @@
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT common_business_XMLFunctions
+IMPORT updAvailLimitInput
+<--START
+	# Script body goes here
+	TRACE ON
+
+	sub_createRepClassB("MIIB","CUSTOM")	
+	BANCS.STDIN.menuId = "HSCRIPT"
+	
+	
+	### 4.CALL UPDATE AVAIL LIMIT API ###
+	BANCS.INPUT.holdAmount 	= "12669571.15" 				###FORMAT$(CDOUBLE(CUST.DATA.prevEarMark),"%2.2f")
+	BANCS.INPUT.refType 	= "TFS"				### "TSS","TFS"
+	BANCS.INPUT.txnAmount  	= "12669571.15"				###FORMAT$(CDOUBLE(CUST.DATA.prevEntityAmt),"%2.2f")
+	BANCS.INPUT.refNum	   	= "TRL20000073" 	###CUST.DATA.foracid
+	BANCS.INPUT.acfNum	   	= "65000464ILCTHB"	###CUST.DATA.slLmtId
+	BANCS.INPUT.balance    	= 12669571.15				###FORMAT$(CDOUBLE(CUST.DATA.prevEntityAmt),"%2.2f") + "|" + CUST.DATA.prevEntityCcy 
+	BANCS.INPUT.currency 	= "THB"				###CUST.DATA.prevEntityCcy
+	BANCS.INPUT.prevEarMark	= 1
+
+	PRINT(BANCS.INPUT.currency)
+	IF(CDOUBLE(BANCS.INPUT.prevEarMark) == 0)THEN
+	#{
+		BANCS.INPUT.balance = -1 * CDOUBLE(BANCS.INPUT.balance)
+		BANCS.INPUT.balance = FORMAT$(CDOUBLE(BANCS.INPUT.balance),"%2.2f") + "|" + BANCS.INPUT.currency
+		BANCS.INPUT.updTypeFlag	= "UO"
+	#}
+	ELSE
+	#{
+		BANCS.INPUT.updTypeFlag	= "RU"
+	#}
+	ENDIF
+	
+	
+	###BANCS.INPUT.updTypeFlag	= "RU","UO"
+	MIIB.CUSTOM.succOrFail 	= "S"
+	CALL("updAvalLimit.scr")	
+	IF(FIELDEXISTS(INTF.DATA.orgCode))THEN
+	#{
+		IF(INTF.DATA.orgCode != "000")THEN
+		#{
+			MIIB.CUSTOM.succOrFail = "F"
+			sv_a = urhk_SRV_SetErr(INTF.DATA.orgCode + " - " + INTF.DATA.ErrorDesc)
+			sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+			BANCS.OUTPUT.successOrFailure = "F"
+			EXITSCRIPT
+		#}
+		ENDIF
+
+	#}
+	ENDIF
+
+	TRACE OFF
+	EXITSCRIPT
+END-->

@@ -21,7 +21,6 @@ IMPORT LibCommonB002
 	# Script body goes here
 	trace on
 	sub_createRepClassB("INTF","DATA")
-
 	##################Initializing Variables###################
 	CALLSCRIPTIFEXIST("inqAcctDetail.scr")
 	EXITSCRIPT

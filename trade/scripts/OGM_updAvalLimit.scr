@@ -73,6 +73,8 @@ IMPORT updAvailLimitInput
                 CUST.DATA.amendAmt = CDOUBLE(CUST.DATA.amendAmt)
                 PRINT(CUST.DATA.amendAmt)
 		CUST.DATA.markInvokeStatus = ""
+		CUST.DATA.eventOperType = ""
+		CUST.DATA.liabAmt = ""
 		IF(((CUST.DATA.menuId == "OGM") OR (CUST.DATA.menuId == "IGM")) AND (CUST.DATA.b2kIdType == "")) THEN
 		#{
 			IF(CUST.DATA.menuId == "OGM") THEN
@@ -124,10 +126,11 @@ IMPORT updAvailLimitInput
                 ### 4.REMOVE EARMARK ADDED DURING MAKER LEVEL ###
                 #             IF(CUST.DATA.slLimitId != "")THEN
                 #             #{
-                #                             BANCS.INPUT.acfNum                  = CUST.DATA.slLimitId
-                #                             BANCS.INPUT.holdAmount         = FORMAT$(CDOUBLE(CUST.DATA.prevEarMark),"%2.2f")
-                #                             BANCS.INPUT.earType = "R"
-                #                             BANCS.INPUT.currency                 = CUST.DATA.b2kCcy
+                #                             BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
+				#                             BANCS.INPUT.acfNum        = CUST.DATA.slLimitId
+                #                             BANCS.INPUT.holdAmount    = FORMAT$(CDOUBLE(CUST.DATA.prevEarMark),"%2.2f")
+                #                             BANCS.INPUT.earType       = "R"
+                #                             BANCS.INPUT.currency      = CUST.DATA.b2kCcy
                 #                             IF(CDOUBLE(BANCS.INPUT.holdAmount) != 0)THEN
                 #                             #{
                 #                                             CALL("mngEarmark.scr")
@@ -177,6 +180,32 @@ IMPORT updAvailLimitInput
                 #}
                 ENDIF
                	IF((CUST.DATA.slLimitId == "") OR ((CDOUBLE(BANCS.INPUT.balance) == 0) AND (CDOUBLE(BANCS.INPUT.holdAmount) == 0)) OR(CUST.DATA.markInvokeStatus == "G")) THEN
+		#{
+			GOTO ENDSCRIPT
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "OGM") THEN
+		#{
+			CUST.DATA.srvFieldNames = "bgChargeDtl.eventOperType"
+			CUST.DATA.srvFieldValues = "eventOperType"
+			sub_getFieldValuesfromSRVStructB("1","CUST","DATA",CUST.DATA.srvFieldNames,CUST.DATA.srvFieldValues)
+			PRINT(CUST.DATA.eventOperType)
+		#}
+		ENDIF
+		sv_h = ""
+		sv_h = sv_h + " liabAmt|SELECT BG_LIAB_AMT"
+		sv_h = sv_h + " FROM TBAADM.BGM "
+		sv_h = sv_h + " WHERE  BG_SRL_NUM = '" + CUST.DATA.b2kRefNo + "' "
+		sv_h = sv_h + " AND BANK_ID = '" + BANCS.STDIN.contextBankId + "'" 
+		print(sv_h)
+		sv_i = urhk_dbSelectWithBind(sv_h)
+		print(sv_i)
+		IF (sv_i == 0) THEN
+		#{
+			CUST.DATA.liabAmt = BANCS.OUTPARAM.liabAmt
+		#}
+		ENDIF
+		IF((CDOUBLE(CUST.DATA.liabAmt) == 0) AND (CUST.DATA.eventOperType == "Z")) THEN
 		#{
 			GOTO ENDSCRIPT
 		#}

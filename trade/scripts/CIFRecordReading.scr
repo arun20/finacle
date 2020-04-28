@@ -812,6 +812,7 @@ ENDSUB
 	
 	sub_createRepClassB("CUST","DATA")
 	
+	
 	CUST.DATA.insertSuccess = "N"
 	CUST.DATA.failCount = "0"
 	CUST.DATA.BODDate = MID$(BANCS.STDIN.BODDate,0,10)
@@ -830,6 +831,7 @@ ENDSUB
 	lv_u = lv_u + " CPARAM.DEL_FLG != 'Y' AND CPARAM.ENTITY_CRE_FLG = 'Y' AND CPARAM.MODULE_NAME = 'LOANS' "
 	lv_u = lv_u + " AND CPVALUE.BANK_ID = ?SVAR  AND CPARAM.BANK_ID = ?SVAR"
 	
+	
 	BANCS.INPARAM.BINDVARS =  BANCS.STDIN.contextBankId +  "|" + BANCS.STDIN.contextBankId
 	lv_z = urhk_dbSelectWithBind(lv_u)
 	IF(lv_z != "0")THEN
@@ -844,43 +846,28 @@ ENDSUB
 	sub_copyOutparamFieldB("uplPath","CUST","DATA","uplPath","")
 	PRINT(CUST.DATA.uplPath)
 	
-	#===========================================================================
-        # Fetching BOD date in YYYYMMDD format.
-        #===========================================================================
-        sv_q = "sysDate|SELECT TO_CHAR(DC_CLS_DATE,'YYYYMMDD') FROM TBAADM.GCT"
-        sv_d = urhk_dbSelectWithBind(sv_q)
-        CUST.DATA.sysDate = BANCS.OUTPARAM.sysDate
-        print(CUST.DATA.sysDate)
-        CUST.DATA.CIFUplFileName = "BCFMAST_" + CUST.DATA.sysDate + ".TXT"
-
-        #-------------------------------------
-        # Copy from SFTP Server to Finacle
-        #-------------------------------------
-
-        sv_u = urhk_getFileLocation("COM|sftp_tf_get.com")
-        print(sv_u)
-        IF(sv_u == 0) THEN
-        #{
-                sv_m = BANCS.OUTPARAM.fileLocation
-                print(sv_m)
-                sv_a = sv_m + "sftp_tf_get.com " + CUST.DATA.CIFUplFileName + " /FTP_DATA/FIN/WORKING " + CUST.DATA.uplPath + " > " + CUST.DATA.uplPath +"/CIFUpload_SFTP" + CUST.DATA.sysDate + ".log"
-                print(sv_a)
-                sv_v = system(sv_a)
-                print(sv_v)
-                IF(sv_v != 0)THEN
-                #{
-			PRINT("SFTP Connection Failed")
-			CUST.DATA.errorMsg = "SFTP Connection Failed"
-			CUST.DATA.successOrFailure = "F"
-			sub_genFailureLst1()
-			GOTO END
-                #}
-                ENDIF
-        #}
-        ENDIF	
-
-	CUST.DATA.uplFileName = CUST.DATA.CIFUplFileName
-	print(CUST.DATA.uplFileName)
+	lv_u = "uplFileName|SELECT PARAMETER_VALUE "
+	lv_u = lv_u + " FROM CUSTOM.C_CPMASTER CPARAM, CUSTOM.C_CPVALUE CPVALUE"
+	lv_u = lv_u + " WHERE CPVALUE.PARAMETER_ID = 'CIF_UPL_FILE' AND CPARAM.PARAMETER_ID = CPVALUE.PARAMETER_ID"
+	lv_u = lv_u + " AND CPVALUE.DEL_FLG != 'Y' AND CPVALUE.ENTITY_CRE_FLG = 'Y' AND "
+	lv_u = lv_u + " CPARAM.DEL_FLG != 'Y' AND CPARAM.ENTITY_CRE_FLG = 'Y' AND CPARAM.MODULE_NAME = 'LOANS' "
+	lv_u = lv_u + " AND CPVALUE.BANK_ID = ?SVAR  AND CPARAM.BANK_ID = ?SVAR"
+	
+	
+	BANCS.INPARAM.BINDVARS =  BANCS.STDIN.contextBankId +  "|" + BANCS.STDIN.contextBankId
+	lv_z = urhk_dbSelectWithBind(lv_u)
+	IF(lv_z != "0")THEN
+	#{
+		PRINT("CPARAM FETCH NOT SUCCESS")
+		CUST.DATA.errorMsg = "CPARAM Fetch failed for - CIF_UPL_FILE"
+		CUST.DATA.successOrFailure = "F"
+		CUST.DATA.cifId = ""
+		sub_genFailureLst1()
+		GOTO END
+	#}
+	ENDIF
+	sub_copyOutparamFieldB("uplFileName","CUST","DATA","uplFileName","")
+	PRINT(CUST.DATA.uplFileName)
 	
 	CUST.DATA.inpFileNameWithPath   = CUST.DATA.uplPath + "/" + CUST.DATA.uplFileName
 	PRINT(CUST.DATA.inpFileNameWithPath)
@@ -968,16 +955,6 @@ ENDSUB
 		#}
 		ENDIF
 	#}
-	ELSE
-	#{
-		PRINT("File Doesnt Exist")
-
-                CUST.DATA.errorMsg = " File Doesnt Exist"
-                CUST.DATA.successOrFailure = "F"
-                CUST.DATA.cifId = ""
-                sub_genFailureLst1()
-                GOTO END
-	#}
 	ENDIF
 	
 	sv_t = urtn_fileClose(CUST.DATA.fileindex)
@@ -1002,20 +979,18 @@ ENDSUB
 	sv_f = SYSTEM("rm  -f "+CUST.DATA.tempPath+"/*" )
 	PRINT(sv_f)
 	#This part will remove the first AND last lines from current file, so that it can be passed directly to the FUNCTION.
-	#sv_a = " sed '1d;$d' "+CUST.DATA.inpFileNameWithPath+ ">"+CUST.DATA.tempPath+"/temp1.txt"
 	sv_a = " sed '1d;$d' "+CUST.DATA.inpFileNameWithPath+ ">"+CUST.DATA.tempPath+"/temp2.txt"
-        PRINT(sv_a)
-        sv_b= SYSTEM(sv_a)
-        PRINT(sv_b)
-
-        sv_a = " sed -e 's/,/ /g' " + CUST.DATA.tempPath + "/temp2.txt" + ">" + CUST.DATA.tempPath + "/temp1.txt"
 	PRINT(sv_a)
 	sv_b= SYSTEM(sv_a)
+	PRINT(sv_b)
+
+	sv_a = " sed -e 's/,/ /g' " + CUST.DATA.tempPath + "/temp2.txt" + ">" + CUST.DATA.tempPath + "/temp1.txt"
+	print(sv_a)
+	sv_b = SYSTEM(sv_a)
 	PRINT(sv_b)
 	
 	CUST.DATA.inpFileNameWithPath = CUST.DATA.tempPath+"/temp1.txt"
 	PRINT(CUST.DATA.inpFileNameWithPath)
-	
 	
 	CUST.DATA.outputFileName=CUST.DATA.tempPath+"/NEWUPLOADFILE.txt"
 	PRINT(CUST.DATA.outputFileName)
@@ -1235,7 +1210,8 @@ ENDSUB
 		sv_u = "LHCIFBatchReadingFailureRpt"
 		PRINT(sv_u)
 		
-		sv_n= "chmod 777 " + CUST.DATA.failureLst
+		#sv_n= "chmod 777 " + CUST.DATA.reportLst + " " + CUST.DATA.rptName + ".PDF"
+		sv_n= "chmod 777 " + CUST.DATA.failureLst + " " + sv_u + ".PDF"
 		PRINT(sv_n)
 		sv_m= SYSTEM(sv_n)
 		PRINT(sv_m)
@@ -1243,11 +1219,7 @@ ENDSUB
 		#sub_genReportAndPushToHPRB(CUST.DATA.jasperFileName,CUST.DATA.reportLst,CUST.DATA.rptName,CUST.DATA.reportTitle,"PDF")
 		sub_genReportAndPushToHPRB(CUST.DATA.jasperFileNameForFailure,CUST.DATA.failureLst,sv_u,sv_u,"PDF")
 		PRINT("AFTER REPORT")
-
-		sv_j = "mv CIF_FAILURE_LST* CIF_SUCCESS_LST* LHCIFBatchReadingFailure*  $TBA_PROD_ROOT/CDCI_LOGS/CIFUPL"
-		sv_m = SYSTEM(sv_j)
-		PRINT(sv_m)
-
+		
 		#END:
 		
 		

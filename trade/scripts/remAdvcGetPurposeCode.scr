@@ -17,11 +17,36 @@ IMPORT LibCommonB001
 	#sv_a = urhk_b2k_printRepos("BANCS")
 	CUST.DATA.purposeCode=""
 	CUST.DATA.SLRemarks=""
+	CUST.DATA.partyPinCode = ""
+	CUST.DATA.partyCityCode = ""
+	CUST.DATA.partyCityDesc = ""
+	CUST.DATA.draweeBankPinCode = ""
+	CUST.DATA.otherPartyPinCode = ""
+	CUST.DATA.purposeCodeDesc = ""
+	CUST.DATA.locdraweeBankName = ""
+	CUST.DATA.locdraweeBankAddr1 = ""
+	CUST.DATA.locdraweeBankAddr2 = ""
+	CUST.DATA.locdraweeBankAddr3 = ""
+	CUST.DATA.locdraweeBankPinCode = ""
+	CUST.DATA.locdraweeBankCntryCode = ""
+	CUST.DATA.locotherPartyName = ""
+	CUST.DATA.locotherPartyAddr1 = ""
+	CUST.DATA.locotherPartyAddr2 = ""
+	CUST.DATA.locotherPartyAddr3 = ""
+	CUST.DATA.locotherPartyCntryCode = ""
+	CUST.DATA.locotherPartyPinCode = ""
+	CUST.DATA.locotherPartyCntryDesc = ""
+	CUST.DATA.locdraweeBankCntryDesc = ""
+	
+	
+	
 	### INPUT VARIABLES FROM MRT ###
 	sub_copyOptionalFieldB("FBHtranId","CUST","DATA","tran_id","")
 	sub_copyOptionalFieldB("FAEtranDate","CUST","DATA","tranDate","")
+	sub_copyOptionalFieldB("UnformattedBillId","CUST","DATA","billId","")
 	PRINT(CUST.DATA.tran_id)
 	PRINT(CUST.DATA.tranDate)
+	PRINT(CUST.DATA.billId)
 	###-----------------------------------------------###
 	##  Fetching Provisional Dr Acct from the database ##
 	###-----------------------------------------------###
@@ -56,9 +81,114 @@ IMPORT LibCommonB001
 		PRINT(CUST.DATA.purposeCode)
 	#}
 	ENDIF
+	
+	sv_q = "partyPinCode,partyCityCode|select PARTY_PIN_CODE,PARTY_CITY_CODE from tbaadm.cgm "
+	sv_q = sv_q + " where COLLECTION_ID = trim('"+ CUST.DATA.billId +"')"
+	sv_q = sv_q + " and rownum='1'"
+	PRINT(sv_q)
+	sv_r = urhk_dbSelectWithBind(sv_q)
+	PRINT(sv_r)
+
+	IF (sv_r == 0) THEN
+	#{
+		CUST.DATA.partyPinCode = BANCS.OUTPARAM.partyPinCode
+		CUST.DATA.partyCityCode = BANCS.OUTPARAM.partyCityCode
+	#}
+	ENDIF
+	
+	sv_q = "partyCityDesc|SELECT REF_DESC FROM TBAADM.RCT WHERE REF_REC_TYPE = '01' AND REF_CODE = ?SVAR"
+	BANCS.INPARAM.BINDVARS = CUST.DATA.partyCityCode
+	sv_d=urhk_dbSelectWithBind(sv_q)
+	IF (sv_d == 0) THEN
+	#{
+		CUST.DATA.partyCityDesc = BANCS.OUTPARAM.partyCityDesc
+	#}
+	ENDIF
+	
+	sv_q = "draweeBankName, draweeBankAddr1, draweeBankAddr2, draweeBankAddr3, draweeBankCntryCode, draweeBankPinCode, otherPartyName, otherPartyAddr1, otherPartyAddr2, otherPartyAddr3, otherPartyCntryCode, otherPartyPinCode|select DRAWEE_BANK_NAME,DRAWEE_BANK_ADDR_1,DRAWEE_BANK_ADDR_2,DRAWEE_BANK_ADDR_3, DRAWEE_BANK_CNTRY_CODE, DRAWEE_BANK_PIN_CODE,  OTHER_PARTY_NAME, OTHER_PARTY_ADDR1, OTHER_PARTY_ADDR2, OTHER_PARTY_ADDR3, OTHER_PARTY_CNTRY_CODE, OTHER_PARTY_PIN_CODE from tbaadm.fci "
+	sv_q = sv_q + " where BILL_ID = trim('"+ CUST.DATA.billId +"')"
+	sv_q = sv_q + " and rownum='1'"
+	PRINT(sv_q)
+	sv_r = urhk_dbSelectWithBind(sv_q)
+	PRINT(sv_r)
+
+	IF (sv_r == 0) THEN
+	#{
+		CUST.DATA.locdraweeBankName = BANCS.OUTPARAM.draweeBankName
+		CUST.DATA.locdraweeBankAddr1 = BANCS.OUTPARAM.draweeBankAddr1
+		CUST.DATA.locdraweeBankAddr2 = BANCS.OUTPARAM.draweeBankAddr2
+		CUST.DATA.locdraweeBankAddr3 = BANCS.OUTPARAM.draweeBankAddr3
+		CUST.DATA.locdraweeBankPinCode = BANCS.OUTPARAM.draweeBankPinCode
+		CUST.DATA.locdraweeBankCntryCode = BANCS.OUTPARAM.draweeBankCntryCode
+		CUST.DATA.locotherPartyName = BANCS.OUTPARAM.otherPartyName
+		CUST.DATA.locotherPartyAddr1 = BANCS.OUTPARAM.otherPartyAddr1
+		CUST.DATA.locotherPartyAddr2 = BANCS.OUTPARAM.otherPartyAddr2
+		CUST.DATA.locotherPartyAddr3 = BANCS.OUTPARAM.otherPartyAddr3
+		CUST.DATA.locotherPartyCntryCode = BANCS.OUTPARAM.otherPartyCntryCode
+		CUST.DATA.locotherPartyPinCode = BANCS.OUTPARAM.otherPartyPinCode
+	#}
+	ENDIF
+	
+	
+	print(CUST.DATA.locdraweeBankName) 
+	print(CUST.DATA.locdraweeBankAddr1)
+	print(CUST.DATA.locdraweeBankAddr2)
+	print(CUST.DATA.locdraweeBankAddr3)
+	print(CUST.DATA.locdraweeBankPinCode)
+	print(CUST.DATA.locdraweeBankCntryCode)
+	print(CUST.DATA.locotherPartyName) 
+	print(CUST.DATA.locotherPartyAddr1)
+	print(CUST.DATA.locotherPartyAddr2)
+	print(CUST.DATA.locotherPartyAddr3)
+	print(CUST.DATA.locotherPartyCntryCode)
+	print(CUST.DATA.locotherPartyPinCode)
+	
+	
+	
+	
+	sv_q = "draweeBankCntryDesc|SELECT REF_DESC FROM TBAADM.RCT WHERE REF_REC_TYPE = '03' AND REF_CODE = ?SVAR"
+	BANCS.INPARAM.BINDVARS = CUST.DATA.locdraweeBankCntryCode
+	print(sv_q)
+	print(BANCS.INPARAM.BINDVARS)
+	sv_d=urhk_dbSelectWithBind(sv_q)
+	IF (sv_d == 0) THEN
+	#{
+		CUST.DATA.locdraweeBankCntryDesc = BANCS.OUTPARAM.draweeBankCntryDesc
+	#}
+	ENDIF
+	print(CUST.DATA.locdraweeBankCntryDesc)
+	sv_q = "otherPartyCntryDesc|SELECT REF_DESC FROM TBAADM.RCT WHERE REF_REC_TYPE = '03' AND REF_CODE = ?SVAR"
+	BANCS.INPARAM.BINDVARS = CUST.DATA.locotherPartyCntryCode
+	print(sv_q)
+	print(BANCS.INPARAM.BINDVARS)
+	sv_d=urhk_dbSelectWithBind(sv_q)
+	IF (sv_d == 0) THEN
+	#{
+		CUST.DATA.locotherPartyCntryDesc = BANCS.OUTPARAM.otherPartyCntryDesc
+	#}
+	ENDIF
+	print(CUST.DATA.locotherPartyCntryDesc)
+	
 	### OUTPUT VARIABLES TO MRT ###
 	BANCS.OUTPUT.purposeCode = CUST.DATA.purposeCode
 	BANCS.OUTPUT.SLRemarks = CUST.DATA.SLRemarks
+	BANCS.OUTPUT.partyPinCode = CUST.DATA.partyPinCode
+	BANCS.OUTPUT.partyCityDesc = CUST.DATA.partyCityDesc
+	
+	
+	BANCS.OUTPUT.locBankName = 		CUST.DATA.locdraweeBankName
+	BANCS.OUTPUT.locBankAddr1 = 		CUST.DATA.locdraweeBankAddr1
+	BANCS.OUTPUT.locBankAddr2 = 		CUST.DATA.locdraweeBankAddr2
+	BANCS.OUTPUT.locBankAddr3 = 		CUST.DATA.locdraweeBankAddr3
+	BANCS.OUTPUT.locBankPinCode = 	CUST.DATA.locdraweeBankPinCode
+	BANCS.OUTPUT.locBankCntryDesc = 	CUST.DATA.locdraweeBankCntryDesc
+	BANCS.OUTPUT.locPartyName = 		CUST.DATA.locotherPartyName
+	BANCS.OUTPUT.locPartyAddr1 = 		CUST.DATA.locotherPartyAddr1
+	BANCS.OUTPUT.locPartyAddr2 = 		CUST.DATA.locotherPartyAddr2
+	BANCS.OUTPUT.locPartyAddr3 = 		CUST.DATA.locotherPartyAddr3
+	BANCS.OUTPUT.locPartyCntryDesc = 	CUST.DATA.locotherPartyCntryDesc
+	BANCS.OUTPUT.locPartyPinCode = 	CUST.DATA.locotherPartyPinCode
+	
 	sub_deleteRepClassB("CUST","DATA")
 	TRACE OFF
 END-->

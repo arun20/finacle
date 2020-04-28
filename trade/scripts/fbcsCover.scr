@@ -18,11 +18,15 @@ IMPORT LibCommonB001
 	CUST.DATA.reimBank = ""
 	CUST.DATA.reimBranch = ""
 	CUST.DATA.reimBIC = ""	
+	CUST.DATA.entry_date = ""
 	#sv_a = urhk_b2k_printRepos("BANCS")
 	### INPUT VARIABLES FROM MRT ###
 	sub_copyOptionalFieldB("lc_number","CUST","DATA","lc_number","")
 	
 	PRINT(CUST.DATA.lc_number)
+	
+	sub_copyOptionalFieldB("formatted_bill_id","CUST","DATA","formatted_bill_id","")
+	PRINT(CUST.DATA.formatted_bill_id)
 	
 
 	sv_q = "refNum,reimBank,reimBranch| "
@@ -59,6 +63,24 @@ IMPORT LibCommonB001
 	#}
 	ENDIF
 	
+	CUST.DATA.func_code = "#"
+	sv_q = "entry_date| "
+	sv_q = sv_q + "select entry_date from (select to_char(ENTRY_SYS_DATE,'DD-MM-YYYY') as entry_date from tbaadm.fbh where BILL_FUNC in ('G',?SVAR) and BILL_ID =?SVAR "
+	sv_q = sv_q + " order by ENTRY_SYS_DATE desc) where rownum='1'"
+	PRINT(sv_q)
+
+        BANCS.INPARAM.BINDVARS = CUST.DATA.func_code + "|" + CUST.DATA.formatted_bill_id
+        print(BANCS.INPARAM.BINDVARS)
+
+	sv_d=urhk_dbSelectWithBind(sv_q)
+	print(sv_d)
+	IF (sv_d == 0) THEN
+	#{
+		CUST.DATA.entry_date = BANCS.OUTPARAM.entry_date
+	#}
+	ENDIF
+
+	
 
 	### OUTPUT VARIABLES TO MRT ###
 	IF(LEFT$(CUST.DATA.lc_number,1) == "I") THEN
@@ -73,6 +95,8 @@ IMPORT LibCommonB001
 	PRINT(BANCS.OUTPUT.otherBank)
 	BANCS.OUTPUT.reimBic = CUST.DATA.reimBIC
 	print(BANCS.OUTPUT.reimBic)
+	BANCS.OUTPUT.entry_date = CUST.DATA.entry_date
+	print(BANCS.OUTPUT.entry_date)
 
 	sub_deleteRepClassB("CUST","DATA")
 	TRACE OFF

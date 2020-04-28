@@ -213,6 +213,20 @@ IMPORT LibCommonB001
 		CUST.DATA.addrb2kId = BANCS.OUTPARAM.addrb2kId
         #}
         ENDIF
+	sv_q = "custIdTF,addrb2kId|SELECT CIF_ID,COLLECTION_B2K_ID FROM TBAADM.CGM WHERE COLLECTION_ID IN (SELECT REF_NUM FROM TBAADM.DCTD_ACLI "
+	sv_q = sv_q + "WHERE TRIM(TRAN_ID) = ?SVAR AND TRAN_DATE = TO_DATE(?SVAR,'DD-MM-YYYY'))"
+	BANCS.INPARAM.BINDVARS = TRIM(CUST.DATA.tran_id) + "|" + MID$(CUST.DATA.tranDate,0,10)
+	print(BANCS.INPARAM.BINDVARS)
+	sv_d=urhk_dbSelectWithBind(sv_q)
+	print(sv_d)
+	IF (sv_d == 0) THEN
+	#{
+		CUST.DATA.cifIdTF = BANCS.OUTPARAM.custIdTF
+		PRINT(CUST.DATA.cifIdTF)
+		CUST.DATA.TFtranType = "RM"
+		CUST.DATA.addrb2kId = BANCS.OUTPARAM.addrb2kId
+	#}
+	ENDIF
 	sv_q = "custIdTF|SELECT DISTINCT CUST_ID FROM TBAADM.GAM WHERE ACID IN (SELECT ACID FROM TBAADM.DCTD_ACLI"
 	sv_q = sv_q + " WHERE TRIM(TRAN_ID) = ?SVAR AND TRAN_DATE = TO_DATE(?SVAR,'DD-MM-YYYY') AND TRAN_SUB_TYPE != 'IC')"
 	sv_q = sv_q + "  AND SCHM_TYPE IN ('PCA','ODA') AND CUST_ID IS NOT NULL AND ROWNUM<2"
@@ -582,7 +596,33 @@ IMPORT LibCommonB001
 		ENDIF
 	#}
 	ENDIF
-
+	print(CUST.DATA.TFtranType)
+	IF(CUST.DATA.customerName == "") THEN
+	#{
+		CUST.DATA.tran_idTemp = MID$(TRIM(CUST.DATA.tran_id),2,10)
+		print(CUST.DATA.tran_idTemp)
+		sv_a = CINT(CUST.DATA.tran_idTemp) - 1
+		print(sv_a)
+		CUST.DATA.tran_idTempNum = sv_a 
+		CUST.DATA.tran_idTemp = MID$(TRIM(CUST.DATA.tran_id),0,2) + CUST.DATA.tran_idTempNum
+		print(CUST.DATA.tran_idTemp)
+		sv_q = "customerName|select SL_ACCT_NAME from CUSTOM.C_DISBH_EXT c ,tbaadm.disbh d where trim(c.DISB_ID)= trim(d.DISB_ID) and trim(d.TRAN_ID) = ?SVAR"
+		BANCS.INPARAM.BINDVARS = CUST.DATA.tran_idTemp
+		sv_d=urhk_dbSelectWithBind(sv_q)
+		IF (sv_d == 0) THEN
+		#{
+			CUST.DATA.customerName = BANCS.OUTPARAM.customerName
+			IF (CUST.DATA.TFtranType == "") THEN
+			#{
+				CUST.DATA.TFtranType = "TR"
+			#}
+			ENDIF
+			print(CUST.DATA.customerName)
+		#}
+		ENDIF
+		print(CUST.DATA.TFtranType)
+	#}
+	ENDIF
 
 	### OUTPUT VARIABLES TO MRT ###
 	BANCS.OUTPUT.purposeCode = CUST.DATA.purposeCode

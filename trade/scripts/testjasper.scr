@@ -1,0 +1,20 @@
+<--START
+	TRACE ON
+	IF (REPEXISTS("CUST") == 0) THEN
+	#{
+		CREATEREP("CUST")
+	#}
+	ENDIF
+
+	IF (CLASSEXISTS("CUST", "LHB") == 0) THEN
+	#{
+		CREATECLASS("CUST", "LHB", 5)
+	#}
+	ENDIF
+	CUST.LHB.rptLst="reportList_20190527.lst"
+	CUST.LHB.sysDate="20190527"
+		sv_i = "AOCodeUpdationReport.jasper|" + CUST.LHB.rptLst+ "|AOCodeUpdationReport_" + CUST.LHB.sysDate + "||"
+        sv_o = urhk_B2k_GenRpt4004(sv_i)
+        PRINT(sv_o)
+TRACE OFF
+END-->

@@ -7,18 +7,56 @@
 
 FUNCTION xmlMngEarBodyDetails()
 #{
+	#--------------------------------------------------------
+	#FETCH Mid Rate FROM RATE LIST HISTORY
+	#--------------------------------------------------------
+    PRINT(BANCS.INPUT.currency)   
+	BANCS.INPARAM.BINDVARS = BANCS.INPUT.currency + "|" + BANCS.INPUT.currency
+	PRINT(BANCS.INPARAM.BINDVARS)
+	
+	sv_a = "midRate|SELECT VAR_CRNCY_UNITS FROM TBAADM.RTH R WHERE RATECODE = 'MID' AND VAR_CRNCY_CODE = 'THB' AND FXD_CRNCY_CODE = ?SVAR "
+	sv_a = sv_a + " AND RCRE_TIME = (SELECT MAX(RCRE_TIME) FROM TBAADM.RTH WHERE RATECODE = 'MID' AND VAR_CRNCY_CODE = 'THB' AND FXD_CRNCY_CODE = ?SVAR AND TRUNC(RCRE_TIME) < TRUNC(SYSDATE))"
+	sv_a = urhk_dbSelectWithBind(sv_a)
+	sub_copyOutparamFieldB("midRate","CUST","DATA","midRate","1")
+	IF(BANCS.INPUT.currency == "THB")THEN
+	#{
+		CUST.DATA.midRate = 1
+	#}
+	ENDIF
+	PRINT(CUST.DATA.midRate)
+	PRINT(BANCS.INPUT.holdAmount)
+        #----------------------------------------------------------
+        #For Single currency
+        #----------------------------------------------------------
+	BANCS.INPUT.midRate = CUST.DATA.midRate
+	#BANCS.INPUT.holdAmountTHB = CDOUBLE(BANCS.INPUT.holdAmount) * CDOUBLE(CUST.DATA.midRate)
+	#BANCS.INPUT.holdAmountTHB = FORMAT$(CDOUBLE(BANCS.INPUT.holdAmountTHB),"%0.2f")
+	#PRINT(BANCS.INPUT.holdAmountTHB)
 
-	print(BANCS.INPUT.holdAmount)
+        #----------------------------------------------------------
+        #For multiple currency
+        #----------------------------------------------------------
 	BANCS.INPUT.holdAmount = FORMAT$(CDOUBLE(BANCS.INPUT.holdAmount),"%0.2f")
-	print(BANCS.INPUT.holdAmount)	
-
+	PRINT(BANCS.INPUT.holdAmount)	
 	sv_v = ""
-	sv_v = sv_v + "<earParam>"
+        #-----------------------------------------------------------
+        #For multiple currency
+        #-----------------------------------------------------------
+        sv_v = sv_v + "<earParam>"
 	sv_v = sv_v + "<acfNum>"+BANCS.INPUT.acfNum+"</acfNum>"
 	sv_v = sv_v + "<holdAmount>"+BANCS.INPUT.holdAmount+"</holdAmount>"
-	sv_v = sv_v + "<earType>"+BANCS.INPUT.earType+"</earType>"
+        sv_v = sv_v + "<earType>"+BANCS.INPUT.earType+"</earType>"
 	sv_v = sv_v + "<currency>"+BANCS.INPUT.currency+"</currency>"
-	sv_v = sv_v + " </earParam>"
+        sv_v = sv_v + "</earParam>"
+        #------------------------------------------------------------        
+	#For single currency
+        #-------------------------------------------------------------
+        #sv_v = sv_v + "<earParam>"
+	#sv_v = sv_v + "<acfNum>"+BANCS.INPUT.acfNum+"</acfNum>"
+        #sv_v = sv_v + "<holdAmount>"+BANCS.INPUT.holdAmountTHB+"</holdAmount>"
+        #sv_v = sv_v + "<earType>"+BANCS.INPUT.earType+"</earType>"
+	#sv_v = sv_v + "<currency>THB</currency>"
+	#sv_v = sv_v + "</earParam>"
 	PRINT(sv_v)
 	RETURN sv_v
 #}

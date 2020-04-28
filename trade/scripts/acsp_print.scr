@@ -1,0 +1,116 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: acsp_print.scr
+# Type: NA|default
+# Description: This script is used to fetch more details to show in acsp report
+# Author: Saisomasekhar_N
+# Date: 6/5/18 5:12 PM
+# Modification Log:
+#============================================================
+IMPORT LibCommonB001
+<--START
+	# Script body goes here
+	TRACE ON
+	sub_createRepClassB("CUST","DATA")
+	CUST.DATA.acct_open_date = ""
+	CUST.DATA.due_date = ""
+	CUST.DATA.buyer_name = ""
+	CUST.DATA.acid = ""
+	CUST.DATA.locschmType = ""
+
+	#sv_a = urhk_b2k_printRepos("BANCS")
+	### INPUT VARIABLES FROM MRT ###
+	sub_copyOptionalFieldB("forAcid","CUST","DATA","forAcid","")
+	
+	PRINT(CUST.DATA.forAcid)
+	
+	
+
+	sv_q = "acct_open_date,acid,locschmType| "
+	sv_q = sv_q + "SELECT to_char(ACCT_OPN_DATE,'DD-MM-YYYY'),ACID,SCHM_TYPE FROM TBAADM.GAM WHERE FORACID =?SVAR "
+	PRINT(sv_q)
+
+        BANCS.INPARAM.BINDVARS = CUST.DATA.forAcid 
+        print(BANCS.INPARAM.BINDVARS)
+
+	sv_d=urhk_dbSelectWithBind(sv_q)
+	print(sv_d)
+	IF (sv_d == 0) THEN
+	#{
+		CUST.DATA.acct_open_date = BANCS.OUTPARAM.acct_open_date
+		CUST.DATA.acid = BANCS.OUTPARAM.acid
+		CUST.DATA.locschmType = BANCS.OUTPARAM.locschmType
+	#}
+	ENDIF
+	
+	sv_q = "buyer_name| "
+	sv_q = sv_q + "select FREE_TEXT_1 from  tbaadm.gac where acid = ?SVAR "
+	PRINT(sv_q)
+
+        BANCS.INPARAM.BINDVARS = CUST.DATA.acid 
+        print(BANCS.INPARAM.BINDVARS)
+
+	sv_d=urhk_dbSelectWithBind(sv_q)
+	print(sv_d)
+	IF (sv_d == 0) THEN
+	#{
+		CUST.DATA.buyer_name = BANCS.OUTPARAM.buyer_name
+	#}
+	ENDIF
+	
+	IF (CUST.DATA.locschmType == "ODA") THEN
+	#{
+		sv_q = "due_date| "
+		sv_q = sv_q + "select to_char(LIM_EXP_DATE,'DD-MM-YYYY') from  tbaadm.lht where acid = ?SVAR "
+		sv_q = sv_q + " AND SERIAL_NUM = (SELECT MAX(SERIAL_NUM) FROM TBAADM.LHT LTH1 WHERE LTH1.ACID = lht.ACID)"
+		PRINT(sv_q)
+
+			BANCS.INPARAM.BINDVARS = CUST.DATA.acid 
+			print(BANCS.INPARAM.BINDVARS)
+
+		sv_d=urhk_dbSelectWithBind(sv_q)
+		print(sv_d)
+		IF (sv_d == 0) THEN
+		#{
+			CUST.DATA.due_date = BANCS.OUTPARAM.due_date
+		#}
+		ENDIF
+	#}
+	ENDIF
+	IF (CUST.DATA.locschmType == "PCA") THEN
+	#{
+		sv_q = "due_date| "
+		sv_q = sv_q + "select due_date from (select to_char(DUE_DATE,'DD-MM-YYYY') as due_date from tbaadm.disb where RPC_ACID = ?SVAR  "
+		sv_q = sv_q + " order by DUE_DATE desc) where rownum='1' "
+		PRINT(sv_q)
+
+			BANCS.INPARAM.BINDVARS = CUST.DATA.acid 
+			print(BANCS.INPARAM.BINDVARS)
+
+		sv_d=urhk_dbSelectWithBind(sv_q)
+		print(sv_d)
+		IF (sv_d == 0) THEN
+		#{
+			CUST.DATA.due_date = BANCS.OUTPARAM.due_date
+		#}
+		ENDIF
+	#}
+	ENDIF
+
+	
+
+	### OUTPUT VARIABLES TO MRT ###
+	BANCS.OUTPUT.acct_open_date = CUST.DATA.acct_open_date
+	print(BANCS.OUTPUT.acct_open_date)
+	BANCS.OUTPUT.due_date = CUST.DATA.due_date
+	print(BANCS.OUTPUT.due_date)
+	BANCS.OUTPUT.buyer_name = CUST.DATA.buyer_name
+	print(BANCS.OUTPUT.buyer_name)
+	BANCS.OUTPUT.locschmType = CUST.DATA.locschmType
+	print(BANCS.OUTPUT.locschmType)
+
+	sub_deleteRepClassB("CUST","DATA")
+	TRACE OFF
+END-->

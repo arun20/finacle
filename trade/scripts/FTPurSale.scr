@@ -254,6 +254,12 @@ IF(FIELDEXISTS(BANCS.INPUT.tran_id))THEN
                 #}
                 ENDIF
 
+                ####For re-setting the deal status from DELETED to ACCEPTED ################
+                IF((BANCS.TRDATA.record_status =="DELETED") AND (BANCS.OUTPARAM.rateCode!="") AND (BANCS.OUTPARAM.rateCode =="MID"))THEN
+                        BANCS.TRDATA.record_status="ACCEPTED"
+                ENDIF
+                ####End for re-setting status from DELETED to ACCEPTED ################  
+
                 IF((BANCS.OUTPARAM.crncyPurchsd!="") AND (BANCS.OUTPARAM.crncySold!="") AND (BANCS.OUTPARAM.rateCode!=""))THEN
         #{
             sv_i = BANCS.OUTPARAM.rateCode
@@ -311,6 +317,7 @@ IF(FIELDEXISTS(BANCS.INPUT.tran_id))THEN
                         ENDIF
                     #}
                     ENDIF
+ 
                 #}
                 ELSE
                 #{
@@ -363,7 +370,7 @@ ENDIF
         PRINT(BANCS.INPARAM.BINDVARS)
 
         sv_d = urhk_dbSelectWithBind(sv_s)
-        IF (sv_d == 0) THEN
+IF (sv_d == 0) THEN
                 BANCS.TRDATA.additional_text_2 = BANCS.OUTPARAM.cifId
                 BANCS.TRDATA.additional_text_1 = BANCS.OUTPARAM.acctName
                 PRINT(BANCS.TRDATA.additional_text_2)
@@ -373,11 +380,19 @@ ENDIF
                 #######################################################
                 #Changes   for rate code
                 ########################################################
-                IF((BANCS.OUTPARAM.tranCcy!="") AND (BANCS.OUTPARAM.refCcy!="") AND (BANCS.OUTPARAM.rateCode!=""))THEN
+ 
+                ####For re-setting the deal status from DELETED to ACCEPTED ################
+                IF((BANCS.TRDATA.record_status =="DELETED") AND (BANCS.OUTPARAM.rateCode!="") AND (BANCS.OUTPARAM.rateCode =="MID"))THEN
+                        BANCS.TRDATA.record_status="ACCEPTED"
+                ENDIF
+                ####End for re-setting status from DELETED to ACCEPTED ################ 
+
+
+        IF((BANCS.OUTPARAM.tranCcy!="") AND (BANCS.OUTPARAM.refCcy!="") AND (BANCS.OUTPARAM.rateCode!=""))THEN
         #{
-                                sv_i = BANCS.OUTPARAM.rateCode
-                                sv_j = BANCS.OUTPARAM.tranCcy
-                                sv_l = BANCS.OUTPARAM.refCcy
+				sv_i = BANCS.OUTPARAM.rateCode
+				sv_j = BANCS.OUTPARAM.tranCcy
+				sv_l = BANCS.OUTPARAM.refCcy
                 IF(BANCS.OUTPARAM.tranCcy != BANCS.OUTPARAM.refCcy)THEN
                 #{
                         PRINT(BANCS.OUTPARAM.refCcy)
@@ -430,6 +445,7 @@ ENDIF
                                                         ENDIF
                                                 #}
                                                 ENDIF
+                                                
                                         #}
                                         ELSE
                                         #{
@@ -442,10 +458,9 @@ ENDIF
                         PRINT("No Rate details fetched")
                 #}
                 ENDIF
+				
         ENDIF
 ENDIF
-
-
 
 BANCS.TRDATA.additional_text_4 = "FTPurSale.scr Script Used"
 BANCS.TRDATA.host_deal_action="COMPLETE"
