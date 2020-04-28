@@ -1,0 +1,110 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: miib_updAvalLimit.scr
+# Type: NA|default
+# Description: miib_updAvalLimit.scr
+# Author: Surya Sneha.P
+# Date: 7/25/18 
+# Modification Log:
+#============================================================
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT common_business_XMLFunctions
+IMPORT updAvailLimitInput
+<--START
+	# Script body goes here
+	TRACE ON
+
+	sub_createRepClassB("MIIB","CUSTOM")
+
+	### THIS SCRIPT IS CALLED DURING POSTPROCESS OF VERIFY IN MIIB ###
+	### 1.GET MENU ID ###
+	sv_a = func_getCallingMenuOptionB("CMMSG00004",BYREF MIIB.CUSTOM.menuId)
+	PRINT(MIIB.CUSTOM.menuId)
+	IF(MIIB.CUSTOM.menuId != "MIIB")THEN
+	#{
+		EXITSCRIPT
+	#}
+	ENDIF
+	
+	### 2.GET KEY FIELD VALUES FROM SRV - MENU SPECIFIC ###
+	MIIB.CUSTOM.srvFieldNames = "billCritDtls.dcRefNum.num|impBillRealDtls.billRealDtls.brAmt|impBillRealDtls.billRealDtls.brCcy.crncyCode|billCritDtls.billId"
+	MIIB.CUSTOM.srvFieldValues = "dcRefNum|brAmt|b2kCcy|billId"
+	sub_getFieldValuesfromSRVStructB("4","MIIB","CUSTOM",MIIB.CUSTOM.srvFieldNames,MIIB.CUSTOM.srvFieldValues)
+	PRINT(MIIB.CUSTOM.dcRefNum)
+	PRINT(MIIB.CUSTOM.brAmt)
+	PRINT(MIIB.CUSTOM.b2kCcy)
+
+	
+	### 3.FETCH PREVIOUS OPERATION VALUES ON THIS ENTITY ###
+	BANCS.INPARAM.BINDVARS = MIIB.CUSTOM.dcRefNum + "|" + BANCS.STDIN.contextBankId
+	PRINT(BANCS.INPARAM.BINDVARS)
+
+	sv_a = "slLmtId|SELECT SL_LIMIT_ID FROM "
+	sv_a = sv_a + " (SELECT SL_LIMIT_ID,SRL_NUM FROM CUSTOM.C_TFCT_TBL WHERE TRIM(B2K_ID) = TRIM(( "
+	sv_a = sv_a + " SELECT DC_B2KID FROM TBAADM.DCMM WHERE TRIM(DC_REF_NUM) =TRIM(?SVAR) "
+	sv_a = sv_a + " AND ENTITY_CRE_FLG ='Y' AND DEL_FLG ='N')) AND BANK_ID =?SVAR "
+	sv_a = sv_a + " ORDER BY SRL_NUM DESC) WHERE ROWNUM =1 "
+
+	PRINT(sv_a)
+	sv_a = urhk_dbSelectWithBind(sv_a)
+	PRINT(sv_a)
+	sub_copyOutparamFieldB("slLmtId","MIIB","CUSTOM","slLmtId","")
+	
+	PRINT(MIIB.CUSTOM.slLmtId)
+	PRINT(MIIB.CUSTOM.brAmt)
+	PRINT(MIIB.CUSTOM.b2kCcy)
+	PRINT(MIIB.CUSTOM.dcRefNum)
+	PRINT(MIIB.CUSTOM.billId)
+	### 4.CALL UPDATE AVAIL LIMIT API ###
+	BANCS.INPUT.holdAmount 	= "0"
+	BANCS.INPUT.refType 		= "T"
+	BANCS.INPUT.txnAmount  	= "0"
+	BANCS.INPUT.refNum	   	= MIIB.CUSTOM.billId
+	BANCS.INPUT.acfNum	   	= MIIB.CUSTOM.slLmtId
+	BANCS.INPUT.balance    	= FORMAT$(CDOUBLE(MIIB.CUSTOM.brAmt),"%2.2f")
+	PRINT(BANCS.INPUT.balance)
+	PRINT(MIIB.CUSTOM.excFlg)
+	IF(MIIB.CUSTOM.excFlg == "-1")THEN
+	#{
+		BANCS.INPUT.balance = CDOUBLE(BANCS.INPUT.balance) *(-1)
+		BANCS.INPUT.balance    	= FORMAT$(CDOUBLE(BANCS.INPUT.balance),"%2.2f")
+		PRINT(BANCS.INPUT.balance)
+	#}
+	ENDIF
+	
+	BANCS.INPUT.currency   	= MIIB.CUSTOM.b2kCcy
+	BANCS.INPUT.updTypeFlag	= "UO"
+	BANCS.INPUT.balance = -1 * CDOUBLE(BANCS.INPUT.balance)
+	BANCS.INPUT.balance = FORMAT$(CDOUBLE(BANCS.INPUT.balance),"%2.2f")
+	MIIB.CUSTOM.succOrFail 	= "S"	
+	IF((MIIB.CUSTOM.slLmtId != "") AND (BANCS.INPUT.balance != 0)) THEN
+	#{
+		CALL("updAvalLimit.scr")
+	#}
+	ELSE
+	#{
+		EXITSCRIPT	
+	#}
+	ENDIF
+
+	IF(FIELDEXISTS(INTF.DATA.orgCode))THEN
+	#{
+		IF(INTF.DATA.orgCode != "000")THEN
+		#{
+			MIIB.CUSTOM.succOrFail = "F"
+			sv_a = urhk_SRV_SetErr(INTF.DATA.orgCode + " - " + INTF.DATA.ErrorDesc)
+			sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+			BANCS.OUTPUT.successOrFailure = "F"
+			EXITSCRIPT
+		#}
+		ENDIF
+
+	#}
+	ENDIF
+
+	TRACE OFF
+	EXITSCRIPT
+END-->

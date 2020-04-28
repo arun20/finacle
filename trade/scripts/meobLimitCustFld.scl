@@ -1,0 +1,128 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Domain: Finacle Core
+# Library Name: meobLimitCustFld.scl
+# Description: Custom field addition in MEOB menu
+#============================================================
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT LibDateB001
+IMPORT customFields
+IMPORT meobLimitMode
+
+SUB meobLimitCustFlds()
+#{
+	#####################################################################################
+	# REPOSITORY AND CLASS CREATION
+	#####################################################################################
+	sub_createRepClassB("PRODMENU","CUSTFLDS")
+	
+	#####################################################################################
+	# GET MENU OPTION
+	#####################################################################################
+	sv_f = func_getCallingMenuOptionB("CMMSG00004",BYREF PRODMENU.CUSTFLDS.menuId)
+	PRINT(sv_f)
+	
+	#####################################################################################
+	# VALIDATE MENU ID
+	#####################################################################################
+	PRODMENU.CUSTFLDS.validMenuFlg = "N"
+	PRODMENU.CUSTFLDS.outputStr = ""
+	IF(PRODMENU.CUSTFLDS.menuId == "MEOB")THEN
+	#{
+		PRODMENU.CUSTFLDS.validMenuFlg = "Y"
+	#}
+	ENDIF
+	
+	IF(PRODMENU.CUSTFLDS.validMenuFlg != "Y")THEN
+	#{
+		GOTO ENDOFSUB
+	#}
+	ENDIF
+	
+	sub_meobLimitMode()
+	
+	#####################################################################################
+	# INITIALIZE VARIABLES AND SET KEY FIELDS AND VALUES
+	#####################################################################################
+	PRODMENU.CUSTFLDS.pageName = "FRWK_FBMLIMITDET"
+	PRODMENU.CUSTFLDS.custWithOutFrwkExists = "N"
+	PRODMENU.CUSTFLDS.outputFields = "freeText1,freeText2,freeText3,freeText4,freeText5,freeText6,freeText7,freeText8,freeText9,freeText10,freeDate1,freeDate2,freeDate3,freeDate4,freeDate5,freeAmount1,freeAmount2,freeAmount3,freeAmount4,freeAmount5"
+	PRODMENU.CUSTFLDS.selectFields = "FREETEXT1,FREETEXT2,FREETEXT3,FREETEXT4,FREETEXT5,FREETEXT6,FREETEXT7,FREETEXT8,FREETEXT9,FREETEXT10,TO_CHAR(FREEDATE1,'DD-MM-YYYY'),TO_CHAR(FREEDATE2,'DD-MM-YYYY'),TO_CHAR(FREEDATE3,'DD-MM-YYYY'),TO_CHAR(FREEDATE4,'DD-MM-YYYY'),TO_CHAR(FREEDATE5,'DD-MM-YYYY'),FREEAMOUNT1,FREEAMOUNT2,FREEAMOUNT3,FREEAMOUNT4,FREEAMOUNT5"
+	PRODMENU.CUSTFLDS.mainTable = "CUSTOM.C_FBM_EXT_TBL"
+	PRODMENU.CUSTFLDS.modTable 	= "CUSTOM.C_FBM_EXT_MOD_TBL"
+	PRODMENU.CUSTFLDS.keyFields = "SOL_ID|BANK_ID|BILL_ID|DEL_FLG"
+	PRODMENU.CUSTFLDS.keyValues = ""	
+	
+	PRINT(PRODMENU.CUSTFLDS.funcMode)
+	PRINT("TEST")
+	IF((PRODMENU.CUSTFLDS.funcMode == "FETCH_FROM_MAIN")  OR (PRODMENU.CUSTFLDS.funcMode == "MODIFY") OR (PRODMENU.CUSTFLDS.funcMode == "CANCEL") OR (PRODMENU.CUSTFLDS.funcMode == "FETCH_FROM_MOD_ELSE_FROM_MAIN") OR (PRODMENU.CUSTFLDS.funcMode == "VERIFY")) THEN
+	#{		
+	    sv_u = urhk_SRV_GetVal("billCritDtls.billId")
+        IF(sv_u == 0) THEN
+        #{
+            PRODMENU.CUSTFLDS.billId = BANCS.OUTPARAM.srvValue
+            PRINT(PRODMENU.CUSTFLDS.billId)
+        #}
+        ENDIF
+				
+		sv_u = urhk_SRV_GetVal("billCritDtls.billSolId.solId")
+        IF(sv_u == 0) THEN
+        #{
+            PRODMENU.CUSTFLDS.solId = BANCS.OUTPARAM.srvValue
+            PRINT(PRODMENU.CUSTFLDS.solId)
+        #}
+        ENDIF
+	#}
+	ENDIF
+	
+	IF(( PRODMENU.CUSTFLDS.funcMode == "ADD") OR (PRODMENU.CUSTFLDS.funcMode == "FETCH_FROM_MOD")) THEN
+	#{					    
+	#PRODMENU.CUSTFLDS.noOfFields            =               "2"
+	#PRODMENU.CUSTFLDS.srvStruct             =               "billCritDtls.billId|billCritDtls.billSolId.solId"
+	#PRODMENU.CUSTFLDS.srvOutput             =               "billId|solId"	#sv_c=sub_getFieldValuesfromSRVStructB(PRODMENU.CUSTFLDS.noOfFields,"PRODMENU","CUSTFLDS",PRODMENU.CUSTFLDS.srvStruct,PRODMENU.CUSTFLDS.srvOutput)
+	#PRINT(sv_c)
+	
+	 sv_u = urhk_SRV_GetVal("billCritDtls.billId")
+        IF(sv_u == 0) THEN
+        #{
+            PRODMENU.CUSTFLDS.billId = BANCS.OUTPARAM.srvValue
+            PRINT(PRODMENU.CUSTFLDS.billId)
+        #}
+        ENDIF
+				
+		sv_u = urhk_SRV_GetVal("billCritDtls.billSolId.solId")
+        IF(sv_u == 0) THEN
+        #{
+            PRODMENU.CUSTFLDS.solId = BANCS.OUTPARAM.srvValue
+            PRINT(PRODMENU.CUSTFLDS.solId)
+        #}
+        ENDIF
+	
+	
+	PRINT(PRODMENU.CUSTFLDS.solId)
+	PRINT(PRODMENU.CUSTFLDS.billId)
+	#}
+	ENDIF
+	
+	IF(( PRODMENU.CUSTFLDS.funcMode == "ADD") OR (PRODMENU.CUSTFLDS.funcMode == "FETCH_FROM_MOD") OR (PRODMENU.CUSTFLDS.funcMode == "FETCH_FROM_MOD_ELSE_FROM_MAIN")) THEN
+	#{
+		PRODMENU.CUSTFLDS.keyValues = PRODMENU.CUSTFLDS.solId + "|" + BANCS.STDIN.contextBankId + "|" + PRODMENU.CUSTFLDS.billId + "|N"
+	#}
+	ENDIF
+	IF((PRODMENU.CUSTFLDS.funcMode == "FETCH_FROM_MAIN")  OR (PRODMENU.CUSTFLDS.funcMode == "MODIFY") OR (PRODMENU.CUSTFLDS.funcMode == "CANCEL") OR (PRODMENU.CUSTFLDS.funcMode == "VERIFY")) THEN
+	#{
+		PRODMENU.CUSTFLDS.keyValues = PRODMENU.CUSTFLDS.solId + "|" + BANCS.STDIN.contextBankId + "|" + PRODMENU.CUSTFLDS.billId + "|N"
+	#}
+	ENDIF
+	PRINT(PRODMENU.CUSTFLDS.keyValues)
+	
+	sub_processCustomFields()
+	
+	ENDOFSUB:
+	#}
+	ENDSUB
+	
+<--START
+CHECKSUM="16349e15dbf22838faf752d8c200b62b7159a01a6b4fe17066a3b4eb040b627c"
+END-->

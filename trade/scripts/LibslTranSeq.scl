@@ -1,0 +1,67 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Domain: Finacle Core
+# Library Name: LibslTranSeq.scl
+# Description: common function to get the the next serial number to be passed to SL for each transaction
+#============================================================
+IMPORT LibCommonB001
+FUNCTION getslTranSeq(BYREF fv_finalSeq)
+#{
+	
+	fv_s="txnSeq|SELECT TO_CHAR(CUSTOM.LH_TRAN_SEQ.nextval) from dual"
+	fv_r = urhk_dbSelectWithBind(fv_s)
+	PRINT(fv_r)
+	IF(fv_r == 0)THEN
+	#{
+		fv_finalSeq   = BANCS.OUTPARAM.txnSeq
+		#}
+	ELSE
+		#{
+		RETURN 1
+	#}
+	ENDIF
+	RETURN 0
+#}
+ENDFUNCTION
+
+FUNCTION chkAcctGl(fv_foracid,BYREF fv_error)
+#{
+	
+	fv_a=func_selectFromCustTableB("acctGl","GL_SUB_HEAD_CODE","TBAADM.GAM","foracid|bankId",fv_foracid+"|"+BANCS.STDIN.contextBankId)
+	PRINT(fv_a)
+	IF(fv_a != 0)THEN
+	#{
+		fv_error = "Could not fetch Account GL"
+		RETURN 1
+	#}
+	ENDIF
+	fv_acctGl = BANCS.OUTPARAM.acctGl
+	
+	fv_t = "count|SELECT COUNT(1) FROM CUSTOM.C_CPMASTER CPARAM,CUSTOM.C_CPVALUE CPVALUE WHERE CPVALUE.PARAMETER_ID = 'CUST_GL_LIST' "
+	fv_t = fv_t + "AND CPARAM.PARAMETER_ID = CPVALUE.PARAMETER_ID AND CPVALUE.DEL_FLG != 'Y' AND CPVALUE.ENTITY_CRE_FLG = 'Y' "
+	fv_t = fv_t + "AND CPARAM.DEL_FLG != 'Y' AND CPARAM.ENTITY_CRE_FLG = 'Y' AND CPARAM.MODULE_NAME = 'CASA' AND CPVALUE.BANK_ID = ?SVAR "
+	fv_t = fv_t + "AND CPARAM.BANK_ID = ?SVAR AND CPVALUE.PARAMETER_VALUE LIKE '%"+fv_acctGl+"%' "
+	BANCS.INPARAM.BINDVARS = BANCS.STDIN.contextBankId + "|" + BANCS.STDIN.contextBankId
+	fv_d = urhk_dbSelectWithBind(fv_t)
+	PRINT(fv_d)
+	IF(fv_d !=0)THEN
+	#{
+		fv_error = "Could not fetch CPARAM"
+		RETURN 1
+	#}
+	ENDIF
+	fv_count = BANCS.OUTPARAM.count
+	IF(fv_count != 1)THEN
+	#{
+		fv_error = "Account is not in valid GL List"
+		RETURN 1
+	#}
+	ENDIF
+	RETURN 0
+#}
+ENDFUNCTION
+
+
+<--START
+CHECKSUM="208bedca895393243d5f2a64c35e05d065259a0cca4c6018aa02dbf60d09a161"
+END-->

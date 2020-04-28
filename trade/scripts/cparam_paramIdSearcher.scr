@@ -1,0 +1,738 @@
+#=================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# category: Script Name Based
+# script: cparam_val.scr
+# event: NA
+# description: VAlidation script
+#=================================================
+
+#############################################################################
+#	Name					   :   cparam_paramIdSearcher.scr
+#	Date					   :   25-11-12
+#	Description				:   This script is for the Parameter Id searcher 
+#						on criteria page.
+#	Input					  :
+#	Output					 :   NA
+#	Author					 :   Santosh 	 
+#	Called From				:   
+#	Calling Script			 :   NA
+#	Reference				  :   NA
+#	Modification History	   :   
+#############################################################################
+<--start
+
+trace on
+#----------------------------------------------------------------------
+# Create the necessary repos and classes
+#----------------------------------------------------------------------
+
+IF (REPEXISTS("STDWFS") == 0) THEN
+#{
+	CREATEREP("STDWFS")
+#}
+ENDIF
+
+IF (CLASSEXISTS("STDWFS", "GLBDATA") == 0) THEN
+#{
+	CREATECLASS("STDWFS", "GLBDATA", 5)
+#}
+ENDIF
+
+#----------------------------
+# Calling CReAM_INFENG.scr
+#----------------------------
+sv_s = "CReAM_" + BANCS.STDIN.languageCode + ".scr"
+print(sv_s)
+sv_u = urhk_getFileLocation("SCRIPT|" + sv_s)
+IF (sv_u !=0) THEN
+#{
+        GOTO ENDOFSCRIPT
+#}
+ENDIF
+CALL(sv_s)
+
+#----------------------------------------------------------------------------------
+#   Accepting the variables from front end.
+#----------------------------------------------------------------------------------
+STDWFS.GLBDATA.userId = BANCS.STDIN.userId
+STDWFS.GLBDATA.funcCode = BANCS.INPUT.funcCode
+STDWFS.GLBDATA.paramLev = BANCS.INPUT.paramlev
+STDWFS.GLBDATA.modName = BANCS.INPUT.modName
+STDWFS.GLBDATA.paramId = TOUPPER(TRIM(BANCS.INPUT.paramId))
+STDWFS.GLBDATA.successFailure = "S"
+STDWFS.GLBDATA.messageField = ""
+
+STDWFS.GLBDATA.pageNumber = BANCS.INPUT.nextPage
+STDWFS.GLBDATA.recPerPage = "20"
+
+IF (STDWFS.GLBDATA.pageNumber == "") THEN
+#{
+	STDWFS.GLBDATA.pageNumber = "1"
+#}
+ENDIF
+
+#---------------------------------------------------------------------------------
+#Initializing fields from front end to 'N'
+#---------------------------------------------------------------------------------
+sv_z = "Message|N"
+sv_z = urhk_SetOrbOut(sv_z)
+#---------------------------------------------------------------------------------
+
+IF (STDWFS.GLBDATA.paramId == "") THEN
+#{
+	STDWFS.GLBDATA.paramId = " "
+#}
+ENDIF
+
+#sv_a = urhk_B2k_PrintRepos("BANCS")
+
+STDWFS.GLBDATA.funcCode = TOUPPER(TRIM(STDWFS.GLBDATA.funcCode))
+STDWFS.GLBDATA.paramLev = TOUPPER(TRIM(STDWFS.GLBDATA.paramLev))
+STDWFS.GLBDATA.modName = TOUPPER(TRIM(STDWFS.GLBDATA.modName))
+
+PRINT(STDWFS.GLBDATA.funcCode)
+PRINT(STDWFS.GLBDATA.paramLev)
+PRINT(STDWFS.GLBDATA.modName)
+PRINT(STDWFS.GLBDATA.paramId)
+
+IF (STDWFS.GLBDATA.paramLev == "BNKL") THEN
+#{
+	STDWFS.GLBDATA.levelCode1 = "ALL"
+	STDWFS.GLBDATA.levelCode2 = ""
+#}
+ELSE
+#{
+	IF (STDWFS.GLBDATA.paramLev == "SOLL") THEN
+	#{
+		STDWFS.GLBDATA.levelCode1 = TOUPPER(TRIM(BANCS.INPUT.solid))
+		STDWFS.GLBDATA.levelCode2 = ""
+	#}
+	ELSE
+	#{
+		IF (STDWFS.GLBDATA.paramLev == "SCHM") THEN
+		#{
+			STDWFS.GLBDATA.levelCode1 = TOUPPER(TRIM(BANCS.INPUT.schcod))
+			STDWFS.GLBDATA.levelCode2 = ""
+		#}
+		ELSE
+		#{
+			IF (STDWFS.GLBDATA.paramLev == "CURL") THEN
+			#{
+				STDWFS.GLBDATA.levelCode1 = TOUPPER(TRIM(BANCS.INPUT.cccod))
+				STDWFS.GLBDATA.levelCode2 = ""
+			#}
+			ELSE
+			#{
+				IF (STDWFS.GLBDATA.paramLev == "SHCR") THEN
+				#{
+					STDWFS.GLBDATA.levelCode1 = TOUPPER(TRIM(BANCS.INPUT.schcod))
+					STDWFS.GLBDATA.levelCode2 = TOUPPER(TRIM(BANCS.INPUT.cccod))
+				#}
+				ELSE
+				#{
+					STDWFS.GLBDATA.levelCode1 = TOUPPER(TRIM(BANCS.INPUT.gencod))
+					STDWFS.GLBDATA.levelCode2 = TOUPPER(TRIM(BANCS.INPUT.genid))
+				#}
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ENDIF
+#}
+ENDIF
+
+
+IF ((STDWFS.GLBDATA.funcCode == "W") OR (STDWFS.GLBDATA.funcCode == "L")) THEN
+#{
+	sv_q = "totalRecs|SELECT COUNT(1)"
+	sv_q = sv_q + " FROM C_CPMASTER WHERE ENTITY_CRE_FLG='N'"
+	sv_q = sv_q + " AND PARAMETER_ID >= ?SVAR"
+	sv_q = sv_q + " AND BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.paramId + "|" + BANCS.STDIN.contextBankId
+	
+	IF (STDWFS.GLBDATA.modName != "") THEN
+	#{
+		sv_q = sv_q + " AND MODULE_NAME = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.modName
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.paramLev != "") THEN
+	#{
+		sv_q = sv_q + " AND PARAMETER_LEVEL = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramLev
+	#}
+	ENDIF
+	
+	
+	PRINT(sv_q)
+	
+	PRINT(BANCS.INPARAM.BINDVARS)
+	
+	sv_d = urhk_dbSelectWithBind(sv_q)
+	
+	#print(sv_d)
+	IF (sv_d == 0) THEN
+	#{
+		sv_r = BANCS.OUTPARAM.totalRecs
+		sv_p = CINT(sv_r) / CINT(STDWFS.GLBDATA.recPerPage)
+		sv_a = CDOUBLE(sv_r) / CDOUBLE(STDWFS.GLBDATA.recPerPage)
+		
+		IF (sv_a != sv_p) THEN
+		#{
+			STDWFS.GLBDATA.totalPages = sv_p + 1
+		#}
+		ELSE
+		#{
+			STDWFS.GLBDATA.totalPages = sv_p
+		#}
+		ENDIF
+	#}
+	ELSE
+	#{
+		sv_u = urhk_SetOrbOut("Message|N")
+		sv_u = urhk_SetOrbOut("Count|0")
+		sv_u = urhk_SetOrbOut("CurrPage|1")
+		sv_u = urhk_SetOrbOut("TotalPage|1")
+		sv_u = urhk_SetOrbOut("SuccessOrFailure|Y")
+		GOTO EndOfScript
+	#}
+	ENDIF
+	sv_q = "paramId,paramDescr,paramlev,modName,levelCode1,levelCode2,paramVal|"
+	sv_q = sv_q + "SELECT field1,field2,field3,field4,field5,field6,field7 "
+	sv_q = sv_q + "FROM (SELECT  ROWNUM as rw,CPM.PARAMETER_ID as field1,CPM.PARAMETER_DESC as field2,CPM.PARAMETER_LEVEL as field3,CPM.MODULE_NAME as field4,' ' as field5,' ' as field6,' ' as field7 "
+	sv_q = sv_q + " FROM C_CPMASTER CPM"
+	sv_q = sv_q + " WHERE ENTITY_CRE_FLG='N'"
+	sv_q = sv_q + " AND PARAMETER_ID >= ?SVAR"
+	sv_q = sv_q + " AND BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.paramId + "|" + BANCS.STDIN.contextBankId
+	
+	IF (STDWFS.GLBDATA.modName != "") THEN
+	#{
+		sv_q = sv_q + " AND MODULE_NAME = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.modName
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.paramLev != "") THEN
+	#{
+		sv_q = sv_q + " AND PARAMETER_LEVEL = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramLev
+	#}
+	ENDIF
+
+	sv_q = sv_q + " ORDER BY 2"
+	sv_q = sv_q + " )"
+	sv_q = sv_q + " WHERE "
+	STDWFS.GLBDATA.pageNumberLow = CINT(STDWFS.GLBDATA.pageNumber)  - 1 
+	STDWFS.GLBDATA.pageNumberLow = CINT(STDWFS.GLBDATA.pageNumberLow) * CINT(STDWFS.GLBDATA.recPerPage)
+	IF (STDWFS.GLBDATA.pageNumberLow == "") THEN
+	#{
+		STDWFS.GLBDATA.pageNumberLow = "0"
+	#}
+	ENDIF
+	STDWFS.GLBDATA.pageNumberHigh = (CINT(STDWFS.GLBDATA.pageNumber)) * CINT(STDWFS.GLBDATA.recPerPage)
+	sv_q = sv_q + " rw > ((?NVAR ))"
+	sv_q = sv_q + " AND rw <= ((?NVAR ))"
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS +  "|" + STDWFS.GLBDATA.pageNumberLow + "|" + STDWFS.GLBDATA.pageNumberHigh
+#}
+ENDIF
+
+IF ((STDWFS.GLBDATA.funcCode == "V") OR (STDWFS.GLBDATA.funcCode == "C")) THEN
+#{
+	sv_q = "totalRecs|SELECT COUNT(1)"
+	sv_q = sv_q + " FROM C_CPMASTER CPM, C_CPVALUE_MOD CPV"
+	sv_q = sv_q + " WHERE   CPM.PARAMETER_ID = CPV.PARAMETER_ID"
+	sv_q = sv_q + " AND CPM.PARAMETER_ID >= ?SVAR"
+	sv_q = sv_q + " AND CPV.BANK_ID = CPM.BANK_ID "
+	sv_q = sv_q + " AND  CPV.BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.paramId + "|" + BANCS.STDIN.contextBankId
+	IF (STDWFS.GLBDATA.modName != "") THEN
+	#{
+		sv_q = sv_q + " AND MODULE_NAME = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.modName
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.paramLev != "") THEN
+	#{
+		sv_q = sv_q + " AND PARAMETER_LEVEL = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramLev
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.levelCode1 != "") THEN
+	#{
+		sv_q = sv_q + " AND LEVELCODE_1 = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode1
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.levelCode2 != "") THEN
+	#{
+		sv_q = sv_q + " AND NVL(CPV.LEVELCODE_2,' ') = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode2
+	#}
+	ENDIF
+	
+	
+	PRINT(sv_q)
+	PRINT(BANCS.INPARAM.BINDVARS)
+	
+	sv_d = urhk_dbSelectWithBind(sv_q)
+	
+	#print(sv_d)
+	IF (sv_d == 0) THEN
+	#{
+		sv_r = BANCS.OUTPARAM.totalRecs
+		sv_p = CINT(sv_r) / CINT(STDWFS.GLBDATA.recPerPage)
+		sv_a = CDOUBLE(sv_r) / CDOUBLE(STDWFS.GLBDATA.recPerPage)
+		
+		IF (sv_a != sv_p) THEN
+		#{
+			STDWFS.GLBDATA.totalPages = sv_p + 1
+		#}
+		ELSE
+		#{
+			STDWFS.GLBDATA.totalPages = sv_p
+		#}
+		ENDIF
+	#}
+	ELSE
+	#{
+		sv_u = urhk_SetOrbOut("Message|N")
+		sv_u = urhk_SetOrbOut("Count|0")
+		sv_u = urhk_SetOrbOut("CurrPage|1")
+		sv_u = urhk_SetOrbOut("TotalPage|1")
+		sv_u = urhk_SetOrbOut("SuccessOrFailure|Y")
+		GOTO EndOfScript
+	#}
+	ENDIF
+	
+	sv_q = "paramId,paramDescr,paramlev,modName,levelCode1,levelCode2,paramVal|"
+	sv_q = sv_q + "SELECT field1,field2,field3,field4,field5,field6,field7 "
+	sv_q = sv_q + "FROM (SELECT  ROWNUM as rw,CPM.PARAMETER_ID as field1,CPM.PARAMETER_DESC as field2,CPM.PARAMETER_LEVEL as field3,CPM.MODULE_NAME as field4,CPV.LEVELCODE_1 as field5,CPV.LEVELCODE_2 as field6,CPV.PARAMETER_VALUE as field7 "
+	#sv_q = sv_q + "SELECT CPM.PARAMETER_ID,CPM.PARAMETER_DESC,CPM.PARAMETER_LEVEL,CPM.MODULE_NAME,CPV.LEVELCODE_1,CPV.LEVELCODE_2,CPV.PARAMETER_VALUE "
+	sv_q = sv_q + " FROM C_CPMASTER CPM, C_CPVALUE_MOD CPV"
+	sv_q = sv_q + " WHERE   CPM.PARAMETER_ID = CPV.PARAMETER_ID"
+		sv_q = sv_q + " AND CPM.PARAMETER_ID >= ?SVAR"
+	sv_q = sv_q + " AND CPV.BANK_ID = CPM.BANK_ID "
+	sv_q = sv_q + " AND  CPV.BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.paramId + "|" + BANCS.STDIN.contextBankId
+	
+	IF (STDWFS.GLBDATA.modName != "") THEN
+	#{
+		sv_q = sv_q + " AND MODULE_NAME = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.modName
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.paramLev != "") THEN
+	#{
+		sv_q = sv_q + " AND PARAMETER_LEVEL = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramLev
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.levelCode1 != "") THEN
+	#{
+		sv_q = sv_q + " AND LEVELCODE_1 = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode1
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.levelCode2 != "") THEN
+	#{
+		sv_q = sv_q + " AND NVL(CPV.LEVELCODE_2,' ') = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode2
+	#}
+	ENDIF
+
+	sv_q = sv_q + " ORDER BY 2"
+	sv_q = sv_q + " )"
+	sv_q = sv_q + " WHERE "
+	STDWFS.GLBDATA.pageNumberLow = CINT(STDWFS.GLBDATA.pageNumber)  - 1 
+	STDWFS.GLBDATA.pageNumberLow = CINT(STDWFS.GLBDATA.pageNumberLow) * CINT(STDWFS.GLBDATA.recPerPage)
+	IF (STDWFS.GLBDATA.pageNumberLow == "") THEN
+	#{
+		STDWFS.GLBDATA.pageNumberLow = "0"
+	#}
+	ENDIF
+	STDWFS.GLBDATA.pageNumberHigh = (CINT(STDWFS.GLBDATA.pageNumber)) * CINT(STDWFS.GLBDATA.recPerPage)
+	sv_q = sv_q + " rw > ((?NVAR ))"
+	sv_q = sv_q + " AND rw <= ((?NVAR ))"
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS +  "|" + STDWFS.GLBDATA.pageNumberLow + "|" + STDWFS.GLBDATA.pageNumberHigh
+#}
+ENDIF
+
+IF (STDWFS.GLBDATA.funcCode == "I") THEN
+#{
+	sv_q = "totalRecs|SELECT COUNT(1)"
+	sv_q = sv_q + " FROM C_CPMASTER CPM, C_CPVALUE CPV"
+	sv_q = sv_q + " WHERE   CPM.PARAMETER_ID = CPV.PARAMETER_ID"
+	sv_q = sv_q + " AND CPM.PARAMETER_ID >= ?SVAR"
+	sv_q = sv_q + " AND CPV.BANK_ID = CPM.BANK_ID AND CPV.ENTITY_CRE_FLG='Y' AND CPV.DEL_FLG='N'"
+	sv_q = sv_q + " AND  CPV.BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.paramId + "|" + BANCS.STDIN.contextBankId
+	IF (STDWFS.GLBDATA.modName != "") THEN
+	#{
+		sv_q = sv_q + " AND MODULE_NAME = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.modName
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.paramLev != "") THEN
+	#{
+		sv_q = sv_q + " AND PARAMETER_LEVEL = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramLev
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.levelCode1 != "") THEN
+	#{
+		sv_q = sv_q + " AND LEVELCODE_1 = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode1
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.levelCode2 != "") THEN
+	#{
+		sv_q = sv_q + " AND NVL(CPV.LEVELCODE_2,' ') = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode2
+	#}
+	ENDIF
+	
+	sv_q = sv_q + " ORDER BY CPM.PARAMETER_ID"
+	
+	PRINT(sv_q)
+	PRINT(BANCS.INPARAM.BINDVARS)
+	
+	sv_d = urhk_dbSelectWithBind(sv_q)
+	
+	#print(sv_d)
+	IF (sv_d == 0) THEN
+	#{
+		sv_r = BANCS.OUTPARAM.totalRecs
+		sv_p = CINT(sv_r) / CINT(STDWFS.GLBDATA.recPerPage)
+		sv_a = CDOUBLE(sv_r) / CDOUBLE(STDWFS.GLBDATA.recPerPage)
+		
+		IF (sv_a != sv_p) THEN
+		#{
+			STDWFS.GLBDATA.totalPages = sv_p + 1
+		#}
+		ELSE
+		#{
+			STDWFS.GLBDATA.totalPages = sv_p
+		#}
+		ENDIF
+	#}
+	ELSE
+	#{
+		sv_u = urhk_SetOrbOut("Message|N")
+		sv_u = urhk_SetOrbOut("Count|0")
+		sv_u = urhk_SetOrbOut("CurrPage|1")
+		sv_u = urhk_SetOrbOut("TotalPage|1")
+		sv_u = urhk_SetOrbOut("SuccessOrFailure|Y")
+		GOTO EndOfScript
+	#}
+	ENDIF
+	
+	
+	sv_q = "paramId,paramDescr,paramlev,modName,levelCode1,levelCode2,paramVal|"
+	sv_q = sv_q + "SELECT field1,field2,field3,field4,field5,field6,field7 "
+	sv_q = sv_q + "FROM (SELECT  ROWNUM as rw,CPM.PARAMETER_ID as field1,CPM.PARAMETER_DESC as field2,CPM.PARAMETER_LEVEL as field3,CPM.MODULE_NAME as field4,CPV.LEVELCODE_1 as field5,CPV.LEVELCODE_2 as field6,CPV.PARAMETER_VALUE as field7 "
+	sv_q = sv_q + " FROM C_CPMASTER CPM, C_CPVALUE CPV"
+	sv_q = sv_q + " WHERE   CPM.PARAMETER_ID = CPV.PARAMETER_ID"
+	sv_q = sv_q + " AND CPM.PARAMETER_ID >= ?SVAR"
+	sv_q = sv_q + " AND CPV.BANK_ID = CPM.BANK_ID AND CPV.ENTITY_CRE_FLG='Y' AND CPV.DEL_FLG='N'"
+	sv_q = sv_q + " AND  CPV.BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.paramId + "|" + BANCS.STDIN.contextBankId
+	
+	IF (STDWFS.GLBDATA.modName != "") THEN
+	#{
+		sv_q = sv_q + " AND MODULE_NAME = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.modName
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.paramLev != "") THEN
+	#{
+		sv_q = sv_q + " AND PARAMETER_LEVEL = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramLev
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.levelCode1 != "") THEN
+	#{
+		sv_q = sv_q + " AND LEVELCODE_1 = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode1
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.levelCode2 != "") THEN
+	#{
+		sv_q = sv_q + " AND NVL(CPV.LEVELCODE_2,' ') = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode2
+	#}
+	ENDIF
+	
+	sv_q = sv_q + " ORDER BY 2"
+	sv_q = sv_q + " )"
+	sv_q = sv_q + " WHERE "
+	STDWFS.GLBDATA.pageNumberLow = CINT(STDWFS.GLBDATA.pageNumber)  - 1 
+	STDWFS.GLBDATA.pageNumberLow = CINT(STDWFS.GLBDATA.pageNumberLow) * CINT(STDWFS.GLBDATA.recPerPage)
+	IF (STDWFS.GLBDATA.pageNumberLow == "") THEN
+	#{
+		STDWFS.GLBDATA.pageNumberLow = "0"
+	#}
+	ENDIF
+	STDWFS.GLBDATA.pageNumberHigh = (CINT(STDWFS.GLBDATA.pageNumber)) * CINT(STDWFS.GLBDATA.recPerPage)
+	sv_q = sv_q + " rw > ((?NVAR ))"
+	sv_q = sv_q + " AND rw <= ((?NVAR ))"
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS +  "|" + STDWFS.GLBDATA.pageNumberLow + "|" + STDWFS.GLBDATA.pageNumberHigh
+#}
+ENDIF
+
+IF (STDWFS.GLBDATA.funcCode == "M") THEN
+#{
+	sv_q = "totalRecs|SELECT COUNT(1)"
+	sv_q = sv_q + " FROM C_CPMASTER CPM, C_CPVALUE CPV"
+	sv_q = sv_q + " WHERE   CPM.PARAMETER_ID = CPV.PARAMETER_ID(+)"
+	sv_q = sv_q + " AND CPM.PARAMETER_ID >= ?SVAR"
+	sv_q = sv_q + " AND CPV.BANK_ID(+) = CPM.BANK_ID AND CPM.ENTITY_CRE_FLG='Y' AND CPM.DEL_FLG='N'"
+	sv_q = sv_q + " AND  CPM.BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.paramId + "|" + BANCS.STDIN.contextBankId
+	IF (STDWFS.GLBDATA.modName != "") THEN
+	#{
+		sv_q = sv_q + " AND MODULE_NAME = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.modName
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.paramLev != "") THEN
+	#{
+		sv_q = sv_q + " AND PARAMETER_LEVEL = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramLev
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.levelCode1 != "") THEN
+	#{
+		sv_q = sv_q + " AND LEVELCODE_1(+) = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode1
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.levelCode2 != "") THEN
+	#{
+		sv_q = sv_q + " AND CPV.LEVELCODE_2(+) = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode2
+	#}
+	ENDIF
+	
+	
+	PRINT(sv_q)
+	PRINT(BANCS.INPARAM.BINDVARS)
+	
+	sv_d = urhk_dbSelectWithBind(sv_q)
+	
+	#print(sv_d)
+	IF (sv_d == 0) THEN
+	#{
+		sv_r = BANCS.OUTPARAM.totalRecs
+		sv_p = CINT(sv_r) / CINT(STDWFS.GLBDATA.recPerPage)
+		sv_a = CDOUBLE(sv_r) / CDOUBLE(STDWFS.GLBDATA.recPerPage)
+		
+		IF (sv_a != sv_p) THEN
+		#{
+			STDWFS.GLBDATA.totalPages = sv_p + 1
+		#}
+		ELSE
+		#{
+			STDWFS.GLBDATA.totalPages = sv_p
+		#}
+		ENDIF
+	#}
+	ELSE
+	#{
+		sv_u = urhk_SetOrbOut("Message|N")
+		sv_u = urhk_SetOrbOut("Count|0")
+		sv_u = urhk_SetOrbOut("CurrPage|1")
+		sv_u = urhk_SetOrbOut("TotalPage|1")
+		sv_u = urhk_SetOrbOut("SuccessOrFailure|Y")
+		GOTO EndOfScript
+	#}
+	ENDIF
+	
+	sv_q = "paramId,paramDescr,paramlev,modName,levelCode1,levelCode2,paramVal|"
+	sv_q = sv_q + "SELECT field1,field2,field3,field4,field5,field6,field7 "
+	sv_q = sv_q + "FROM (SELECT  ROWNUM as rw,CPM.PARAMETER_ID as field1,CPM.PARAMETER_DESC as field2,CPM.PARAMETER_LEVEL as field3,CPM.MODULE_NAME as field4,CPV.LEVELCODE_1 as field5,CPV.LEVELCODE_2 as field6,CPV.PARAMETER_VALUE as field7 "
+	sv_q = sv_q + " FROM C_CPMASTER CPM, C_CPVALUE CPV"
+	sv_q = sv_q + " WHERE   CPM.PARAMETER_ID = CPV.PARAMETER_ID(+)"
+	sv_q = sv_q + " AND CPM.PARAMETER_ID >= ?SVAR"
+	sv_q = sv_q + " AND CPV.BANK_ID(+) = CPM.BANK_ID AND CPM.ENTITY_CRE_FLG='Y' AND CPM.DEL_FLG='N'"
+	sv_q = sv_q + " AND  CPM.BANK_ID = ?SVAR"	
+	BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.paramId + "|" + BANCS.STDIN.contextBankId
+	IF (STDWFS.GLBDATA.modName != "") THEN
+	#{
+		sv_q = sv_q + " AND MODULE_NAME = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.modName
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.paramLev != "") THEN
+	#{
+		sv_q = sv_q + " AND PARAMETER_LEVEL = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramLev
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.levelCode1 != "") THEN
+	#{
+		sv_q = sv_q + " AND LEVELCODE_1(+) = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode1
+	#}
+	ENDIF
+	IF (STDWFS.GLBDATA.levelCode2 != "") THEN
+	#{
+		sv_q = sv_q + " AND CPV.LEVELCODE_2(+) = ?SVAR"
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode2
+	#}
+	ENDIF
+	
+	sv_q = sv_q + " ORDER BY 2"
+	sv_q = sv_q + " )"
+	sv_q = sv_q + " WHERE "
+	STDWFS.GLBDATA.pageNumberLow = CINT(STDWFS.GLBDATA.pageNumber)  - 1 
+	STDWFS.GLBDATA.pageNumberLow = CINT(STDWFS.GLBDATA.pageNumberLow) * CINT(STDWFS.GLBDATA.recPerPage)
+	IF (STDWFS.GLBDATA.pageNumberLow == "") THEN
+	#{
+		STDWFS.GLBDATA.pageNumberLow = "0"
+	#}
+	ENDIF
+	STDWFS.GLBDATA.pageNumberHigh = (CINT(STDWFS.GLBDATA.pageNumber)) * CINT(STDWFS.GLBDATA.recPerPage)
+	sv_q = sv_q + " rw > ((?NVAR ))"
+	sv_q = sv_q + " AND rw <= ((?NVAR ))"
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS +  "|" + STDWFS.GLBDATA.pageNumberLow + "|" + STDWFS.GLBDATA.pageNumberHigh
+#}
+ENDIF
+
+PRINT(sv_q)
+
+PRINT(BANCS.INPARAM.BINDVARS)
+sv_b = urhk_dbCursorOpenWithBind(sv_q)
+
+IF (sv_b == 0) THEN
+#{
+	sv_c = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+	sv_d = urhk_dbCursorFetch(sv_c)
+	sv_e = 1
+	STDWFS.GLBDATA.recCount = sv_e
+	WHILE(sv_d == 0)
+	#{
+		IF (BANCS.OUTPARAM.paramId == "") THEN
+		#{
+			BANCS.OUTPARAM.paramId = " "
+		#}
+		ENDIF
+		IF (BANCS.OUTPARAM.paramDescr == "") THEN
+		#{
+			BANCS.OUTPARAM.paramDescr = " "
+		#}
+		ENDIF
+		IF (BANCS.OUTPARAM.paramlev == "") THEN
+		#{
+			BANCS.OUTPARAM.paramlev = " "
+		#}
+		ENDIF
+		IF (BANCS.OUTPARAM.modName == "") THEN
+		#{
+			BANCS.OUTPARAM.modName = " "
+		#}
+		ENDIF
+		IF (BANCS.OUTPARAM.levelCode1 == "") THEN
+		#{
+			BANCS.OUTPARAM.levelCode1 = " "
+		#}
+		ENDIF
+		IF (BANCS.OUTPARAM.levelCode2 == "") THEN
+		#{
+			BANCS.OUTPARAM.levelCode2 = " "
+		#}
+		ENDIF
+		
+		# Handling single quote from Failure reaason
+		sv_s = TRIM(BANCS.OUTPARAM.paramVal)
+		sv_l = STRLEN(sv_s)
+		sv_i = 0
+		WHILE(sv_i < sv_l)
+		#{
+			sv_x = CHARAT(sv_s, sv_i)
+			
+			# If there is a single quote then adding one more to it
+			IF (sv_x == 39) THEN
+			#{
+				sv_s = MID$(sv_s, 0, sv_i) + MID$(sv_s, sv_i + 1, sv_l)
+				sv_l = sv_l - 1
+				sv_i = sv_i - 1
+			#}
+			ENDIF
+			sv_i = sv_i + 1
+		#}
+		DO
+		BANCS.OUTPARAM.paramVal = sv_s
+		
+		IF (BANCS.OUTPARAM.paramVal == "") THEN
+		#{
+			BANCS.OUTPARAM.paramVal = " "
+		#}
+		ENDIF
+		
+		("STDWFS").("GLBDATA").("paramId_" + FORMAT$(sv_e, "%d")) = BANCS.OUTPARAM.paramId
+		("STDWFS").("GLBDATA").("paramDescr_" + FORMAT$(sv_e, "%d")) = BANCS.OUTPARAM.paramDescr
+		("STDWFS").("GLBDATA").("paramlev_" + FORMAT$(sv_e, "%d")) = BANCS.OUTPARAM.paramlev
+		("STDWFS").("GLBDATA").("modName_" + FORMAT$(sv_e, "%d")) = BANCS.OUTPARAM.modName
+		("STDWFS").("GLBDATA").("levelCode1_" + FORMAT$(sv_e, "%d")) = BANCS.OUTPARAM.levelCode1
+		("STDWFS").("GLBDATA").("levelCode2_" + FORMAT$(sv_e, "%d")) = BANCS.OUTPARAM.levelCode2
+		("STDWFS").("GLBDATA").("paramVal_" + FORMAT$(sv_e, "%d")) = BANCS.OUTPARAM.paramVal
+		sv_d = urhk_dbCursorFetch(sv_c)
+		sv_e = sv_e + 1
+	#}
+	DO
+	#while close
+	sv_a = urhk_dbCursorClose(sv_c)
+	sv_e = sv_e - 1
+	STDWFS.GLBDATA.recCount = FORMAT$(sv_e, "%d")
+	PRINT(STDWFS.GLBDATA.recCount)
+	
+	#sv_u = urhk_SetOrbOut("recordCount|"+STDWFS.GLBDATA.recCount)
+	
+	sv_e = 1
+	WHILE(sv_e <= CINT(STDWFS.GLBDATA.recCount))
+	#{
+		PRINT(("STDWFS").("GLBDATA").("paramId_" + FORMAT$(sv_e, "%d")))
+		sv_a = urhk_SetOrbOut("paramId_" + FORMAT$(sv_e, "%d") + "|" + ("STDWFS").("GLBDATA").("paramId_" + FORMAT$(sv_e, "%d")))
+		sv_a = urhk_SetOrbOut("paramDescr_" + FORMAT$(sv_e, "%d") + "|" + ("STDWFS").("GLBDATA").("paramDescr_" + FORMAT$(sv_e, "%d")))
+		sv_a = urhk_SetOrbOut("paramlev_" + FORMAT$(sv_e, "%d") + "|" + ("STDWFS").("GLBDATA").("paramlev_" + FORMAT$(sv_e, "%d")))
+		sv_a = urhk_SetOrbOut("modName_" + FORMAT$(sv_e, "%d") + "|" + ("STDWFS").("GLBDATA").("modName_" + FORMAT$(sv_e, "%d")))
+		sv_a = urhk_SetOrbOut("levelCode1_" + FORMAT$(sv_e, "%d") + "|" + ("STDWFS").("GLBDATA").("levelCode1_" + FORMAT$(sv_e, "%d")))
+		sv_a = urhk_SetOrbOut("levelCode2_" + FORMAT$(sv_e, "%d") + "|" + ("STDWFS").("GLBDATA").("levelCode2_" + FORMAT$(sv_e, "%d")))
+		sv_a = urhk_SetOrbOut("paramVal_" + FORMAT$(sv_e, "%d") + "|" + ("STDWFS").("GLBDATA").("paramVal_" + FORMAT$(sv_e, "%d")))
+		sv_e = sv_e + 1
+	#}
+	DO
+	sv_u = urhk_SetOrbOut("Message|Success")
+	sv_u = urhk_SetOrbOut("Count|" + STDWFS.GLBDATA.recCount)
+	IF (STDWFS.GLBDATA.pageNumber == "") THEN
+	#{
+		STDWFS.GLBDATA.pageNumber = "1"
+	#}
+	ENDIF
+	sv_u = urhk_SetOrbOut("CurrPage|" + STDWFS.GLBDATA.pageNumber)
+	IF (STDWFS.GLBDATA.totalPages == "") THEN
+	#{
+		STDWFS.GLBDATA.totalPages = "1"
+	#}
+	ENDIF
+	sv_u = urhk_SetOrbOut("TotalPage|" + STDWFS.GLBDATA.totalPages)
+	sv_u = urhk_SetOrbOut("SuccessOrFailure|Y")
+	
+#}
+ELSE
+#{
+	sv_u = urhk_SetOrbOut("Message|N")
+	sv_u = urhk_SetOrbOut("Count|0")
+	sv_u = urhk_SetOrbOut("CurrPage|1")
+	sv_u = urhk_SetOrbOut("TotalPage|1")
+	sv_u = urhk_SetOrbOut("SuccessOrFailure|Y")
+	
+#}
+ENDIF
+
+
+
+EndOfScript:
+end-->

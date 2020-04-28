@@ -1,0 +1,56 @@
+<--START
+TRACE ON
+	LIBNAME CUSTOMSO
+	IF (REPEXISTS("CUST") == 0) THEN
+	#{
+		CREATEREP("CUST")
+	#}
+	ENDIF
+	IF (CLASSEXISTS("CUST", "LHB") == 0) THEN
+	#{
+		CREATECLASS("CUST", "LHB", 5)
+	#}
+	ENDIF
+	CUST.LHB.taxId = "LHB"
+	#fetch cif id
+	#sv_u = urhk_B2k_PrintRepos("BANCS")
+	#print(sv_u)
+	PRINT(BANCS.INPUT.cifId)
+	CUST.LHB.cifId = BANCS.INPUT.cifId
+	
+	sv_s = "orgtype|SELECT ORGTYPE FROM CRMUSER.ACCOUNTS WHERE ORGKEY = ?SVAR"
+	BANCS.INPARAM.BINDVARS = CUST.LHB.cifId
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	CUST.LHB.orgtype = BANCS.OUTPARAM.orgtype
+	IF(CUST.LHB.orgtype == "Account") THEN
+	#{
+		sv_s = "taxId|SELECT REFERENCENUMBER FROM CRMUSER.ENTITYDOCUMENT WHERE ORGKEY = ?SVAR AND DOCCODE ='TI'"
+	#}
+	ELSE
+	#{
+		sv_s = "taxId|SELECT TAXID FROM CRMUSER.CORPORATE WHERE CORP_KEY = ?SVAR"
+	#}
+	ENDIF
+	print(sv_s)
+	BANCS.INPARAM.BINDVARS = CUST.LHB.cifId
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	print(sv_d)
+	IF(sv_d == 0) THEN
+	#{
+		CUST.LHB.taxId = BANCS.OUTPARAM.taxId
+		print(CUST.LHB.taxId)
+		IF(CUST.LHB.taxId == "") THEN
+		#{
+			CUST.LHB.taxId = "LHB"
+			print(CUST.LHB.taxId)
+		#}
+		ENDIF
+	#}
+	ELSE
+	#{
+		CUST.LHB.taxId = "LHB"
+	#}
+	ENDIF
+	sv_u = urhk_SetOrbOut("taxId|" + CUST.LHB.taxId)
+TRACE OFF
+END-->

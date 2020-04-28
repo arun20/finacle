@@ -1,0 +1,662 @@
+#=================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# category: Script Name Based
+# script: cparam_val.scr
+# event: NA
+# description: VAlidation script
+#=================================================
+
+#############################################################################
+#	Name					   :   cparam_val.scr
+#	Date					   :   08-06-2006
+#	Description				:   This script does all validations. 
+#	Input					  :
+#	Output					 :   NA
+#	Author					 :   Abhilash Rao D 	 
+#	Called From				:   
+#	Calling Script			 :   NA
+#	Reference				  :   NA
+#	Modification History	   :   
+#	<Serial No.>   <Date>   <Author Name>	<Description>
+#	0.1		25-11-12  Santosh	Made Changes for New CPARAM 10X.
+#############################################################################
+<--start
+
+
+#----------------------------------------------------------------------
+# Create the necessary repos and classes
+#----------------------------------------------------------------------
+
+	IF (REPEXISTS("STDWFS") == 0 ) THEN
+	#{
+		CREATEREP("STDWFS")
+	#}
+	ENDIF
+
+	IF (CLASSEXISTS("STDWFS","GLBDATA") == 0) THEN
+	#{
+		CREATECLASS("STDWFS","GLBDATA",5)
+	#}
+	ENDIF
+	
+#----------------------------
+# Calling CReAM_INFENG.scr
+#----------------------------
+sv_s = "CReAM_" + BANCS.STDIN.languageCode + ".scr"
+print(sv_s)
+sv_u = urhk_getFileLocation("SCRIPT|" + sv_s)
+IF (sv_u !=0) THEN
+#{
+        GOTO ENDOFSCRIPT
+#}
+ENDIF
+CALL(sv_s)
+
+#----------------------------------------------------------------------------------
+#   Accepting the variables from front end.
+#----------------------------------------------------------------------------------
+	STDWFS.GLBDATA.userId		 =   BANCS.STDIN.userId  
+	STDWFS.GLBDATA.funcCode	   =   BANCS.INPUT.funcCode
+	STDWFS.GLBDATA.paramlev	   =   BANCS.INPUT.paramlev
+	STDWFS.GLBDATA.modname		=   BANCS.INPUT.modName
+	STDWFS.GLBDATA.paramId		=   TOUPPER(TRIM(BANCS.INPUT.paramId))
+	STDWFS.GLBDATA.successFailure  =  "S"
+	STDWFS.GLBDATA.messageField = ""
+		
+	STDWFS.GLBDATA.funcCode	   =   TOUPPER(TRIM(STDWFS.GLBDATA.funcCode))
+	STDWFS.GLBDATA.paramlev	   =   TOUPPER(TRIM(STDWFS.GLBDATA.paramlev))
+	STDWFS.GLBDATA.modname		=   TOUPPER(TRIM(STDWFS.GLBDATA.modname))
+
+		print(STDWFS.GLBDATA.funcCode)
+		print(STDWFS.GLBDATA.paramlev)
+		print(STDWFS.GLBDATA.modname)
+		print(STDWFS.GLBDATA.paramId)
+
+IF(STDWFS.GLBDATA.paramlev == "BNKL") THEN
+#{
+	STDWFS.GLBDATA.levelCode1 = "ALL"
+	STDWFS.GLBDATA.levelCode2 = " "
+#}
+ELSE
+#{
+	IF(STDWFS.GLBDATA.paramlev == "SOLL") THEN
+	#{
+		STDWFS.GLBDATA.levelCode1 = BANCS.INPUT.solid
+		STDWFS.GLBDATA.levelCode2 = " "
+	#}
+	ELSE
+	#{
+		IF(STDWFS.GLBDATA.paramlev == "SCHM") THEN
+		#{
+			STDWFS.GLBDATA.levelCode1 = BANCS.INPUT.schcod
+			STDWFS.GLBDATA.levelCode2 = " "
+		#}
+		ELSE
+		#{
+			IF(STDWFS.GLBDATA.paramlev == "CURL") THEN
+			#{
+				STDWFS.GLBDATA.levelCode1 = BANCS.INPUT.cccod
+				STDWFS.GLBDATA.levelCode2 = " "
+			#}
+			ELSE
+			#{
+				IF(STDWFS.GLBDATA.paramlev == "SHCR") THEN
+				#{
+					STDWFS.GLBDATA.levelCode1 = BANCS.INPUT.schcod
+					STDWFS.GLBDATA.levelCode2 = BANCS.INPUT.cccod
+				#}
+				ELSE
+				#{
+					STDWFS.GLBDATA.levelCode1 = BANCS.INPUT.gencod
+					STDWFS.GLBDATA.levelCode2 = BANCS.INPUT.genid
+				#}
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ENDIF
+#}
+ENDIF
+
+
+
+IF ((STDWFS.GLBDATA.funcCode =="M") OR (STDWFS.GLBDATA.funcCode =="V") OR (STDWFS.GLBDATA.funcCode =="C") OR (STDWFS.GLBDATA.funcCode =="I")) THEN
+#{
+	IF(STDWFS.GLBDATA.paramlev == "SOLL") THEN
+	#{
+		STDWFS.GLBDATA.solid		   =   BANCS.INPUT.solid
+		STDWFS.GLBDATA.solid		   =   TOUPPER(TRIM(STDWFS.GLBDATA.solid))
+		sv_q	=   "countData|select count(1) from SOL where TRIM(sol_id) = ?SVAR and NVL(DEL_FLG,'N') != 'Y' 
+		AND  BANK_ID = ?SVAR" 
+		BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.solid + "|" +  BANCS.STDIN.contextBankId
+		print(BANCS.INPARAM.BINDVARS)
+
+		sv_z = urhk_dbSelectWithBind(sv_q)
+
+		sv_a = BANCS.OUTPARAM.countData
+		IF ( sv_z == 0 ) THEN
+		#{
+			IF (sv_a == 0) then
+			#{
+				#STDWFS.GLBDATA.messageField =   "Invalid Service Outlet"
+				STDWFS.GLBDATA.messageField =   CREAM.MESG.M0888
+				STDWFS.GLBDATA.successFailure = "F"
+				GOTO EndOfScript
+			#}
+			ENDIF
+		#{
+		ENDIF
+	#}
+	ENDIF
+	
+	IF(STDWFS.GLBDATA.paramlev == "SCHM") THEN
+	#{
+		STDWFS.GLBDATA.schcod		  =   BANCS.INPUT.schcod
+		STDWFS.GLBDATA.schcod		  =   TOUPPER(TRIM(STDWFS.GLBDATA.schcod))
+		sv_q	=   "countData|select count(1) from GSP where TRIM(schm_code) = ?SVAR and NVL(DEL_FLG,'N') != 'Y' 
+		AND  BANK_ID = ?SVAR" 
+		BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.schcod + "|" +  BANCS.STDIN.contextBankId
+		print(BANCS.INPARAM.BINDVARS)
+
+		sv_z = urhk_dbSelectWithBind(sv_q)
+
+		sv_a = BANCS.OUTPARAM.countData
+		IF ( sv_z == 0 ) THEN
+		#{
+			IF (sv_a == 0) then
+			#{
+				#STDWFS.GLBDATA.messageField =   "Invalid Scheme Code"
+				STDWFS.GLBDATA.messageField =   CREAM.MESG.M0408
+				STDWFS.GLBDATA.successFailure = "F"
+				GOTO EndOfScript
+			#}
+			ENDIF
+		#{
+		ENDIF
+	#}
+	ENDIF
+	
+	IF(STDWFS.GLBDATA.paramlev == "CURL") THEN
+	#{
+		STDWFS.GLBDATA.cccode		   =   BANCS.INPUT.cccod
+		STDWFS.GLBDATA.cccode		  =   TOUPPER(TRIM(STDWFS.GLBDATA.cccode))
+		sv_q	=   "countData|select count(1) from CNC where TRIM(crncy_code) = ?SVAR and entity_cre_flg ='Y' 
+		and NVL(DEL_FLG,'N') != 'Y' AND  BANK_ID = ?SVAR" 
+		BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.cccode + "|" +  BANCS.STDIN.contextBankId
+		print(BANCS.INPARAM.BINDVARS)
+
+		sv_z = urhk_dbSelectWithBind(sv_q)
+
+		sv_a = BANCS.OUTPARAM.countData
+		IF ( sv_z == 0 ) THEN
+		#{
+			IF (sv_a == 0) then
+				#STDWFS.GLBDATA.messageField =   "Invalid Currency Code"
+				STDWFS.GLBDATA.messageField =   CREAM.MESG.M0367
+				STDWFS.GLBDATA.successFailure = "F"
+				GOTO EndOfScript
+			#}
+			ENDIF
+		#{
+		ENDIF
+
+	#}
+	ENDIF
+	IF(STDWFS.GLBDATA.paramlev == "SHCR") THEN
+	#{
+		STDWFS.GLBDATA.schcod		  =   BANCS.INPUT.schcod
+		STDWFS.GLBDATA.schcod		  =   TOUPPER(TRIM(STDWFS.GLBDATA.schcod))
+		sv_q	=   "countData|select count(1) from GSP where TRIM(schm_code) = ?SVAR and NVL(DEL_FLG,'N') != 'Y' 
+		AND  BANK_ID = ?SVAR" 
+		BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.schcod + "|" +  BANCS.STDIN.contextBankId
+		print(BANCS.INPARAM.BINDVARS)
+
+		sv_z = urhk_dbSelectWithBind(sv_q)
+
+		sv_a = BANCS.OUTPARAM.countData
+		IF ( sv_z == 0 ) THEN
+		#{
+			IF (sv_a == 0) then
+			#{
+				#STDWFS.GLBDATA.messageField =   "Invalid Scheme Code"
+				STDWFS.GLBDATA.messageField =   CREAM.MESG.M0408
+				STDWFS.GLBDATA.successFailure = "F"
+				GOTO EndOfScript
+			#}
+			else
+				STDWFS.GLBDATA.cccode		  =   BANCS.INPUT.cccod
+				STDWFS.GLBDATA.cccode		  =   TOUPPER(TRIM(STDWFS.GLBDATA.cccode))
+				sv_q	=   "countData|select count(1) from CNC where TRIM(crncy_code) = ?SVAR and 
+				entity_cre_flg ='Y' and NVL(DEL_FLG,'N') != 'Y' AND  BANK_ID = ?SVAR" 
+				BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.cccode + "|" +  BANCS.STDIN.contextBankId
+				print(BANCS.INPARAM.BINDVARS)
+
+				sv_z = urhk_dbSelectWithBind(sv_q)
+
+				sv_a = BANCS.OUTPARAM.countData
+				IF ( sv_z == 0 ) THEN
+				#{
+					IF (sv_a == 0) then
+						#STDWFS.GLBDATA.messageField =   "Invalid Currency Code"
+						STDWFS.GLBDATA.messageField =   CREAM.MESG.M0367
+						STDWFS.GLBDATA.successFailure = "F"
+						GOTO EndOfScript
+					ELSE
+					#{
+						sv_q	=   "countData|select count(1) from CSP where TRIM(schm_code) = ?SVAR and
+						TRIM(crncy_code) = ?SVAR and NVL(DEL_FLG,'N') != 'Y' AND  BANK_ID = ?SVAR" 
+						BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.schcod + "|" +  STDWFS.GLBDATA.cccode + "|" +  BANCS.STDIN.contextBankId
+						print(BANCS.INPARAM.BINDVARS)
+
+						sv_z = urhk_dbSelectWithBind(sv_q)
+
+						sv_a = BANCS.OUTPARAM.countData
+						IF ( sv_z == 0 ) THEN
+						#{
+							IF( sv_a ==0) THEN
+							#{
+								#STDWFS.GLBDATA.messageField =   "Invalid Scheme-Currency Pair"
+								STDWFS.GLBDATA.messageField =   CREAM.MESG.M0889
+								STDWFS.GLBDATA.successFailure = "F"
+								GOTO EndOfScript
+							#}
+							ENDIF
+						#}
+						ENDIF
+					#}
+					ENDIF
+				#}
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ENDIF
+	IF(STDWFS.GLBDATA.paramlev == "GENL") THEN
+	#{
+		STDWFS.GLBDATA.gencod		  =   BANCS.INPUT.gencod
+		STDWFS.GLBDATA.genid		   =   BANCS.INPUT.genid
+		STDWFS.GLBDATA.gencod		  =   TOUPPER(TRIM(STDWFS.GLBDATA.gencod))
+		STDWFS.GLBDATA.genid		   =   TOUPPER(TRIM(STDWFS.GLBDATA.genid))
+		IF(STDWFS.GLBDATA.gencod == "RL") THEN
+		#{
+			sv_q	=   "countData|select count(1) from RPT where TRIM(role_id) = ?SVAR and entity_cre_flg = 'Y' 
+			and NVL(DEL_FLG,'N') != 'Y' AND  BANK_ID = ?SVAR" 
+			BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.genid + "|" +  BANCS.STDIN.contextBankId
+			print(BANCS.INPARAM.BINDVARS)
+
+			sv_z = urhk_dbSelectWithBind(sv_q)
+
+			sv_a = BANCS.OUTPARAM.countData
+			IF ( sv_z == 0 ) THEN
+			#{
+				IF (sv_a == 0) then
+					#STDWFS.GLBDATA.messageField =   "Invalid Role Id"
+					STDWFS.GLBDATA.messageField =   CREAM.MESG.M0407
+					STDWFS.GLBDATA.successFailure = "F"
+					GOTO EndOfScript
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+		IF(STDWFS.GLBDATA.gencod == "GL") THEN
+		#{
+			sv_q	=   "countData|select count(1) from RCT where TRIM(ref_code) = ?SVAR and ref_rec_type = '32' 
+			and NVL(DEL_FLG,'N') != 'Y' AND  BANK_ID = ?SVAR" 
+			BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.genid + "|" +  BANCS.STDIN.contextBankId
+			print(BANCS.INPARAM.BINDVARS)
+
+			sv_z = urhk_dbSelectWithBind(sv_q)
+
+			sv_a = BANCS.OUTPARAM.countData
+			IF ( sv_z == 0 ) THEN
+			#{
+				IF (sv_a == 0) then
+					#STDWFS.GLBDATA.messageField =   "Invalid General Ledger"
+					STDWFS.GLBDATA.messageField =   CREAM.MESG.M0890
+					STDWFS.GLBDATA.successFailure = "F"
+					GOTO EndOfScript
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+		IF(STDWFS.GLBDATA.gencod == "CF") THEN
+		#{
+			sv_q	=   "countData|select count(1) from CMG where TRIM(cif_id) = ?SVAR and entity_cre_flg = 'Y' 
+				and NVL(DEL_FLG,'N') != 'Y' AND  BANK_ID = ?SVAR" 
+			BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.genid + "|" +  BANCS.STDIN.contextBankId
+			print(BANCS.INPARAM.BINDVARS)
+
+			sv_z = urhk_dbSelectWithBind(sv_q)
+
+			sv_a = BANCS.OUTPARAM.countData
+			IF ( sv_z == 0 ) THEN
+			#{
+				IF (sv_a == 0) then
+					#STDWFS.GLBDATA.messageField =   "Invalid CIF"
+					STDWFS.GLBDATA.messageField =   CREAM.MESG.M0361
+					STDWFS.GLBDATA.successFailure = "F"
+					GOTO EndOfScript
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+		IF(STDWFS.GLBDATA.gencod == "CP") THEN
+		#{
+			STDWFS.GLBDATA.crncycode1 = MID$(STDWFS.GLBDATA.genid,0,3)
+			STDWFS.GLBDATA.crncycode2 = MID$(STDWFS.GLBDATA.genid,4,3)
+
+			sv_q	=   "countData|select count(1) from RTL where TRIM(fxd_crncy_code) = ?SVAR and TRIM(var_crncy_code) = ?SVAR and NVL(DEL_FLG,'N') != 'Y' AND  BANK_ID = ?SVAR" 
+			BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.crncycode1 + "|" +  STDWFS.GLBDATA.crncycode2 + "|" +  BANCS.STDIN.contextBankId
+			print(BANCS.INPARAM.BINDVARS)
+
+			sv_z = urhk_dbSelectWithBind(sv_q)
+
+			sv_a = BANCS.OUTPARAM.countData
+			IF ( sv_z == 0 ) THEN
+			#{
+				IF (sv_a == 0) then
+					#STDWFS.GLBDATA.messageField =   "Invalid Currency Pair Combination"
+					STDWFS.GLBDATA.messageField =   CREAM.MESG.M0891
+					STDWFS.GLBDATA.successFailure = "F"
+					GOTO EndOfScript
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+
+	#}
+	ENDIF
+#}
+ENDIF
+
+
+
+#-------------------------------------------------------------------------------------------
+#Verification/Cancel check
+#-------------------------------------------------------------------------------------------
+IF ((STDWFS.GLBDATA.funcCode =="W") OR (STDWFS.GLBDATA.funcCode =="L")) then
+#{
+	sv_a = "countData1|select count(1) from C_CPMASTER where parameter_level =?SVAR "
+	sv_a = sv_a + " and module_name =?SVAR and entity_cre_flg = 'N' and NVL(DEL_FLG,'N') != 'Y'"
+	sv_a = sv_a + " and parameter_id =?SVAR"
+	sv_a = sv_a + " AND BANK_ID = ?SVAR"
+	BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.paramlev + "|" + STDWFS.GLBDATA.modname + "|" + STDWFS.GLBDATA.paramId
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + BANCS.STDIN.contextBankId
+	print(BANCS.INPARAM.BINDVARS)
+
+	sv_z = urhk_dbSelectWithBind(sv_a)
+
+	sv_c = BANCS.OUTPARAM.countData1
+	if(sv_z ==0) then
+	#{
+		if(sv_c !=0) then
+		#{
+			sv_a = "countData1|select count(1) from C_CPMASTER where parameter_level =?SVAR "
+			sv_a = sv_a + " and module_name =?SVAR and entity_cre_flg = 'N' and NVL(DEL_FLG,'N') != 'Y' "
+			sv_a = sv_a + " and parameter_id =?SVAR"
+			sv_a = sv_a + " and trim(RCRE_USER_ID) = ?SVAR "
+			sv_a = sv_a + " AND BANK_ID = ?SVAR"
+			BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.paramlev + "|" + STDWFS.GLBDATA.modname + "|" + STDWFS.GLBDATA.paramId
+			BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.userId + "|" + BANCS.STDIN.contextBankId
+			print(BANCS.INPARAM.BINDVARS)
+
+			sv_z = urhk_dbSelectWithBind(sv_a)
+
+			sv_c = BANCS.OUTPARAM.countData1
+			if(sv_z ==0) then
+			#{
+				if(sv_c !=0) then
+				#{
+					if(STDWFS.GLBDATA.funcCode =="W") then
+					#{
+						#STDWFS.GLBDATA.messageField =   "Same User cannot Verify the Record"
+						STDWFS.GLBDATA.messageField =   CREAM.MESG.M0598
+						STDWFS.GLBDATA.successFailure = "F"
+					#}
+					ELSE
+					#{
+						STDWFS.GLBDATA.messageField ="STATUS|U"
+					#}
+					endif
+					GOTO EndOfScript
+				#}
+				else
+				#{
+					if(STDWFS.GLBDATA.funcCode =="L") then
+					#{
+						#STDWFS.GLBDATA.messageField =   "Only Same user can Cancel"
+						#STDWFS.GLBDATA.messageField =   CREAM.MESG.M0892
+						#STDWFS.GLBDATA.successFailure = "F"
+					#}
+					ELSE
+					#{
+						STDWFS.GLBDATA.messageField ="STATUS|U"
+					#}
+					endif
+					GOTO EndOfScript
+				#}
+				ENDIF
+			#}
+			else
+			#{
+				#STDWFS.GLBDATA.messageField =   "Nothing to Verify or Cancel"
+				STDWFS.GLBDATA.messageField =   CREAM.MESG.M0687
+				STDWFS.GLBDATA.successFailure = "F"
+				GOTO EndOfScript
+			#}
+			ENDIF
+		#}
+		else 
+		#{
+			#STDWFS.GLBDATA.messageField =   "Record Not Found"
+			STDWFS.GLBDATA.messageField =   CREAM.MESG.M0893
+			STDWFS.GLBDATA.successFailure = "F"
+			GOTO EndOfScript
+		#}
+		ENDIF
+	#}
+	ENDIF
+#}
+ENDIF
+
+
+#------------------------
+# BANK LEVEL DETAILS
+#------------------------
+IF((STDWFS.GLBDATA.funcCode == "V") or (STDWFS.GLBDATA.funcCode == "C") or (STDWFS.GLBDATA.funcCode == "M") or (STDWFS.GLBDATA.funcCode == "I")) then
+#{
+	#IF(STDWFS.GLBDATA.paramlev == "BNKL") THEN
+	#{
+		STDWFS.GLBDATA.solid		   =   BANCS.INPUT.solid
+		STDWFS.GLBDATA.solid		   =   TOUPPER(TRIM(STDWFS.GLBDATA.solid))
+		IF((STDWFS.GLBDATA.funcCode == "V") or (STDWFS.GLBDATA.funcCode == "C")) then
+		#{
+			sv_a = "countData1|select count(1) from C_CPVALUE_MOD where levelcode_1 = ?SVAR "
+			BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.levelCode1
+			IF((STDWFS.GLBDATA.paramlev == "SHCR") OR (STDWFS.GLBDATA.paramlev == "GENL") ) THEN
+			#{
+				sv_a = sv_a + " and levelcode_2 = ?SVAR "
+				BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode2
+			#}
+			ENDIF
+			sv_a = sv_a + " and parameter_id = ?SVAR and NVL(DEL_FLG,'N') != 'Y' "
+			#print(sv_a)
+			sv_a = sv_a + " AND BANK_ID = ?SVAR"
+			BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" +  STDWFS.GLBDATA.paramId + "|" +  BANCS.STDIN.contextBankId
+			print(BANCS.INPARAM.BINDVARS)
+
+			sv_z = urhk_dbSelectWithBind(sv_a)
+
+			#print(sv_z)
+			sv_c = BANCS.OUTPARAM.countData1
+			#print(sv_c)
+			if(sv_z ==0) then
+			#{
+				#print(sv_z)
+				if (sv_c !=0) then 
+				#{
+					#print(sv_c)
+					sv_a = "countData1|select count(1) from C_CPVALUE_MOD where  levelcode_1 = ?SVAR "
+					sv_a = sv_a + " and parameter_id = ?SVAR and NVL(DEL_FLG,'N') != 'Y' "
+					BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.levelCode1 + "|" + STDWFS.GLBDATA.paramId
+					IF((STDWFS.GLBDATA.paramlev == "SHCR") OR (STDWFS.GLBDATA.paramlev == "GENL") ) THEN
+					#{
+						sv_a = sv_a + " and levelcode_2 = ?SVAR "
+						BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode2
+					#}
+					ENDIF
+						sv_a = sv_a + " and trim(LCHG_USER_ID) = ?SVAR "
+					sv_a = sv_a + " AND BANK_ID = ?SVAR"
+					BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" +  STDWFS.GLBDATA.userId + "|" +  BANCS.STDIN.contextBankId
+					print(BANCS.INPARAM.BINDVARS)
+
+					sv_z = urhk_dbSelectWithBind(sv_a)
+
+					sv_c = BANCS.OUTPARAM.countData1
+					if(sv_z ==0) then
+					#{
+						if(sv_c !=0) then
+						#{
+							if(STDWFS.GLBDATA.funcCode =="V") then
+							#{
+								#STDWFS.GLBDATA.messageField =   "Same User cannot Verify the Record"
+								STDWFS.GLBDATA.messageField =   CREAM.MESG.M0598
+								STDWFS.GLBDATA.successFailure = "F"
+							#}
+							ELSE
+							#{
+								STDWFS.GLBDATA.messageField ="STATUS|U"
+							#}
+							endif
+							GOTO EndOfScript
+						#}
+						else
+						#{
+							if(STDWFS.GLBDATA.funcCode =="C") then
+							#{
+								#STDWFS.GLBDATA.messageField =   "Only Same user can Cancel"
+								#STDWFS.GLBDATA.messageField =   CREAM.MESG.M0892
+								#STDWFS.GLBDATA.successFailure = "F"
+							#}
+							ELSE
+							#{
+								STDWFS.GLBDATA.messageField ="STATUS|U"
+							#}
+							endif
+							GOTO EndOfScript
+						#}
+						ENDIF
+					else 
+						#STDWFS.GLBDATA.messageField =   "Query Execution Error" 
+						STDWFS.GLBDATA.messageField =   CREAM.MESG.M0894
+						STDWFS.GLBDATA.successFailure = "F"
+						GOTO EndOfScript
+					#}
+					ENDIF
+				else 
+					#STDWFS.GLBDATA.messageField =   "Nothing to Verify or Cancel"
+					STDWFS.GLBDATA.messageField =   CREAM.MESG.M0687
+					STDWFS.GLBDATA.successFailure = "F"
+					GOTO EndOfScript
+				#}
+				ENDIF
+			 #}
+			 ENDIF
+		ELSE
+			IF(STDWFS.GLBDATA.funcCode == "M") then
+				sv_a = "countData1|select count(1) from C_CPVALUE_MOD where levelcode_1 = ?SVAR and parameter_id = ?SVAR and NVL(DEL_FLG,'N') != 'Y'"
+				BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.levelCode1 + "|" + STDWFS.GLBDATA.paramId
+				IF((STDWFS.GLBDATA.paramlev == "SHCR") OR (STDWFS.GLBDATA.paramlev == "GENL") ) THEN
+				#{
+					sv_a = sv_a + " and levelcode_2 = ?SVAR "
+					BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.levelCode2
+				#}
+				ENDIF
+				sv_a = sv_a + " AND BANK_ID = ?SVAR"
+				BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" +  BANCS.STDIN.contextBankId
+				print(BANCS.INPARAM.BINDVARS)
+
+				sv_z = urhk_dbSelectWithBind(sv_a)
+
+				sv_c = BANCS.OUTPARAM.countData1
+				if(sv_z ==0) then
+				#{
+					if (sv_c !=0) then 
+					#{
+						#STDWFS.GLBDATA.messageField =   "Record cannot be Modified.Unverified Record Exists"
+						STDWFS.GLBDATA.messageField = CREAM.MESG.M0895
+					else
+						sv_a = "countData1|select count(1) from C_CPMASTER where parameter_level =?SVAR and parameter_id = ?SVAR and module_name = ?SVAR and entity_cre_flg ='Y' and NVL(DEL_FLG,'N') != 'Y'"
+						sv_a = sv_a + " AND BANK_ID = ?SVAR"
+						BANCS.INPARAM.BINDVARS = STDWFS.GLBDATA.paramlev + "|" + STDWFS.GLBDATA.paramId + "|" + STDWFS.GLBDATA.modname
+						BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + BANCS.STDIN.contextBankId
+						print(BANCS.INPARAM.BINDVARS)
+
+						sv_z = urhk_dbSelectWithBind(sv_a)
+
+						sv_c = BANCS.OUTPARAM.countData1
+						if (sv_c !=0) then 
+							STDWFS.GLBDATA.messageField =   "STATUS|F|"
+						else
+							#STDWFS.GLBDATA.messageField =   "Record Not Found"
+							STDWFS.GLBDATA.messageField =   CREAM.MESG.M0893
+							STDWFS.GLBDATA.successFailure = "F"
+						ENDIF 
+					#}
+					ENDIF
+				#}
+				ENDIF
+			else
+				sv_a = "countData1|select count(1) from C_CPMASTER where parameter_level =?SVAR "
+				sv_a = sv_a + "and module_name = ?SVAR and entity_cre_flg ='Y' and NVL(DEL_FLG,'N') != 'Y'"
+				BANCS.INPARAM.BINDVARS =  STDWFS.GLBDATA.paramlev + "|" + STDWFS.GLBDATA.modname
+				IF (STDWFS.GLBDATA.paramId != "") THEN
+				#{
+					sv_a = sv_a + " and parameter_id = ?SVAR "
+					BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + STDWFS.GLBDATA.paramId
+				#}
+				ENDIF
+				sv_a = sv_a + " AND BANK_ID = ?SVAR"
+				print(sv_a)
+				BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" +  BANCS.STDIN.contextBankId
+				print(BANCS.INPARAM.BINDVARS)
+
+				sv_z = urhk_dbSelectWithBind(sv_a)
+
+				sv_c = BANCS.OUTPARAM.countData1
+				if (sv_c !=0) then 
+					STDWFS.GLBDATA.messageField =   "STATUS|F|"
+				else
+					#STDWFS.GLBDATA.messageField =   "Record Not Found"
+					STDWFS.GLBDATA.messageField =   CREAM.MESG.M0893
+					STDWFS.GLBDATA.successFailure = "F"
+				ENDIF
+			ENDIF
+	
+		#}
+		ENDIF
+	
+	#ENDIF
+#}
+ENDIF
+
+
+
+EndOfScript:
+sv_z = STDWFS.GLBDATA.messageField
+if (STDWFS.GLBDATA.successFailure ==  "F") THEN
+#{
+	sv_z = urhk_SetOrbOut("Error_0|ERROR^" +STDWFS.GLBDATA.messageField + "^dummy")
+	sv_u = urhk_SetOrbOut("SuccessOrFailure|N")
+#}
+endif
+EXITSCRIPT
+end-->

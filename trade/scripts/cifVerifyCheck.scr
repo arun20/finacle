@@ -1,0 +1,35 @@
+<--START
+TRACE ON
+	LIBNAME CUSTOMSO
+	IF (REPEXISTS("CUST") == 0) THEN
+	#{
+		CREATEREP("CUST")
+	#}
+	ENDIF
+	IF (CLASSEXISTS("CUST", "LHB") == 0) THEN
+	#{
+		CREATECLASS("CUST", "LHB", 5)
+	#}
+	ENDIF
+	CUST.LHB.verified = "N"
+	#fetch cif id
+	CUST.LHB.cifId =   BANCS.INPUT.cifId
+	PRINT(CUST.LHB.cifId)
+	
+	#Fetch health code of customer
+	BANCS.INPARAM.BINDVARS = CUST.LHB.cifId
+	print(BANCS.INPARAM.BINDVARS)
+
+	sv_s = "verified|SELECT ENTITY_CRE_FLAG FROM CRMUSER.ACCOUNTS WHERE ORGKEY =?SVAR"
+	print(sv_s)	
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	print(sv_d)
+	IF(sv_d == 0) THEN
+	#{
+		CUST.LHB.verified = BANCS.OUTPARAM.verified
+		print(CUST.LHB.verified)
+	#}
+	ENDIF
+	sv_u = urhk_SetOrbOut("verified|" + CUST.LHB.verified)
+TRACE OFF
+END-->

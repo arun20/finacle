@@ -1,0 +1,26 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: Script Name Based
+# Script: uploadAutoVerifyEnabled.sscr
+# Type: uploadAutoVerifyEnabled|NA
+# Description: Not Available
+#============================================================
+
+#============================================================
+# product: Finacle Core
+# script: uploadAutoVerifyEnabled.sscr
+# description: Enable autoverify for rate upload batch in HMNTRTL
+#              Set enableAutoVerify as Y - if autoverification is
+#                                           needed during upload
+#              Set enableAutoVerify as N - if autoverification is
+#                                       not needed during upload
+#============================================================
+
+<--START
+trace on
+	BANCS.OUTPUT.enableAutoVerify = "Y"
+	print(BANCS.OUTPUT.enableAutoVerify)
+trace off
+exitscript
+END-->

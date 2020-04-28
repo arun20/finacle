@@ -1,0 +1,31 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: meobLimitCustFld.scr
+# Type: NA|default
+# Description: Custom field addition for MEOB Limit tab
+# Author: bethanasamy.r
+# Date: 7/20/18 7:34 AM
+# Modification Log:
+#============================================================
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT meobLimitCustFld
+<--START
+CHECKSUM="68cc2a6bdc57f8d9b5e45c3089cbd5e5897e9ed7619906321a23d5da9ea9ce7e"
+	# Script body goes here
+	TRACE ON
+	# Script body goes here
+	BANCS.STDIN.menuId = "MEOB"
+	IF(FIELDEXISTS(BANCS.STDIN.menuId)) THEN
+	#{
+		IF(BANCS.STDIN.menuId == "MEOB" ) THEN
+		#{
+			sub_meobLimitCustFlds()
+		#}
+		ENDIF
+	#}
+	ENDIF
+	
+END-->

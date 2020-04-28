@@ -1,0 +1,280 @@
+#############################################################################################################
+#    Name                   : AMLResponse.scr
+#    Date                   : 20-06-2018
+#    Description            : Creating request file and checking responce file
+#    Author                 : Chaitanya Yandrapu
+#    Called Script          : none
+#    Calling Script         : none
+#    Modification History   :
+#    SNo         Date                   Author Name               Description
+#    1           20-06-2018             Chaitanya Yandrapu      Creating request file and checking responce file
+###############################################################################################################
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+	TRACE ON
+	LIBNAME CUSTOMSO
+	#------------------------------------------
+	# Creating the repositories
+	#------------------------------------------
+	IF (REPEXISTS("CUST") == 0 ) THEN
+	#{
+		CREATEREP("CUST")
+	#}
+	ENDIF
+	IF (CLASSEXISTS("CUST","LHB") == 0) THEN
+	#{
+		CREATECLASS("CUST","LHB",5)
+	#}
+	ENDIF
+	#-------------------------------------
+	# Creating a File
+	#-------------------------------------
+	#--------------------------------------------------------------------------------
+	# Fetching CPARAM value for AML Batch Path
+	#--------------------------------------------------------------------------------
+	sv_s = func_getCPARAMValueB("AML_BATCH_PATH", "INTF" , BANCS.STDIN.contextBankId , BYREF CUST.LHB.AMLBatchPath)
+	IF(sv_s == 0) THEN
+	#{
+		PRINT(CUST.LHB.AMLBatchPath)
+	#}
+	ELSE
+	#{
+		PRINT("CPARAM not configured for AML Batch Path")
+		CUST.LHB.AMLBatchPath = "$TBA_PROD_ROOT/CDCI_LOGS"
+	#}
+	ENDIF
+	CUST.LHB.AMLBatchPath = CUST.LHB.AMLBatchPath + "AMLRS/"
+        PRINT(CUST.LHB.AMLBatchPath)
+	
+	sv_h = strlen(CUST.LHB.AMLBatchPath)
+	print(sv_h)
+
+	#===========================================================================
+    	# Fetching BOD date in YYYYMMDD format.
+    	#===========================================================================
+	sv_q = "sysDate|SELECT TO_CHAR(SYSDATE,'DD-MM-YYYY HH24:MI:SS') FROM DUAL"
+	sv_d = urhk_dbSelectWithBind(sv_q)
+	CUST.LHB.sysDate = BANCS.OUTPARAM.sysDate
+    	CUST.LHB.sysDate = MID$(CUST.LHB.sysDate,6,4) + MID$(CUST.LHB.sysDate,3,2) + LEFT$(CUST.LHB.sysDate,2) + MID$(CUST.LHB.sysDate,11,2) + MID$(CUST.LHB.sysDate,14,2)
+	print(CUST.LHB.sysDate)
+	lv_a = urhk_B2k_PID("")
+	CUST.LHB.pid  = BANCS.OUTPARAM.PID
+	print(CUST.LHB.pid)
+	CUST.LHB.inputFile = "inputFile_" + CUST.LHB.sysDate + ".txt"
+	CUST.LHB.failLog = "failure_" + CUST.LHB.sysDate + ".log"
+
+	#-------------------------------------
+	# Copy from SFTP Server to Finacle
+	#-------------------------------------
+
+	sv_u = urhk_getFileLocation("COM|sftp_tf_getaml.com")
+	print(sv_u)
+	IF(sv_u == 0) THEN
+	#{
+        	sv_m = BANCS.OUTPARAM.fileLocation
+        	print(sv_m)
+        	sv_a = sv_m + "sftp_tf_getaml.com"
+        	print(sv_a)
+        	sv_v = system(sv_a)
+        	print(sv_v)
+		IF(sv_v != 0)THEN
+		#{
+			CUST.LHB.errMsg = "SFTP Connection Failed"
+                	sv_s = "echo " + CUST.LHB.errMsg + " >> " + CUST.LHB.AMLBatchPath + CUST.LHB.failLog
+                	print(sv_s)
+                	sv_t = system(sv_s)
+                	print(sv_t)
+                	GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+		sv_a = "mv /FCPROD/BE/Finacle/FC/app/CDCI_LOGS/AMLRS/AMLRS_TEMP/*.csv /FCPROD/BE/Finacle/FC/app/CDCI_LOGS/AMLRS/"
+		print(sv_a)
+		sv_v = system(sv_a)
+		print(sv_v)
+	#}
+	ENDIF
+	
+	sv_r = "ls " + CUST.LHB.AMLBatchPath + "TF*Res.csv" + " > " + CUST.LHB.inputFile
+	PRINT(sv_r)
+	sv_s = system(sv_r)
+	PRINT(sv_s)
+		
+	IF (sv_s != 0) THEN
+	#{
+		CUST.LHB.errMsg = "Response file not found"
+		sv_s = "echo " + CUST.LHB.errMsg + " >> " + CUST.LHB.AMLBatchPath + CUST.LHB.failLog
+		print(sv_s)
+		sv_t = system(sv_s)
+		print(sv_t)	
+		GOTO ENDOFSCRIPT
+	#}
+	ELSE
+	#{
+		sv_t = urtn_fileOpen(CUST.LHB.inputFile + "|r")
+		PRINT(sv_t)
+		IF (sv_t < 0) THEN
+		#{
+			CUST.LHB.errMsg = "Unable to open MT7XX file"
+			sv_s = "echo " + CUST.LHB.errMsg + " >> " + CUST.LHB.AMLBatchPath + CUST.LHB.failLog
+			print(sv_s)
+			sv_t = system(sv_s)
+			print(sv_t)	
+			GOTO ENDOFSCRIPT
+		#}
+		ELSE
+		#{
+			CUST.LHB.readFileIndex = sv_t
+			CUST.LHB.fileListRecord = ""
+			sv_t = urtn_fileRead(CUST.LHB.readFileIndex + "|CUST.LHB.fileListRecord")
+			print(sv_t)
+			print(CUST.LHB.fileListRecord)
+	
+			WHILE (sv_t ==0)
+			#{	
+				sv_f = strlen(CUST.LHB.fileListRecord)
+				print(sv_f)
+				CUST.LHB.inputFileName = MID$(CUST.LHB.fileListRecord,sv_h,sv_f)
+				print(CUST.LHB.inputFileName)
+		
+				sv_m = getposition(CUST.LHB.inputFileName,".")
+				print(sv_m)
+				CUST.LHB.newInputFileName = MID$(CUST.LHB.inputFileName,0,sv_m-1)
+				print(CUST.LHB.newInputFileName)
+				CUST.LHB.newInputFileName = CUST.LHB.newInputFileName + ".txt"
+				print(CUST.LHB.newInputFileName)
+		
+				sv_a = urtn_fileAccess(CUST.LHB.fileListRecord)
+				print(sv_a)
+				IF(sv_a != 0) THEN
+				#{	
+					CUST.LHB.errMsg = "Unable to Access the file."
+					sv_s = "echo " + CUST.LHB.errMsg + " >> " + CUST.LHB.AMLBatchPath + CUST.LHB.failLog
+					print(sv_s)
+					sv_u = system(sv_s)
+					print(sv_u)	
+					GOTO NEXTFILE
+				#}
+				ENDIF
+		
+				sv_t = urtn_fileOpen(CUST.LHB.fileListRecord + "|r")
+				PRINT(sv_t)
+				IF (sv_t < 0) THEN
+				#{
+					CUST.LHB.errMsg = "Unable to open file."
+					sv_s = "echo " + CUST.LHB.errMsg + " >> " + CUST.LHB.AMLBatchPath + CUST.LHB.failLog
+					print(sv_s)
+					sv_u = system(sv_s)
+					print(sv_u)	
+					GOTO NEXTFILE
+				#}
+				ENDIF
+	
+				CUST.LHB.readIndex = sv_t
+				CUST.LHB.record = ""	
+				sv_v = urtn_fileRead(CUST.LHB.readIndex + "|CUST.LHB.record")
+				print(sv_v)
+				IF (sv_v != 0) THEN
+				#{	
+					CUST.LHB.errMsg = "No record found inside the input file."
+					sv_s = "echo " + CUST.LHB.errMsg + " >> " + CUST.LHB.AMLBatchPath + CUST.LHB.failLog
+					print(sv_s)
+					sv_u = system(sv_s)
+					print(sv_u)	
+					GOTO NEXTFILE
+				#}
+				ENDIF
+		
+				WHILE(sv_v == 0)
+				#{
+					CUST.LHB.fieldList = "uniqueId,result"
+					print(CUST.LHB.fieldList)
+					print(CUST.LHB.record)
+					WHILE(CUST.LHB.fieldList != "")
+					#{
+						sv_l = STRLEN(CUST.LHB.fieldList)
+						sv_p = GETPOSITION(CUST.LHB.fieldList, ",")
+						IF(sv_p == 0) THEN
+						#{
+							sv_d = CUST.LHB.fieldList
+							CUST.LHB.fieldList = ""
+						#}
+						ELSE
+						#{
+							sv_d = MID$(CUST.LHB.fieldList, 0, sv_p - 1)
+							print(sv_d)
+							CUST.LHB.fieldList = MID$(CUST.LHB.fieldList, sv_p, sv_l)
+						#}
+						ENDIF
+						("CUST").("LHB").(sv_d) = ""
+				
+						sv_r = STRLEN(CUST.LHB.record)
+						sv_g = GETPOSITION(CUST.LHB.record, "|")
+						IF(sv_g == 0) THEN
+						#{
+							sv_f = CUST.LHB.record
+							CUST.LHB.record = ""
+						#}
+						ELSE
+						#{
+							sv_f = MID$(CUST.LHB.record, 0, sv_g - 1)
+							print(sv_f)
+							CUST.LHB.record = MID$(CUST.LHB.record, sv_g, sv_r)
+						#}
+						ENDIF
+				
+						("CUST").("LHB").(sv_d) = sv_f
+						PRINT(("CUST").("LHB").(sv_d))
+					#}
+					DO
+					print(CUST.LHB.uniqueId)
+					print(CUST.LHB.result)
+					BANCS.INPARAM.BINDVARS = CUST.LHB.result + "|" + CUST.LHB.uniqueId
+					sv_a = "UPDATE CUSTOM.C_AUT SET RESULT = ?SVAR WHERE UNIQUE_ID = ?SVAR"
+                                        PRINT(sv_a)
+                                        sv_p = urhk_dbSQLWithBind(sv_a)
+                                        PRINT(sv_p)
+                                        IF(sv_p != 0)THEN
+                                        #{
+                                                CUST.LHB.errorFlg = "Y"
+                                                CUST.LHB.errorMsg = "INSERT INTO CUSTOM.C_AUT TABLE FAILED"
+                                                #GOTO ENDOFSCRIPT
+                                        #}
+                                        ENDIF
+					
+					NEXTREC:
+			
+					#CUST.LHB.newRecord = CUST.LHB.uniqueId + "," + CUST.LHB.result
+					#print(CUST.LHB.newRecord)
+					#sv_s = "echo " + CUST.LHB.newRecord + " >> " + CUST.LHB.AMLBatchPath + CUST.LHB.newInputFileName
+					#print(sv_s)
+					#sv_u = system(sv_s)
+					#print(sv_u)	
+		
+					sv_v = urtn_fileRead(CUST.LHB.readIndex + "|CUST.LHB.record")
+					print(sv_v)
+				#}
+				DO
+		
+				NEXTFILE:	
+				sv_a = urtn_fileClose(CUST.LHB.readIndex)
+				print(sv_a)
+				sv_r = "mv " + CUST.LHB.AMLBatchPath + CUST.LHB.inputFileName + " " + CUST.LHB.AMLBatchPath + CUST.LHB.inputFileName + "_" + CUST.LHB.sysDate + CUST.LHB.pid +".complete"
+				print(sv_r)
+				sv_t = SYSTEM(sv_r)
+				print(sv_t)
+		
+				sv_t = urtn_fileRead(CUST.LHB.readFileIndex + "|CUST.LHB.fileListRecord")
+				print(sv_t)
+				print(CUST.LHB.fileListRecord)	
+			#}
+			DO
+			sv_a = urtn_fileClose(CUST.LHB.readFileIndex)
+			print(sv_a)
+		#}
+		ENDIF
+	#}
+	ENDIF
+	ENDOFSCRIPT:
+	TRACE OFF
+END-->

@@ -1,0 +1,29 @@
+IMPORT LibCommonB001
+<--START
+TRACE ON
+	sub_createRepClassB("CUST","DATA")
+	### INPUT VARIABLES FROM MRT ###
+	sub_copyOptionalFieldB("dcRefNum","CUST","DATA","dcRefNum","")
+	PRINT(CUST.DATA.dcRefNum)
+	CUST.DATA.verifiedFlag = ""
+	sv_q = "verifiedFlag|"
+	sv_q = sv_q + "SELECT ENTITY_CRE_FLG FROM TBAADM.DCMM "
+	sv_q = sv_q + "WHERE DC_REF_NUM = ?SVAR AND ROWNUM=1"
+	PRINT(sv_q)
+        BANCS.INPARAM.BINDVARS = CUST.DATA.dcRefNum 
+        print(BANCS.INPARAM.BINDVARS)
+	sv_d=urhk_dbSelectWithBind(sv_q)
+	print(sv_d)
+	IF (sv_d == 0) THEN
+	#{
+		CUST.DATA.verifiedFlag = BANCS.OUTPARAM.verifiedFlag
+	#}
+	ENDIF
+	
+	### OUTPUT VARIABLES TO MRT ###
+	BANCS.OUTPUT.verifiedFlag = CUST.DATA.verifiedFlag
+	PRINT(BANCS.OUTPUT.verifiedFlag)
+
+	sub_deleteRepClassB("CUST","DATA")
+TRACE OFF
+END-->

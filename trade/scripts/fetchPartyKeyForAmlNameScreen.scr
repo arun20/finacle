@@ -1,0 +1,195 @@
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT customFields
+<--START
+        # Script body goes here
+        TRACE ON
+        sub_createRepClassB("CUST","DATA")
+
+        #sv_a = urhk_b2k_printRepos("BANCS")
+	sv_a = func_getCallingMenuOptionB("CMMSG00004",BYREF CUST.DATA.menuId)
+        PRINT(CUST.DATA.menuId)
+	sub_copyOptionalFieldB("errorFlg","CUST","DATA","errorFlg","N")
+        sub_copyOptionalFieldB("errorMsg","CUST","DATA","errorMsg","")
+	CUST.DATA.benefNAme = ""
+	BANCS.INPUT.partyKey = ""
+	### 3.GET KEY FIELD VALUES FROM SRV - MENU SPECIFIC ###
+        IF(CUST.DATA.menuId == "OGM")THEN
+        #{
+                CUST.DATA.srvFieldNames = "bgCritDtl.bgFuncCode|bgCritDtl.bgApplCifId.cifId|bgGeneralDtl.bgApplPartyDtl.applParty.partyNameAddr.name"
+		CUST.DATA.srvFieldNames = CUST.DATA.srvFieldNames + "|" + "bgPartyDtl.bgBenePartyDtl.beneParty.partyNameAddr.name"
+        #}
+        ENDIF
+        IF(CUST.DATA.menuId == "ODCM")THEN
+        #{
+                CUST.DATA.srvFieldNames = "dcOutCritDtl.dcFuncCode|dcOutCritDtl.dcPartyCode.cifId|dcOutGenDtl.dcApplParty.applParty.partyNameAddr.name"
+                CUST.DATA.srvFieldNames = CUST.DATA.srvFieldNames + "|" + "dcPartyDtl.dcBenefParty.beneParty.partyNameAddr.name"
+        #}
+        ENDIF
+        IF(CUST.DATA.menuId == "IGM")THEN
+        #{
+                CUST.DATA.srvFieldNames = "bgInMsg.bgCritDtl.bgFuncCode|bgInMsg.bgCritDtl.bgApplCifId.cifId|bgInMsg.bgGeneralDtl.bgApplPartyDtl.applParty.partyNameAddr.name"
+                CUST.DATA.srvFieldNames = CUST.DATA.srvFieldNames + "|" + "bgInMsg.bgPartyDtl.bgBenePartyDtl.beneParty.partyNameAddr.name"
+        #}
+        ENDIF
+        IF(CUST.DATA.menuId == "IDCM")THEN
+        #{
+                CUST.DATA.srvFieldNames = "dcInMsgDtl.dcOutCritDtl.dcFuncCode|dcInMsgDtl.dcOutCritDtl.dcPartyCode.cifId|dcInMsgDtl.dcOutGenDtl.dcApplParty.applParty.partyNameAddr.name"
+                CUST.DATA.srvFieldNames = CUST.DATA.srvFieldNames + "|" + "dcInMsgDtl.dcPartyDtl.dcBenefParty.beneParty.partyNameAddr.name"
+        #}
+        ENDIF
+		IF(CUST.DATA.menuId == "HIRM")THEN
+        #{
+                CUST.DATA.srvFieldNames = "remCritDtls.funcCode|remCritDtls.cifId.cifId|remGenDtls.custAddrDtls.name|remPartyDtls.benAddrDtls.name"
+        #}
+        ENDIF
+		IF(CUST.DATA.menuId == "HORM")THEN
+        #{
+                CUST.DATA.srvFieldNames = "remCritDtls.funcCode|remCritDtls.cifId.cifId|remGenDtls.custAddrDtls.name|remPartyDtls.benAddrDtls.name"
+        #}
+        ENDIF
+	IF(CUST.DATA.menuId == "MIIB")THEN
+        #{
+                CUST.DATA.srvFieldNames = "billCritDtls.funcCode|billCritDtls.cifId.cifId|impBillGenDtls.billGenDtls.billDrawerDtl.partyName"
+		#CUST.DATA.srvFieldNames = CUST.DATA.srvFieldNames + "|" + "billPartyDtls.billDrwDtl.swiftPartyNameAddr.name"
+		CUST.DATA.srvFieldNames = CUST.DATA.srvFieldNames + "|" + "billPartyDtls.billDrwDtl.partyName"
+	#}
+	ENDIF
+	IF(CUST.DATA.menuId == "MEOB")THEN
+        #{
+                #CUST.DATA.srvFieldNames = "billCritDtls.funcCode|billCritDtls.cifId.cifId|billGenDtls.billDrawerDtl.partyName"
+		#CUST.DATA.srvFieldNames = CUST.DATA.srvFieldNames + "|" + "billPartyDtls.billDrwDtl.partyName"
+		CUST.DATA.srvFieldNames = "billCritDtls.funcCode|billCritDtls.cifId.cifId|billPartyDtls.billDrwDtl.partyName"
+		CUST.DATA.srvFieldNames = CUST.DATA.srvFieldNames + "|" + "billGenDtls.billDrawerDtl.partyName"
+	#}
+        ENDIF
+	IF((CUST.DATA.menuId == "OGM") OR (CUST.DATA.menuId == "ODCM") OR (CUST.DATA.menuId == "IGM") OR (CUST.DATA.menuId == "IDCM") OR (CUST.DATA.menuId == "HIRM") OR (CUST.DATA.menuId == "HORM") OR (CUST.DATA.menuId == "MIIB") OR (CUST.DATA.menuId == "MEOB"))THEN
+	#{
+		CUST.DATA.srvFieldValues = "funcCode|cifid|Name|benefNAme"
+		sub_getFieldValuesfromSRVStructB("4","CUST","DATA",CUST.DATA.srvFieldNames,CUST.DATA.srvFieldValues)
+		PRINT(CUST.DATA.funcCode)
+		PRINT(CUST.DATA.cifid)
+		PRINT(CUST.DATA.Name)
+		PRINT(CUST.DATA.benefNAme)
+		BANCS.INPUT.partyKey = CUST.DATA.Name
+		CUST.DATA.type = "APPL"
+		IF(BANCS.INPUT.partyKey != "") THEN
+		#{
+			CALLSCRIPTIFEXIST("AMLNameScreenMessage.scr")
+		#}
+		ENDIF
+	#}
+	ENDIF
+	IF((CUST.DATA.menuId == "OAACPS") OR (CUST.DATA.menuId == "OAACMPS")) THEN
+	#{
+                sv_u = urhk_SRV_GetVal("acctCommonInfo.acctClassMISC.freeText1")
+                IF(sv_u == 0) THEN
+                #{
+                        CUST.DATA.Name = BANCS.OUTPARAM.srvValue
+			BANCS.INPUT.partyKey = CUST.DATA.Name
+			CUST.DATA.type = "APPL"
+			IF(BANCS.INPUT.partyKey != "") THEN
+			#{
+				CALLSCRIPTIFEXIST("AMLNameScreenMessage.scr")
+			#}
+			ENDIF
+		#}
+                ENDIF
+	#}
+	ENDIF
+	IF((CUST.DATA.menuId == "HOAACOD") OR (CUST.DATA.menuId == "HOAACMOD")) THEN
+        #{
+                sv_u = urhk_SRV_GetVal("acctCommonInfo.acctClassMISC.freeText1")
+                IF(sv_u == 0) THEN
+                #{
+                        CUST.DATA.benefNAme = BANCS.OUTPARAM.srvValue
+                        PRINT(CUST.DATA.benefNAme)
+                #}
+                ENDIF
+		IF(TRIM(CUST.DATA.benefNAme) == "") then
+		#{
+			BANCS.OUTPUT.successOrFailure = "F"
+                        sv_a = urhk_B2k_PutUserException("BNM")
+                        print(sv_a)
+		#}
+		ENDIF
+        #}
+        ENDIF
+	IF(CUST.DATA.benefNAme != "") THEN
+	#{
+		BANCS.INPUT.partyKey = CUST.DATA.benefNAme
+		CUST.DATA.type = "BENF"
+		CALLSCRIPTIFEXIST("AMLNameScreenMessage.scr")
+	#}
+	ENDIF
+	IF(BANCS.INPUT.partyKey != "") THEN
+        #{
+		IF(CUST.DATA.menuId == "ODCM")THEN
+		#{
+			sv_a = urhk_SRV_SetVal("dcAddlnDtl.dcFreeTxt1|"+INTF.DATA.AMLRes)
+			PRINT(sv_a)
+		#}
+		ENDIF
+		IF(CUST.DATA.menuId == "IDCM") THEN
+                #{
+                        sv_a = urhk_SRV_SetVal("dcInMsgDtl.dcAddlnDtl.dcFreeTxt1|"+INTF.DATA.AMLRes)
+                        PRINT(sv_a)
+                #}
+                ENDIF
+		IF((CUST.DATA.menuId == "HIRM") OR (CUST.DATA.menuId == "HORM")) THEN
+                #{
+                        sv_a = urhk_SRV_SetVal("remGenDtls.encashCertDtls|"+INTF.DATA.AMLRes)
+                        PRINT(sv_a)
+                #}
+                ENDIF
+		IF(CUST.DATA.menuId == "IGM") THEN
+                #{
+                        sv_a = urhk_SRV_SetVal("bgInMsg.bgGuaranteeDtl.bgRemarks|"+INTF.DATA.AMLRes)
+                        PRINT(sv_a)
+                #}
+                ENDIF
+		IF(CUST.DATA.menuId == "OGM") THEN
+                #{
+                        sv_a = urhk_SRV_SetVal("bgGuaranteeDtl.bgRemarks|"+INTF.DATA.AMLRes)
+                        PRINT(sv_a)
+                #}
+                ENDIF
+		IF(CUST.DATA.menuId == "MEOB") THEN
+                #{
+                        sv_a = urhk_SRV_SetVal("exportBillDtls.expShpmtDtls.shpmtrmks|"+INTF.DATA.AMLRes)
+                        PRINT(sv_a)
+                #}
+                ENDIF
+		IF(CUST.DATA.menuId == "MIIB") THEN
+		#{
+			sv_a = urhk_SRV_SetVal("importBillDtls.exportBillDtls.expShpmtDtls.shpmtrmks|"+INTF.DATA.AMLRes)
+			PRINT(sv_a)
+		#}
+		ENDIF
+		IF((CUST.DATA.menuId == "HOAACOD") OR (CUST.DATA.menuId == "HOAACMOD")) THEN
+		#{
+			sv_a = urhk_SRV_SetVal("acctCommonInfo.acctClassMISC.freeText15|"+INTF.DATA.AMLRes)
+                        PRINT(sv_a)
+                #}
+                ENDIF
+		IF((CUST.DATA.menuId == "OAACPS") OR (CUST.DATA.menuId == "OAACMPS")) THEN
+		#{
+                        sv_a = urhk_SRV_SetVal("acctCommonInfo.acctClassMISC.freeText15|"+INTF.DATA.AMLRes)
+                        PRINT(sv_a)
+                #}
+                ENDIF
+        #}
+        ENDIF
+
+ENDOFSCRIPT :
+IF(CUST.DATA.errorFlg == "Y")THEN
+#{
+        PRINT(CUST.DATA.errorMsg)
+        sv_a = urhk_SRV_SetErr(CUST.DATA.errorMsg)
+        sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+        BANCS.OUTPUT.successOrFailure = "F"
+#}
+ENDIF
+sub_deleteRepClassB("CUST","DATA")
+
+END-->

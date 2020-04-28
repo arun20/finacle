@@ -1,0 +1,59 @@
+IMPORT LibCommonB001
+<--START
+TRACE ON
+	sub_createRepClassB("CUST","DATA")
+	### INPUT VARIABLES FROM MRT ###
+	sub_copyOptionalFieldB("corr_coll_bank_code","CUST","DATA","corr_coll_bank_code","")
+	PRINT(CUST.DATA.corr_coll_bank_code)
+	sub_copyOptionalFieldB("corr_coll_br_code","CUST","DATA","corr_coll_br_code","")
+	PRINT(CUST.DATA.corr_coll_br_code)
+	sub_copyOptionalFieldB("bill_crncy_code","CUST","DATA","bill_crncy_code","")
+	PRINT(CUST.DATA.bill_crncy_code)
+	CUST.DATA.corrCollBrName = ""
+	CUST.DATA.corrCollBrBIC = ""
+	CUST.DATA.nostroAccount = ""
+	sv_q = "corrCollBrName,corrCollBrBIC|"
+	sv_q = sv_q + "SELECT BR_NAME,BANK_IDENTIFIER FROM TBAADM.BCT C,TBAADM.BRBIC R "
+	sv_q = sv_q + "WHERE R.BRANCH_CODE = C.BR_CODE AND R.BANK_CODE = C.BANK_CODE AND BR_CODE = ?SVAR AND C.BANK_CODE = ?SVAR AND ROWNUM=1"
+	PRINT(sv_q)
+        BANCS.INPARAM.BINDVARS = CUST.DATA.corr_coll_br_code + "|" + CUST.DATA.corr_coll_bank_code
+        print(BANCS.INPARAM.BINDVARS)
+	sv_d=urhk_dbSelectWithBind(sv_q)
+	print(sv_d)
+	IF (sv_d == 0) THEN
+	#{
+		CUST.DATA.corrCollBrName = BANCS.OUTPARAM.corrCollBrName
+		CUST.DATA.corrCollBrBIC = BANCS.OUTPARAM.corrCollBrBIC
+	#}
+	ENDIF
+	
+	sv_q = "nostroAccount,nostroAccountName|"
+	sv_q = sv_q + "SELECT NOSTRO_ACCT, NOSTRO_ACCT_NAME FROM TBAADM.NAMT "
+	sv_q = sv_q + "WHERE  BR_CODE = ?SVAR AND BANK_CODE = ?SVAR AND CRNCY_CODE = ?SVAR AND ROWNUM=1"
+	PRINT(sv_q)
+        BANCS.INPARAM.BINDVARS = CUST.DATA.corr_coll_br_code + "|" + CUST.DATA.corr_coll_bank_code + "|" + CUST.DATA.bill_crncy_code
+        print(BANCS.INPARAM.BINDVARS)
+	sv_d=urhk_dbSelectWithBind(sv_q)
+	print(sv_d)
+	IF (sv_d == 0) THEN
+	#{
+		CUST.DATA.nostroAccount = BANCS.OUTPARAM.nostroAccount
+		IF((TRIM(BANCS.OUTPARAM.nostroAccountName) != "") AND (TRIM(BANCS.OUTPARAM.nostroAccountName) != "NULL")) THEN
+		#{
+			CUST.DATA.corrCollBrName = BANCS.OUTPARAM.nostroAccountName
+		#}
+		ENDIF
+	#}
+	ENDIF
+	
+	### OUTPUT VARIABLES TO MRT ###
+	BANCS.OUTPUT.corrCollBrName = CUST.DATA.corrCollBrName
+	BANCS.OUTPUT.corrCollBrBIC = CUST.DATA.corrCollBrBIC
+	BANCS.OUTPUT.nostroAccount = CUST.DATA.nostroAccount
+	PRINT(BANCS.OUTPUT.corrCollBrName)
+	PRINT(BANCS.OUTPUT.corrCollBrBIC)
+	PRINT(BANCS.OUTPUT.nostroAccount)
+
+	sub_deleteRepClassB("CUST","DATA")
+TRACE OFF
+END-->

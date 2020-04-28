@@ -1,0 +1,146 @@
+######################################################################################W#########
+#    Name				: orm_commonFnExeScript.scr
+#    Start Date			: 
+#    Description			: To Check Part Details Tab Exists Or Not
+#    Input				:
+#    Output				:
+#    Author				: Surya Sneha Pulavarthy
+#    Called Script			: 
+#    Calling Script			: 
+#    Reference			:
+#    Modification History:
+#    <Serial No.>		<Date>			<Author Name>                 <Description>
+#	001			31-05-2018		SuryaSneha.P			 InitialDraft
+################################################################################################
+
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+TRACE ON
+#Creation Of Class and Rep
+sub_createRepClassB("HIRM","CUSTOM")
+
+#Checking for label name
+
+HIRM.CUSTOM.labelName	= BANCS.INPUT.labelName
+IF (HIRM.CUSTOM.labelName == "VALIDATE_PARTY_TAB") THEN
+#{
+	GOTO VALIDATE_PARTY_TAB
+#}
+ENDIF
+
+
+IF (HIRM.CUSTOM.labelName == "VALIDATE_LRCDM_CODE") THEN
+#{
+	GOTO VALIDATE_LRCDM_CODE
+#}
+ENDIF
+
+VALIDATE_PARTY_TAB:
+IF (HIRM.CUSTOM.labelName == "VALIDATE_PARTY_TAB") THEN
+#{
+	HIRM.CUSTOM.remType = BANCS.INPUT.remType
+
+	#Checking if the acct Number is of ODA Type
+	sv_s = "count|"
+	sv_s = sv_s + " SELECT COUNT(*)" 
+	sv_s = sv_s + " FROM TBAADM.CPM"
+	sv_s = sv_s + " WHERE DEL_FLG = 'N' "
+	sv_s = sv_s + " AND COLL_CODE = '" + HIRM.CUSTOM.remType + "'"
+	sv_s = sv_s + " AND BANK_ID = ?SVAR "
+	sv_s = sv_s + " AND ENTITY_CRE_FLG = 'Y'"
+	sv_s = sv_s + " AND COLL_TYPE IN ( 'T','M')"
+	
+	print(sv_s)
+	BANCS.INPARAM.BINDVARS = BANCS.STDIN.contextBankId
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	print(sv_d)
+	
+	#If success
+	IF(sv_d == 0) THEN
+	#{
+		sub_copyOutparamFieldB("count","HIRM","CUSTOM","count"," ")
+		#If count is 0 then display not a valid code
+		IF(CINT(HIRM.CUSTOM.count) == "0" )THEN
+		#{
+			HIRM.CUSTOM.retValues = "F"
+			GOTO RETURN_OUTPUT
+		#}
+		ELSE
+		#{
+			HIRM.CUSTOM.retValues	= "S"
+			GOTO RETURN_OUTPUT
+		#}
+		ENDIF
+		
+	#}
+	ELSE
+	#{
+		HIRM.CUSTOM.retValues = "F"
+		GOTO RETURN_OUTPUT
+	#}
+	ENDIF
+#}
+ENDIF
+
+VALIDATE_LRCDM_CODE:
+IF (HIRM.CUSTOM.labelName == "VALIDATE_LRCDM_CODE") THEN
+#{
+	HIRM.CUSTOM.schmRefType = BANCS.INPUT.schmRefType 
+	HIRM.CUSTOM.valueCode = BANCS.INPUT.valueCode
+	HIRM.CUSTOM.refRecType = BANCS.INPUT.lrcdmCode
+
+	#Checking if any data exists with the given input values in LRCT table
+	sv_s = "count|"
+	sv_s = sv_s + " SELECT COUNT(*)" 
+	sv_s = sv_s + " FROM TBAADM.LRCT"
+	sv_s = sv_s + " WHERE SCHM_REF_TYPE = '" + HIRM.CUSTOM.schmRefType + "'"
+	sv_s = sv_s + " AND REF_REC_TYPE = '" + HIRM.CUSTOM.refRecType + "'"
+	sv_s = sv_s + " AND REF_CODE = '" + HIRM.CUSTOM.valueCode + "'"
+	sv_s = sv_s + " AND BANK_ID = ?SVAR "
+	sv_s = sv_s + " AND DEL_FLG = 'N'"
+	
+	print(sv_s)
+	BANCS.INPARAM.BINDVARS = BANCS.STDIN.contextBankId
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	print(sv_d)
+	
+	#If success
+	IF(sv_d == 0) THEN
+	#{
+		sub_copyOutparamFieldB("count","HIRM","CUSTOM","count"," ")
+		#If count is 0 then display not a valid code
+		IF(CINT(HIRM.CUSTOM.count) == "0" )THEN
+		#{
+			HIRM.CUSTOM.retValues = "F"
+			GOTO RETURN_OUTPUT
+		#}
+		ELSE
+		#{
+			HIRM.CUSTOM.retValues	= "S"
+			GOTO RETURN_OUTPUT
+		#}
+		ENDIF
+		
+	#}
+	ELSE
+	#{
+		HIRM.CUSTOM.retValues = "F"
+		GOTO RETURN_OUTPUT
+	#}
+	ENDIF
+#}
+ENDIF
+
+
+
+RETURN_OUTPUT:
+	sv_u = urhk_SetOrbOut("ReturnValues|" + HIRM.CUSTOM.retValues)
+	GOTO ENDOFSCRIPT
+	
+ENDOFSCRIPT:	
+EXITSCRIPT
+ 
+TRACE OFF
+										
+END-->

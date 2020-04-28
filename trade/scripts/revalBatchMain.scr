@@ -1,0 +1,141 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: revalBatchMain.scr
+# Type: NA|default
+# Description: revalBatchMain.scr
+# Author: Vaishali_M
+# Date: 10/28/17 11:30 AM
+# Modification Log:
+#============================================================
+
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT LibMTTB001
+IMPORT LibDateB001
+
+<--START
+	# Script body goes here
+	TRACE ON
+	LIBNAME CUSTOMSO
+	
+	sub_createRepClassB ("CUST","DATA")
+	
+	###################################################################################
+	# INITIALIZE VARIABLES
+	###################################################################################
+	CUST.DATA.successCount ="0"
+	CUST.DATA.successCount2 = "0"
+	CUST.DATA.failureCount ="0"
+	CUST.DATA.errCode = ""
+	CUST.DATA.errMsg = ""
+
+	CUST.DATA.bodDate = ""
+	CUST.DATA.bodDate = LEFT$(BANCS.STDIN.BODDate,10)
+	PRINT (CUST.DATA.bodDate)	
+
+	CUST.DATA.homeCrncy = BANCS.STDIN.homeCrncyCode
+	
+	#-----------------------------------------------------------------------------------------
+	# Fetching HO SOL_ID
+	#-----------------------------------------------------------------------------------------
+
+	sv_r = func_getCPARAMValueB("REVAL_SOL", "LOANS",BANCS.STDIN.contextBankId ,BYREF CUST.DATA.revalSol)
+	PRINT(CUST.DATA.revalSol)
+	
+	#-----------------------------------------------------------------------------------------
+	# Fetching timestamp
+	#-----------------------------------------------------------------------------------------
+	
+	sv_d = "today|SELECT TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS') FROM DUAL"
+	PRINT(sv_d)
+	sv_p = urhk_dbSelectWithBind(sv_d)
+	PRINT(sv_p)
+	CUST.DATA.timeStamp = BANCS.OUTPARAM.today
+	PRINT(CUST.DATA.timeStamp)
+	
+	#-----------------------------------------------------------------------------------------
+	# INITIALIZE REPORT VARIABLES
+	#-----------------------------------------------------------------------------------------
+	
+	CUST.DATA.succLst1 = "SuccessReportForRevaluation1" + CUST.DATA.timeStamp + ".lst"
+	CUST.DATA.succLst2 = "SuccessReportForRevaluation2" + CUST.DATA.timeStamp + ".lst"
+	CUST.DATA.failLst = "FailureReportForRevaluation" + CUST.DATA.timeStamp + ".lst"
+	CUST.DATA.succJasperName1 = "Revalreport1.jasper"
+	CUST.DATA.succJasperName2 = "Revalreport2.jasper"
+	CUST.DATA.failJasperName = "RevalFailurereport.jasper"
+	CUST.DATA.succReportName1 = "SuccessReportForRevaluation1"
+	CUST.DATA.succReportName2 = "SuccessReportForRevaluation2"
+	CUST.DATA.failReportName = "FailureReportForRevaluation"
+	
+	#############################################################################
+	# INITIALIZE selection CURSOR VARS
+	#############################################################################
+	
+	CUST.DATA.outParam = "tradCrncy1,tradCrncy2,tradeAcct,revalRateCode,revalAcct,revalPAndLAcct"
+	CUST.DATA.query = "SELECT TRAD_CRNCY_CODE_1,TRAD_CRNCY_CODE_2,TRADING_ACCOUNT,REVAL_RATE_CODE,REVAL_ACCOUNT,REVAL_PL_ACCOUNT FROM TBAADM.CYC"
+	CUST.DATA.query = CUST.DATA.query + " WHERE BANK_ID= ?SVAR AND TRAD_CRNCY_CODE_2 = ?SVAR AND ENTITY_CRE_FLG = 'Y'"
+
+	BANCS.INPARAM.BINDVARS = BANCS.STDIN.contextBankId + "|" + CUST.DATA.homeCrncy
+	sv_s = CUST.DATA.outParam + "|" + CUST.DATA.query
+	sv_u = urhk_dbCursorOpenWithBind(sv_s)
+	print(sv_u)
+	
+	IF (sv_u != 0) THEN
+	#{
+		CUST.DATA.usrMsg  = "Database Error. Please contact Administrator.Ref:[Cursor Error]"
+		PRINT(CUST.DATA.usrMsg)
+		GOTO ENDSCRIPT
+	#}
+	ENDIF
+	
+	CUST.DATA.dbcurNum2 = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+	PRINT(CUST.DATA.dbcurNum2)
+	CUST.DATA.dbcursor2 = urhk_dbCursorFetch(CUST.DATA.dbcurNum2)
+	
+	IF(CUST.DATA.dbcursor2 != 0)THEN
+	#{
+		sv_c = urhk_dbCursorClose(CUST.DATA.dbcurNum2)
+		GOTO ENDSCRIPT
+	#}
+	ENDIF
+
+	WHILE(CUST.DATA.dbcursor2  == 0)
+	#{
+		CALLSCRIPTIFEXIST("revalBatch.scr")		
+		CUST.DATA.dbcursor2 = urhk_dbCursorFetch(CUST.DATA.dbcurNum2)
+	#}
+	DO
+	sv_c = urhk_dbCursorClose(CUST.DATA.dbcurNum2)
+	#---------------------------------------------------------------------------------
+	# Cursor Closed
+	#---------------------------------------------------------------------------------
+	
+	ENDSCRIPT:
+		
+		IF(CINT(CUST.DATA.successCount) == 0)THEN
+		#{
+			CUST.DATA.outRecord1 = "0" 
+			sv_r = func_addDataToFileB(CUST.DATA.succLst1,CUST.DATA.outRecord1)
+			PRINT (sv_r)
+			sv_r = func_addDataToFileB(CUST.DATA.succLst2,CUST.DATA.outRecord1)
+			PRINT (sv_r)
+		#}
+		ENDIF
+		
+		IF(CINT(CUST.DATA.failureCount) == 0)THEN
+		#{
+			CUST.DATA.outRecord1 = "0" 
+			sv_r = func_addDataToFileB(CUST.DATA.failLst,CUST.DATA.outRecord1)
+			PRINT (sv_r)
+		#}
+		ENDIF
+		
+		sub_genReportAndPushToHPRB(CUST.DATA.succJasperName1,CUST.DATA.succLst1, CUST.DATA.succReportName1 ,"RevaluationSuccessReport1" ,"PDF")
+		sub_genReportAndPushToHPRB(CUST.DATA.succJasperName2,CUST.DATA.succLst2, CUST.DATA.succReportName2 ,"RevaluationSuccessReport2" ,"PDF")
+		sub_genReportAndPushToHPRB(CUST.DATA.failJasperName,CUST.DATA.failLst, CUST.DATA.failReportName ,"RevaluationFailureReport" ,"PDF")
+		sub_deleteRepClassB("CUST","DATA")
+		
+	TRACE OFF
+END-->

@@ -1,0 +1,193 @@
+###############################################################################################################
+# Name of the file      : LIB013_SBA_autoClosure_batch_mn001.scr
+# Start Date            : 
+# Description           : This script is used to close dormant savings accounts where account balance is 0.
+# Reference Document    :
+# Bank                  : LHB
+# Modification History:
+# <Serial No.>         <Date>         <Author Name>              <Description>
+#       0.1          10-05-2018	       Amandeep Kaur             Initial Draft
+###############################################################################################################
+
+IMPORT LibCommonB002
+IMPORT LibCommonB001
+IMPORT LibDateB001
+IMPORT SRVHCAAC
+
+<--START
+trace on
+
+LIBNAME CUSTOMSO
+sub_createRepClassB ("CUST", "BATCH")
+
+CUST.BATCH.BOD          = MID$(BANCS.STDIN.BODDate, 0, 10)
+CUST.BATCH.userId       = BANCS.STDIN.userId
+CUST.BATCH.mySOLid      = BANCS.STDIN.mySolId
+CUST.BATCH.bankId       = BANCS.STDIN.contextBankId
+CUST.BATCH.errorMessage = ""
+CUST.BATCH.dtFormat   = func_getSysDateTimeWithFormatB("YYMMDD")
+
+# file name format : SDP33001.YYMMDD
+
+CUST.BATCH.RptName =  "SBA_ACCT_CLOSURE."+ CUST.BATCH.dtFormat
+
+CUST.BATCH.lstFileName = "SBA_ACCT_CLOSURE.lst"
+
+# Empty lst file
+#----------------
+sv_w = system(">" + CUST.BATCH.lstFileName)
+
+sv_q  = urtn_fileOpen(CUST.BATCH.lstFileName + "|w")
+
+PRINT(sv_q)
+IF (sv_q < 0) THEN
+	#{
+		PRINT("lst file cannot be open")
+	#}
+ENDIF
+	
+CUST.BATCH.lstIndex = sv_q
+PRINT(CUST.BATCH.lstIndex)
+
+
+####################################################################################################
+# fetching account details for processing 
+####################################################################################################
+sv_s = "acid, foracid , solId|"
+sv_s = sv_s + "select g.acid , g.foracid , g.sol_id from tbaadm.gam g , tbaadm.smt s , tbaadm.eit  e "
+sv_s = sv_s + "where schm_type = ?SVAR  and entity_cre_flg = ?SVAR  and del_flg = ?SVAR  "
+sv_s = sv_s + "and acct_cls_flg = ?SVAR  and clr_bal_amt = 0 "
+sv_s = sv_s + "and g.acid = s.acid "
+sv_s = sv_s + "and g.bank_id = s.bank_id "
+sv_s = sv_s + "and g.bank_id = e.bank_id "
+sv_s = sv_s + "and g.bank_id = ?SVAR "
+sv_s = sv_s + "and acct_status = ?SVAR  and acct_status_date < to_date(?SVAR ,'dd-mm-yyyy') "
+sv_s = sv_s + "and e.entity_id = g.acid "
+sv_s = sv_s + "and nrml_booked_amount_cr = nrml_interest_amount_cr order by g.sol_id, g.foracid "
+
+print(sv_s)
+BANCS.INPARAM.BINDVARS = "SBA|Y|N|N|" +  CUST.BATCH.bankId + "|D|" + CUST.BATCH.BOD
+print(sv_s)
+print(BANCS.INPARAM.BINDVARS)
+sv_d = urhk_dbCursorOpenWithBind(sv_s)
+
+IF(sv_d != "0")THEN
+#{
+	CUST.BATCH.error = "Database errorr | Unable to select records"
+	GOTO END_OF_CURSOR
+
+#}
+ENDIF
+
+CUST.BATCH.MainCursor = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+sv_c = urhk_dbCursorFetch(CUST.BATCH.MainCursor)
+print(sv_c)
+
+if (sv_c != 0) then
+#{
+	print("Error in db query")
+	CUST.BATCH.error ="No Data Found"
+	GOTO END_OF_CURSOR
+#}
+ENDIF
+
+WHILE(sv_c == 0)
+#{
+	
+	CUST.BATCH.acid	= BANCS.OUTPARAM.acid
+	print(CUST.BATCH.acid)
+	CUST.BATCH.foracid	= BANCS.OUTPARAM.foracid
+	CUST.BATCH.solId = BANCS.OUTPARAM.solId
+	print(CUST.BATCH.solId)
+	CUST.BATCH.acntCount = 0
+	#######################################################################
+	# Calling function to close savings account
+	#######################################################################
+	
+	CUST.BATCH.xferBalFlg ="N"
+	CUST.BATCH.intCalcReqd = "N"
+	CUST.BATCH.tranType = ""	
+	CUST.BATCH.transferForacid = ""	
+	CUST.BATCH.xferAmt = ""	
+	CUST.BATCH.cashCrncyCode = ""	
+	CUST.BATCH.cashAmt = ""	
+	CUST.BATCH.rptCode = ""	
+	CUST.BATCH.cashTranRate = ""	
+	CUST.BATCH.cashTranRateCode = ""	
+	CUST.BATCH.cashTranTreaRate = ""	
+	CUST.BATCH.cashTranTreaRefNum = ""	
+	CUST.BATCH.xferTranRate = ""	
+	CUST.BATCH.xferTranTreaRate = ""	
+	CUST.BATCH.xferTranRateCode = ""	
+	CUST.BATCH.xferTranTreaRefNum = ""	
+	CUST.BATCH.closureReasonCode = ""	
+	CUST.BATCH.closureReasonDesc = ""	
+	CUST.BATCH.clsrNotes = ""	
+	CUST.BATCH.clsPenaltyAmt = ""	
+	
+	lv_a = func_closeVerifyTxnAccount("CUST","BATCH")
+	
+	IF(lv_a == 0)THEN
+	#{
+		PRINT("Account Closed and Verfied Successfully")
+		CUST.BATCH.status = "SUCCESS|"
+		CUST.BATCH.errorMsg = ""
+	#}
+	ELSE
+	#{
+		PRINT(CUST.BATCH.errorMsg)
+		
+		sv_b = STRLEN(CUST.BATCH.errorMsg)
+		IF (sv_b > 156 ) then
+			CUST.BATCH.errorMsg1 = MID$(CUST.BATCH.errorMsg,0,78)
+			CUST.BATCH.errorMsg2 = MID$(CUST.BATCH.errorMsg,78,78)
+			CUST.BATCH.errorMsg = CUST.BATCH.errorMsg1 + "|" +  CUST.BATCH.errorMsg2 + "|" + MID$(CUST.BATCH.errorMsg ,156,78)
+		ELSE
+			IF (sv_b > 78) then
+				CUST.BATCH.errorMsg1 = MID$(CUST.BATCH.errorMsg,0,78)
+				CUST.BATCH.errorMsg = CUST.BATCH.errorMsg1 + "|" + MID$(CUST.BATCH.errorMsg ,78,78)
+			endIF
+		endif
+		
+		CUST.BATCH.status = "FAILURE" + "|" + CUST.BATCH.errorMsg
+	#}
+	ENDIF
+		
+	#########################Writing in LST file #############################
+	sv_l = CUST.BATCH.solId 
+	sv_l = sv_l + "|" + CUST.BATCH.foracid
+	sv_l = sv_l + "|" + CUST.BATCH.status
+	PRINT(sv_l)
+		
+	sv_t = urtn_fileWrite(CUST.BATCH.lstIndex +"|"+ sv_l)
+	PRINT(sv_t)
+	
+	
+	NEXT:	
+	sv_c = urhk_dbCursorFetch(CUST.BATCH.MainCursor)
+#}
+DO
+
+########################################################################################
+#SECTION : END OF CURSOR
+########################################################################################
+END_OF_CURSOR:
+sv_r = urhk_dbCursorClose(CUST.BATCH.MainCursor)
+
+		sv_c    = urtn_fileClose(CUST.BATCH.lstIndex)
+#####################################################################
+#	Generate and Push report to HPR
+#####################################################################
+
+    CUST.BATCH.reportto      = "MANAGER"
+    CUST.BATCH.reportFormat  = "TXT"
+    CUST.BATCH.jasperName    = "LIB013_SBA_autoClosure_batch_rpt_003.jasper"
+    sub_genReportAndPushToHPRB(CUST.BATCH.jasperName,CUST.BATCH.lstFileName ,CUST.BATCH.RptName,"Dormant SBA AutoClosure Report",CUST.BATCH.reportFormat)
+
+
+ENDOFSCRIPT:
+
+sub_deleteRepClassB( "CUST", "BATCH")
+EXITSCRIPT
+
+end-->

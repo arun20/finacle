@@ -1,0 +1,145 @@
+#==============================================================================================================
+# Name                  : FIN_BGShipRep_custval.scr
+# Date                  : 04-Sep-2019
+# Author                :  Sireesha
+# Called Script         :  None
+# Calling Script        :  NOne
+# Entity Details        : For LHB
+# Modification History
+# <Serial No.>      <Date>         <Author Name>            	<Description>
+# -----------        -----         -------------              	 -------------
+#   1    		 04-Sep-2019    	Sireesha					Base Version released
+########################################################################################
+
+<--START
+#TRACE ON
+LIBNAME CUSTOMSO
+#===============================================
+# Creating Required Repository
+#===============================================
+IF (REPEXISTS("CUST") == 0 ) THEN
+#{
+	CREATEREP("CUST")
+#}
+ENDIF
+IF (CLASSEXISTS("CUST","DATA") == 0) THEN
+#{
+	CREATECLASS("CUST","DATA",5)
+#}
+ENDIF
+#=====================================================================*
+# Getting the BOD date 
+#=====================================================================*
+sv_r = urhk_B2k_PRINTRepos("BANCS")
+PRINT(sv_r)
+CUST.DATA.tempErrMessage = ""
+CUST.DATA.bankId = BANCS.STDIN.contextBankId 
+#======================================================================*
+# Getting the Request date from frontend 
+#======================================================================*
+
+CUST.DATA.inpDate = ""
+CUST.DATA.inpInOutInd  = ""
+CUST.DATA.inpcifId  = ""
+CUST.DATA.inppartyName  = ""
+IF(FIELDEXISTS(BANCS.FINRPTCRIT.P_as_of_date)==1) THEN
+#{
+        IF(BANCS.FINRPTCRIT.P_as_of_date != "") THEN
+        #{
+                CUST.DATA.inpDate = TOUPPER(BANCS.FINRPTCRIT.P_as_of_date)
+		#}
+		ENDIF
+#}
+ENDIF
+IF(FIELDEXISTS(BANCS.FINRPTCRIT.P_inpInOutInd)==1) THEN
+#{
+        IF(BANCS.FINRPTCRIT.P_inpInOutInd != "") THEN
+        #{
+                CUST.DATA.inpInOutInd = BANCS.FINRPTCRIT.P_inpInOutInd
+		#}
+		ENDIF
+#}
+ENDIF
+IF(FIELDEXISTS(BANCS.FINRPTCRIT.P_inpcifId)==1)THEN
+#{
+        IF(BANCS.FINRPTCRIT.P_inpcifId != "")THEN
+        #{
+                CUST.DATA.inpcifId = TOUPPER(BANCS.FINRPTCRIT.P_inpcifId)
+		#}
+		ENDIF
+#}
+ENDIF
+
+IF(FIELDEXISTS(BANCS.FINRPTCRIT.P_inppartyName)==1)THEN
+#{
+        IF(BANCS.FINRPTCRIT.P_inppartyName!="")THEN
+        #{
+                CUST.DATA.inppartyName = TOUPPER(BANCS.FINRPTCRIT.P_inppartyName)
+		#}
+		ENDIF
+#}
+ENDIF
+#======================================================================* 
+# Date  is mandatory
+#======================================================================* 	
+IF(CUST.DATA.inpDate == "")THEN
+#{
+	CUST.DATA.errMessage = "As of Date is Mandatory"
+	CUST.DATA.fieldName="P_inpDate"
+	sv_u = urhk_FINRPT_SetErr(CUST.DATA.fieldName+"|"+ CUST.DATA.errMessage +" ")
+#}
+ENDIF
+
+	########################################################################################
+	# Validation to check whether the  cif Id is valid
+	########################################################################################
+	BANCS.INPARAM.BINDVARS = CUST.DATA.inpcifId 
+	sv_s = "count"
+	sv_s = sv_s + "|"
+	sv_s = sv_s + "SELECT COUNT(1) "
+	sv_s = sv_s + "FROM tbaadm.cmg "
+	sv_s = sv_s + "WHERE CIF_ID = ?SVAR "
+	sv_s = sv_s + "AND DEL_FLG = 'N' "
+	sv_s = sv_s + "AND ENTITY_CRE_FLG ='Y' "
+	
+	sv_d = urhk_dbSelectWithBind(sv_s)
+	PRINT(sv_d)
+	IF(sv_d!=0)THEN
+	#{
+		CUST.DATA.errMessage = "Invalid Cif Id"
+		CUST.DATA.fieldName="P_inpcifId"
+		sv_u = urhk_FINRPT_SetErr(CUST.DATA.fieldName+"|"+ CUST.DATA.errMessage +" ")
+	#}
+	ENDIF
+	
+	########################################################################################
+	# Validation to check whether the  indicator is valid
+	########################################################################################
+	IF(CUST.DATA.inpInOutInd != "") THEN
+	#{
+		IF((CUST.DATA.inpInOutInd != "I") AND (CUST.DATA.inpInOutInd != "O")) THEN
+		#{
+			CUST.DATA.errMessage = "Invalid In/Out Indicator"
+			CUST.DATA.fieldName="P_inpInOutInd"
+			sv_u = urhk_FINRPT_SetErr(CUST.DATA.fieldName+"|"+ CUST.DATA.errMessage +" ")
+		#}
+		ENDIF
+	#}
+	ENDIF
+	
+ENDOFSCRIPT:
+      
+	IF (CLASSEXISTS("CUST", "DATA") != 0) THEN
+	#{
+		DELETECLASS("CUST", "DATA")
+	#}
+	ENDIF
+	IF (REPEXISTS("CUST") != 0) THEN
+	#{
+		DELETEREP("CUST")
+	#}
+	ENDIF
+#TRACE OFF
+EXITSCRIPT
+END-->
+

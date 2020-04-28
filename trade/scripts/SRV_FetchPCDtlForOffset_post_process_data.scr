@@ -1,0 +1,8 @@
+<--START
+TRACE ON
+
+	CALLSCRIPTIFEXIST("mptoffsetdet.scr")
+
+	EXITSCRIPT
+END-->
+

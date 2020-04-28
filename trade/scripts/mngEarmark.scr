@@ -1,0 +1,183 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: mngEarmark.scr
+# Type: NA|default
+# Description: Interface Script for mngEarmark
+# Author: Sreedevi_Neelam
+# Date: 5/24/18 3:39 PM
+# Modification Log:
+#============================================================
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT common_business_XMLFunctions
+IMPORT mngEarmarkInput
+<--START
+	# Script body goes here
+	TRACE ON
+	##################Creating repository and classes###################
+	#sv_r = urhk_b2k_printrepos("BANCS")
+	sub_createRepClassB("INTF","DATA")
+	sub_createRepClassB("CUST","TBL")
+	
+	PRINT(BANCS.STDIN.menuId)
+	##################Initializing Variables###################
+	BANCS.OUTPUT.successOrFailure = "S"
+	BANCS.OUTPUT.ErrorDesc = "SUCCESS"
+	INTF.DATA.outputString = ""
+	
+	BANCS.INPARAM.srvReqId = "MngEarmark"
+	BANCS.INPARAM.SERVICE_NAME = "FIJCA"
+	BANCS.INPARAM.SEND_RECV_FLG = "R"
+	BANCS.INPARAM.IsRespReqd = "Y"
+	BANCS.INPARAM.rqAppId      			= "8001"
+	BANCS.INPARAM.rqTxnCode  			= "ESB300003"
+	BANCS.INPARAM.rqUserId 				= "98001FinCore"
+	BANCS.INPARAM.rqToken  				= "98001FinCore"
+	BANCS.INPARAM.rqTerminalTypeCode  	= "80"
+	BANCS.INPARAM.rqLangPref  			= "en"
+	
+	#----------------------------
+	#Getting and Forming the XML Header , Body and Footer Details
+	#------------------------------
+	sv_c = func_xmlHeaderDetails()
+	BANCS.OUTPARAM.XMLHeader = sv_c
+	INTF.DATA.XMLHeader = BANCS.OUTPARAM.XMLHeader
+	print(BANCS.OUTPARAM.XMLHeader)
+	
+	sv_c = func_xmlMngEarBodyDetails()
+	BANCS.OUTPARAM.XMLBody = sv_c
+	INTF.DATA.XMLBody = BANCS.OUTPARAM.XMLBody
+	print(BANCS.OUTPARAM.XMLBody)
+	
+	sv_c = func_xmlFooterDetails()
+	BANCS.OUTPARAM.XMLFooter = sv_c
+	INTF.DATA.XMLFooter = BANCS.OUTPARAM.XMLFooter
+	
+	print(BANCS.OUTPARAM.XMLFooter)
+	
+	sv_s = INTF.DATA.XMLHeader + INTF.DATA.XMLBody + INTF.DATA.XMLFooter
+	PRINT(sv_s)
+
+	#---------------------------------------------
+	#Custom Table Insertion & variable definition
+	#---------------------------------------------
+
+	CUST.TBL.apiName = "manageEarmark"
+	CUST.TBL.menuName = BANCS.STDIN.menuId
+	CUST.TBL.invDate = BANCS.STDIN.BODDate
+	CUST.TBL.reqId = "Req_"+BANCS.INPARAM.requestuuid
+	CUST.TBL.soapReqId = BANCS.INPARAM.rqUID
+	CUST.TBL.reqXML = sv_s
+	CUST.TBL.userId = BANCS.STDIN.userId
+
+	CALLSCRIPTIFEXIST("insertInterfaceRecord.scr")
+	
+	#-----------------------------------------------------
+	#Sending the request xml to FI service provider
+	#-----------------------------------------------------
+	
+	sv_a = func_ConnectToFIAndSendMsg("INTF","DATA",sv_s,BYREF INTF.DATA.responseXml,BYREF INTF.DATA.msgDescription,BYREF INTF.DATA.successFailure)
+	
+	#-----------------------------------------------------
+	#When request is triggered successfully from Finacle
+	#-----------------------------------------------------
+	IF(INTF.DATA.successFailure == "Success") THEN
+	#{
+		sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<Status>","</Status>",BYREF INTF.DATA.FIStatus)
+		PRINT(sv_e)
+		sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<rsCode>","</rsCode>",BYREF INTF.DATA.orgCode)
+		PRINT(sv_e)
+		
+		#--------------------------------------------------------------------------------------------------------------------------------
+		#Request triggered successfully and processed by host system successfully - Earmark addition successful (or) not successful.
+		#--------------------------------------------------------------------------------------------------------------------------------
+		IF((INTF.DATA.FIStatus == "processed") OR (INTF.DATA.FIStatus == "SUCCESS")) THEN
+		#{
+			INTF.DATA.status = "S"
+			#-----------------------------------------------------------------------
+			#When response from host is positive i.e. earmark add/remove successful
+			#-----------------------------------------------------------------------
+			IF(INTF.DATA.orgCode == 000) THEN
+			#{
+				INTF.DATA.noOfFields = "3"
+				INTF.DATA.tagFields  = "acfNum|holdAmount|currency"
+				
+				sub_getFieldsFromRespXml(INTF.DATA.noOfFields,INTF.DATA.responseXml,INTF.DATA.tagFields,"")
+				
+				PRINT(BANCS.OUTPUT.acfNum)
+				PRINT(BANCS.OUTPUT.holdAmount)
+				PRINT(BANCS.OUTPUT.currency)
+				INTF.DATA.outputString = BANCS.OUTPUT.acfNum + "!" + BANCS.OUTPUT.holdAmount + "!" + BANCS.OUTPUT.currency
+				sv_u = urhk_setOrbOut("errorCode|"+INTF.DATA.orgCode)
+				sv_u = urhk_setOrbOut("outputString|"+INTF.DATA.outputString)
+				
+			#}
+			#-------------------------------------------------------------------------------
+			#In case of invalid ACF Number (or) any other negative response from host system
+			#-------------------------------------------------------------------------------
+			ELSE
+			#{
+				sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<orgDesc>","</orgDesc>",BYREF INTF.DATA.ErrorDesc)
+				PRINT(sv_e)
+				
+				INTF.DATA.status = "F"
+				BANCS.OUTPUT.successOrFailure = "F"
+				
+				BANCS.OUTPUT.ErrorDesc = INTF.DATA.ErrorDesc
+				sv_u = urhk_setOrbOut("errorCode|"+INTF.DATA.orgCode)
+				sv_u = urhk_setOrbOut("outputString|"+INTF.DATA.ErrorDesc)
+				
+			#}
+			ENDIF
+		#}
+		#---------------------------------------------------------
+		# When request to host times out/when host system is down
+		#---------------------------------------------------------
+		ELSE
+		#{
+			sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<ErrorCode>","</ErrorCode>",BYREF INTF.DATA.ErrorDesc)
+			PRINT(sv_e)
+			sv_e = func_xmlParseFunc(INTF.DATA.responseXml,"<ErrorDesc>","</ErrorDesc>",BYREF INTF.DATA.ErrorDesc)
+			PRINT(sv_e)
+			
+			INTF.DATA.status = "F"
+			BANCS.OUTPUT.successOrFailure = "F"
+			
+			BANCS.OUTPUT.ErrorDesc = INTF.DATA.ErrorDesc
+			sv_u = urhk_setOrbOut("errorCode|"+INTF.DATA.orgCode)
+			sv_u = urhk_setOrbOut("outputString|"+INTF.DATA.ErrorDesc)		
+		#}
+		ENDIF
+		
+		#-----------------------------------------------------------
+        #Updating response XML and Status in interface custom table
+        #-----------------------------------------------------------
+
+        BANCS.INPARAM.BINDVARS = INTF.DATA.responseXml + "|" + INTF.DATA.status + "|" + CUST.TBL.reqId
+
+        sv_s = "UPDATE CUSTOM.C_ICIT "
+        sv_s = sv_s + "SET RESPONSE_XML = ?SVAR, STATUS = ?SVAR "
+        sv_s = sv_s + "WHERE REQUEST_ID = ?SVAR "
+        print(sv_s)
+        sv_a = urhk_dbSQLWithBind(sv_s)
+        print(sv_a)
+
+        #sv_a = urhk_dbSqlWithBind("COMMIT")
+        print(sv_a)
+	#}
+	#--------------------------------------------------------
+	#When request is not triggered successfully from Finacle
+	#--------------------------------------------------------
+	ELSE
+	#{
+		BANCS.OUTPUT.successOrFailure = "F"
+		INTF.DATA.status = "F"
+		BANCS.OUTPUT.ErrorDesc = INTF.DATA.msgDescription
+		sv_u = urhk_setOrbOut("outputString|"+INTF.DATA.msgDescription)
+	#}
+	ENDIF
+
+EXITSCRIPT
+END-->

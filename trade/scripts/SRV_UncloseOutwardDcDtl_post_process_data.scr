@@ -1,0 +1,17 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: SRV_UncloseOutwardDcDtl_post_process_data.scr
+# Type: NA|default
+# Description: SRV_UncloseOutwardDcDtl_post_process_data.scr
+# Author: Saisomasekhar_N
+# Date: 7/25/18 4:52 PM
+# Modification Log:
+#============================================================
+
+<--START
+	# Script body goes here
+	TRACE ON
+	CALL("ODCM_SLAcctChrgDtls.scr")
+END-->

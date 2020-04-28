@@ -1,0 +1,138 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: APCHCOLL_SLAcctChrgDtls_TranStatus.scr
+# Type: NA|default
+# Description: APCHCOLL_SLAcctChrgDtls_TranStatus.scr
+# Author: Saisomasekhar_N
+# Date: 7/4/18 12:49 PM
+# Modification Log:
+#============================================================
+IMPORT LibslTranSeq
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+	# Script body goes here
+	TRACE ON
+	
+	sub_createRepClassB("CUST","DATA")
+	
+	### 1.INITIALIZE VARIABLES ###
+	sub_copyOptionalFieldB("errorFlg","CUST","DATA","errorFlg","N")
+	sub_copyOptionalFieldB("errorMsg","CUST","DATA","errorMsg","")
+	
+	### 2.GET MENU ID ###
+	CUST.DATA.menuId = ""
+	sv_a = func_getCallingMenuOptionB("CMMSG00004",BYREF CUST.DATA.menuId)
+	PRINT(CUST.DATA.menuId)
+	IF(CUST.DATA.menuId != "APCHCOLL")THEN
+	#{
+		EXITSCRIPT
+	#}
+	ENDIF
+	
+	### 3.GET SL TRAN SEQUENCE ###
+	CUST.DATA.txnSeq = ""
+	sv_a = func_getslTranSeq(BYREF CUST.DATA.txnSeq)
+	PRINT(sv_a)
+	IF(sv_a != 0)THEN
+	#{
+		CUST.DATA.errorFlg = "Y"
+		CUST.DATA.errorMsg = "Generation of Transaction Sequence Failed."
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+	PRINT(CUST.DATA.txnSeq)
+	
+	CUST.DATA.chkTxnSeq = ""
+	sv_a = func_getslTranSeq(BYREF CUST.DATA.chkTxnSeq)
+	PRINT(sv_a)
+	IF(sv_a != 0)THEN
+	#{
+		CUST.DATA.errorFlg = "Y"
+		CUST.DATA.errorMsg = "Generation of Transaction Sequence Failed."
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+	PRINT(CUST.DATA.chkTxnSeq)
+	
+	### 4.INPUTS FOR API ###
+	sub_copyOptionalFieldB("inpDate","CUST","DATA","inpDate",BANCS.STDIN.BODDate)
+	BANCS.INPARAM.BINDVARS = LEFT$(BANCS.STDIN.BODDate,10)
+	sv_a = "inpDate|SELECT TO_CHAR(TO_DATE(?SVAR,'DD-MM-YYYY'),'YYYY-MM-DD') FROM DUAL"
+	sv_a = urhk_dbSelectWithBind(sv_a)
+	sub_copyOutparamFieldB("inpDate","CUST","DATA","inpDate","inpDate")
+	PRINT(CUST.DATA.inpDate)
+	BANCS.INPUT.tellerId 	= BANCS.STDIN.userId
+	BANCS.INPUT.txnSeq 		= CUST.DATA.txnSeq
+	BANCS.INPUT.chkTxnDate 	= CUST.DATA.inpDate
+	BANCS.INPUT.chkTxnSeq 	= CUST.DATA.chkTxnSeq
+	CALLSCRIPTIFEXIST("InqTransferStatus.scr")
+	
+	IF(FIELDEXISTS(INTF.DATA.orgCode))THEN
+	#{
+		IF(INTF.DATA.orgCode != "000")THEN
+		#{
+			CUST.DATA.errorMsg = INTF.DATA.orgCode+"-"+INTF.DATA.ErrorDesc
+			CUST.DATA.errorFlg = "Y"
+			GOTO ENDOFSCRIPT
+			#}
+		ELSE
+			#{
+			### 5.CALL API FOR FUND TRANSFER IF SUCCESS ###
+			CALLSCRIPTIFEXIST("APCHCOLL_inqTransferFund.scr")
+			IF(CUST.DATA.errorFlg == "Y")THEN
+			#{
+				EXITSCRIPT
+				#}
+			ELSE
+				#{
+				### 6.GET KEY FIELD VALUES FROM SRV - MENU SPECIFIC ###
+				CUST.DATA.srvFieldNames = "actionCode|entityId.entityType|entityId.entityId|entityId.entityDispId"
+				CUST.DATA.srvFieldNames = CUST.DATA.srvFieldNames + "|" + "entityCrncy|eventSrlNum"
+				CUST.DATA.srvFieldNames = CUST.DATA.srvFieldNames + "|" + "chrgTranId|chrgStartDate"
+				CUST.DATA.srvFieldValues = "funcCode|b2kIdType|entityB2kId|b2kRefNo|b2kCcy|eventSrlNum|chrgTranId|chrgStartDate"
+				sub_getFieldValuesfromSRVStructB("8","CUST","DATA",CUST.DATA.srvFieldNames,CUST.DATA.srvFieldValues)
+				PRINT(CUST.DATA.funcCode)
+				PRINT(CUST.DATA.b2kIdType)
+				PRINT(CUST.DATA.entityB2kId)
+				PRINT(CUST.DATA.b2kRefNo)
+				PRINT(CUST.DATA.b2kCcy)
+				PRINT(CUST.DATA.eventSrlNum)
+				PRINT(CUST.DATA.chrgTranId)
+				CUST.DATA.chrgStartDate = LEFT$(CUST.DATA.chrgStartDate,10)
+				PRINT(CUST.DATA.chrgStartDate)
+				BANCS.INPARAM.BINDVARS = CUST.DATA.chkTxnSeq + "|" + CUST.DATA.entityB2kId + "|" + CUST.DATA.b2kIdType + "|" + BANCS.STDIN.contextBankId
+				BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + CUST.DATA.entityB2kId + "|" + CUST.DATA.b2kIdType + "|" + BANCS.STDIN.contextBankId
+				PRINT(BANCS.INPARAM.BINDVARS)
+				sv_a = "UPDATE CUSTOM.C_TFCT_TBL SET SEQ_TRAN_ID_SL = ?SVAR WHERE B2K_ID = ?SVAR AND B2KID_TYPE = ?SVAR AND BANK_ID = ?SVAR "
+				sv_a = sv_a + "AND SRL_NUM = (SELECT MAX(SRL_NUM) FROM CUSTOM.C_TFCT_TBL WHERE B2K_ID = ?SVAR AND B2KID_TYPE = ?SVAR AND BANK_ID = ?SVAR)"
+				PRINT(sv_a)
+				sv_a = urhk_dbSQLWithBind(sv_a)
+				IF(sv_a != 0) THEN
+				#{
+					CUST.DATA.errorMsg = "Transaction Details : Updation Failed in C_DTD_P_EXT."
+					CUST.DATA.errorFlg = "Y"
+					GOTO ENDOFSCRIPT
+				#}
+				ENDIF
+			#}
+			ENDIF
+		#}
+		ENDIF
+		
+	#}
+	ENDIF
+	ENDOFSCRIPT :
+		IF(CUST.DATA.errorFlg == "Y")THEN
+		#{
+			PRINT(CUST.DATA.errorMsg)
+			sv_a = urhk_SRV_SetErr(CUST.DATA.errorMsg)
+			sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+			BANCS.OUTPUT.successOrFailure = "F"	
+		#}
+		ENDIF
+		sub_deleteRepClassB("CUST","DATA")
+		
+END-->

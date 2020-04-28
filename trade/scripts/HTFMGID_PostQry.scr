@@ -1,0 +1,133 @@
+<--start
+trace on
+#-----------------------------------------------
+# Setting the value for the display field status
+#-----------------------------------------------
+sv_a = BANCS.INPUT.mt_no
+
+
+if (" " != sv_a) then
+    BANCS.OUTPUT.mt_no = sv_a
+endif
+print(sv_a)
+
+BANCS.OUTPUT.bill_func=BANCS.INPUT.event_type
+sv_n = BANCS.INPUT.sw_srl_num
+
+sv_b = "" 
+sv_p = 0 
+sv_c = "swift_msg|SELECT SWIFT_MSG" 
+sv_c = sv_c + " FROM SMH " 
+sv_c = sv_c + " WHERE SMH.BANK_ID = ?SVAR " 
+sv_c = sv_c + " AND SMH.SW_SRL_NUM = ?SVAR " 
+BANCS.INPARAM.BINDVARS= BANCS.STDIN.contextBankId + "|" + sv_n 
+sv_r = urhk_dbSelectLongWithBind(sv_c) 
+if (sv_r == 0) then 
+sv_m = BANCS.OUTPARAM.swift_msg 
+endif 
+
+print(sv_m)
+
+if(" " != sv_a) then 
+#{
+  sv_p = getPosition(sv_m,":591:")
+  print(sv_p)
+  if(sv_p != 0) then
+  #{
+	sv_p = getPosition(sv_m,":591:")
+        sv_c = MID$(sv_m,sv_p+4,strlen(sv_m))
+        sv_q = GETPOSITION(sv_c,"|:")
+        sv_b = MID$(sv_c,0,(sv_q -1))
+	print(sv_b)
+  #}
+  else	
+  #{ 
+  	sv_p = GETPOSITION(sv_m,":592:") 
+	print(sv_p)
+   	#----------------------------------------------- 
+   	# String ":592:|" is searched in message to check 
+   	# if tag592 contains any value or not. 
+   	# If it contains value then sv_p will  be zero. 
+   	# If 592 tag does not have value(sv_p is non zero) 
+   	# then value from tag  593 will be  used. 
+   	#----------------------------------------------- 
+   	if(sv_p != 0) then 
+   	#{ 
+       		sv_p = GETPOSITION(sv_m,":592:") 
+   		#----------------------------------------------- 
+   		# To get the value of tag592, message is truncated 
+   		# so that it starts from value of tag592. After which 
+   		# next occurance of "|:" is found out. At last, value 
+   		# present from 0th character in split message till 
+   		# (sv_q -1) will present tag 592 value. The same 
+   		# logic is applied to get value of tag 593 in else part. 
+   		# 
+   		# For example, below is swift message. 
+   		# :271:1|:272:1|:40a1:IRREVOCABLE|:201:HETM700|:231:|:31c1:06-07-2010 00:00:00|:31d1:06-07-2014 00:00:00|:31d2:23|:51a2:|:51d2:|:51d3:|:51d4:|:51d5:|:501:COPRORATE|:502# :1|:503:2,3|:504:|:592:FDS|:593:FD|:594:|:595:|:32b1:USD|:32b2:          1000.00|:39a1:  0 
+   		# 
+   		# The first truncation will give below message in scratch pad variable sv_c. 
+   		# FDS|:593:FD|:594:|:595:|:32b1:USD|:32b2:          1000.00|:39a1:  0 
+   		# sv_q will point to "|" character in above truncated message. 
+   		#----------------------------------------------- 
+       		sv_c = MID$(sv_m,sv_p+4,strlen(sv_m)) 
+       		sv_q = GETPOSITION(sv_c,"|:") 
+       		sv_b = MID$(sv_c,0,(sv_q -1)) 
+		print(sv_b)
+   	#} 
+   	else 
+   	#{ 
+		sv_p = GETPOSITION(sv_m,":593:")
+		print(sv_p)
+		if(sv_p != 0) then	
+       			sv_p = GETPOSITION(sv_m,":593:") 
+       			sv_c = MID$(sv_m,sv_p+4,strlen(sv_m)) 
+       			sv_q = GETPOSITION(sv_c,"|:") 
+       			sv_b = MID$(sv_c,0,(sv_q -1)) 
+			print(sv_b)
+		endif
+   	#} 
+   	endif 
+   #}
+   endif  
+  #} 
+  endif 
+BANCS.OUTPUT.benef_name = sv_b 
+print(sv_b)
+BANCS.OUTPUT.receiver_ref_num = ""
+BANCS.OUTPUT.issue_bank_ref_num = ""
+
+if((" " != sv_a) AND (sv_a == "707")) then
+#{
+  sv_p = GETPOSITION(sv_m,":231:")
+   if(sv_p <= 0) then
+   #{
+		BANCS.OUTPUT.issue_bank_ref_num = ""
+   #}
+	else
+       sv_p = GETPOSITION(sv_m,":231:")
+       sv_c = MID$(sv_m,sv_p+4,strlen(sv_m))
+       sv_q = GETPOSITION(sv_c,"|:")
+       sv_b = MID$(sv_c,0,(sv_q -1))
+	   BANCS.OUTPUT.issue_bank_ref_num = sv_b
+    endif
+#}
+endif
+
+if((" " != sv_a) AND (sv_a == "707")) then
+#{
+  sv_p = GETPOSITION(sv_m,":211:")
+   if(sv_p <= 0) then
+   #{
+		BANCS.OUTPUT.receiver_ref_num = ""
+   #}
+	else
+       sv_p = GETPOSITION(sv_m,":211:")
+       sv_c = MID$(sv_m,sv_p+4,strlen(sv_m))
+       sv_q = GETPOSITION(sv_c,"|:")
+       sv_b = MID$(sv_c,0,(sv_q -1))
+	   BANCS.OUTPUT.receiver_ref_num = sv_b
+    endif
+#}
+endif
+trace off
+end-->

@@ -1,0 +1,323 @@
+############################################################################################
+# Name				: fbm_inqTransefrFund.scr
+# Description			: Call for Transfer Fund API
+# Author			: 
+# Date   			: 20/07/18
+# Version			: 0.10
+############################################################################################
+IMPORT LibslTranSeq
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+ TRACE ON
+IF (FIELDEXISTS(ONS.CUSTOM.custDataIn) == 0) THEN
+#{
+	GOTO ENDOFSCRIPT
+#}
+ENDIF
+
+IF (TRIM(ONS.CUSTOM.custDataIn) == "") THEN
+#{
+	GOTO ENDOFSCRIPT
+#}
+ENDIF
+
+#sv_a = urhk_B2k_printRepos("ONS")
+sv_a = ONS.CUSTOM.custDataIn
+print(sv_a)
+sv_u = urhk_ParseONSCustData(sv_a)
+
+MEOB.CUSTOM.pageName = "fbmtrandet"
+MEOB.CUSTOM.totalDebits = "0"
+MEOB.CUSTOM.totalCredits = "0"
+MEOB.CUSTOM.drCrFlg = ""
+MEOB.CUSTOM.tranId = ""
+MEOB.CUSTOM.tranDate =""
+MEOB.CUSTOM.noOfRecords = "0" 
+MEOB.CUSTOM.delFlg = ""
+MEOB.CUSTOM.slAcctId = ""
+MEOB.CUSTOM.succOrFail = "S"
+MEOB.CUSTOM.errMsg = ""
+###########################~fbmtrandet|intFlag|2|5|
+#--------------------------------------------------------------------------------------------------#
+#  FIELD DESCRIPTION                                                                               #
+#--------------------------------------------------------------------------------------------------#
+#  ~fbmtrandet-                                                                                     #
+#     FIELD_1 - intFlag                                                                            #
+#     FIELD_2 - No.of multirecs                                                                    #
+#     FIELD_3 - No.of fields in one record                                                         #
+#--------------------------------------------------------------------------------------------------#
+
+sub_getFieldValuesfromSRVStructB("1","MEOB","CUSTOM","billCritDtls.billId","billId")
+sub_getFieldValuesfromSRVStructB("1","MEOB","CUSTOM","billTranDtls.tranId.tranId","tranId")
+sub_getFieldValuesfromSRVStructB("1","MEOB","CUSTOM","billTranDtls.tranDate","tranDate")
+sub_getFieldValuesfromSRVStructB("1","MEOB","CUSTOM","billCritDtls.billSolId.solId","solId")
+
+
+PRINT(MEOB.CUSTOM.tranId)
+PRINT(MEOB.CUSTOM.tranDate)
+PRINT(MEOB.CUSTOM.solId)
+
+
+IF(FIELDEXISTS(("BANCS").("INPUT").(MEOB.CUSTOM.pageName+"_FIELD_2"))) THEN
+#{
+	MEOB.CUSTOM.noOfRecords = ("BANCS").("INPUT").(MEOB.CUSTOM.pageName+"_FIELD_2")
+#}
+ENDIF
+print(MEOB.CUSTOM.noOfRecords)
+
+sv_c = MEOB.CUSTOM.noOfRecords
+IF (sv_c > 0) THEN
+#{
+	sv_d = 3
+	sv_n = 0
+#--------------------------------------------------------------------------------------------------#
+#  Getting multirec inputs
+#--------------------------------------------------------------------------------------------------#
+	WHILE (sv_n < sv_c)
+	#{		
+		sv_z = sv_n
+		sv_g = FORMAT$(sv_z,"%d")
+		##################################
+		sv_d = sv_d + 1
+		sv_f = FORMAT$(sv_d,"%d")
+		IF (("BANCS").("INPUT").(MEOB.CUSTOM.pageName+"_FIELD_"+sv_f) == "NULL") THEN
+		#{
+			("BANCS").("INPUT").(MEOB.CUSTOM.pageName+"_FIELD_"+sv_f) = ""
+		#}
+		ENDIF
+
+		MEOB.CUSTOM.slAcctId = ("BANCS").("INPUT").(MEOB.CUSTOM.pageName+"_FIELD_"+sv_f)
+		PRINT(MEOB.CUSTOM.slAcctId)	
+		##################################
+		#Number of Fields Skipped 
+		sv_d = sv_d + 6
+		##################################
+		sub_getFieldValuesfromSRVStructB("1","MEOB","CUSTOM","billTranDtls.tranDetails.tranLL.<rec_"+FORMAT$(sv_n,"%d")+">.delFlg","delFlg")
+		print(MEOB.CUSTOM.delFlg)
+
+		##################################
+		sub_getFieldValuesfromSRVStructB("1","MEOB","CUSTOM","billTranDtls.tranDetails.tranLL.<rec_"+FORMAT$(sv_n,"%d")+">.drCrFlg","drCrFlg")
+		print(MEOB.CUSTOM.drCrFlg)
+		
+		##################################
+		sub_getFieldValuesfromSRVStructB("1","MEOB","CUSTOM","billTranDtls.tranDetails.tranLL.<rec_"+FORMAT$(sv_n,"%d")+">.tranAmt","tranAmtCrncy")
+		print(MEOB.CUSTOM.tranAmtCrncy)
+		
+		MEOB.CUSTOM.tranAmt = func_getNthFieldFromStringB(MEOB.CUSTOM.tranAmtCrncy,"|",1)
+		
+		##################################
+				
+		#Storing values in custom repos
+		IF((MEOB.CUSTOM.delFlg !="Y") AND (MEOB.CUSTOM.drCrFlg == "D") AND (MEOB.CUSTOM.slAcctId != ""))THEN
+		#{
+			sv_y = CINT(MEOB.CUSTOM.totalDebits)
+			("MEOB").("CUSTOM").("dbAcctId_"+FORMAT$(sv_y,"%d")) =  MEOB.CUSTOM.slAcctId
+			("MEOB").("CUSTOM").("dbtranAmt_"+FORMAT$(sv_y,"%d")) =  MEOB.CUSTOM.tranAmt
+			MEOB.CUSTOM.totalDebits = CINT(MEOB.CUSTOM.totalDebits) + CINT("1")
+		#}
+		ENDIF
+		print(MEOB.CUSTOM.totalDebits)
+		IF((MEOB.CUSTOM.delFlg !="Y") AND (MEOB.CUSTOM.drCrFlg == "C") AND (MEOB.CUSTOM.slAcctId != ""))THEN
+		#{
+			sv_y = CINT(MEOB.CUSTOM.totalCredits)
+			("MEOB").("CUSTOM").("crAcctId_"+FORMAT$(sv_y,"%d")) =  MEOB.CUSTOM.slAcctId
+			("MEOB").("CUSTOM").("crtranAmt_"+FORMAT$(sv_y,"%d")) =  MEOB.CUSTOM.tranAmt
+			MEOB.CUSTOM.totalCredits = CINT(MEOB.CUSTOM.totalCredits) + CINT("1")
+		#}
+		ENDIF
+		print(MEOB.CUSTOM.totalCredits)
+		sv_n = sv_n + 1
+		
+	#}
+	DO
+#}
+ENDIF
+
+
+
+#Credit  Accounts api call
+sv_i = 0
+sv_j = 1
+
+MEOB.CUSTOM.count = MEOB.CUSTOM.totalDebits
+
+WHILE(MEOB.CUSTOM.count > 0)
+#{
+
+	sv_j = 1
+	WHILE(sv_i < 5)
+	#{
+		IF(FIELDEXISTS(("MEOB").("CUSTOM").("dbAcctId_"+FORMAT$(sv_i,"%d"))))THEN
+		#{
+			("BANCS").("INPUT").("accNum"+FORMAT$(sv_j,"%d")) = ("MEOB").("CUSTOM").("dbAcctId_"+FORMAT$(sv_i,"%d"))
+			("BANCS").("INPUT").("txnAmount"+FORMAT$(sv_j,"%d")) = ("MEOB").("CUSTOM").("dbtranAmt_"+FORMAT$(sv_i,"%d"))
+			sv_j =sv_j +1
+		#}
+		ELSE
+		#{
+			("BANCS").("INPUT").("accNum"+FORMAT$(sv_j,"%d")) = ""
+			("BANCS").("INPUT").("txnAmount"+FORMAT$(sv_j,"%d")) = 0
+			sv_j =sv_j +1
+		#}
+		ENDIF
+		sv_i = sv_i +1
+
+
+	#}
+	DO
+	#C - To GL Account (Incase funds are getting DEBITED to customers SL A/c ID)
+	BANCS.INPUT.direction = "C"
+	BANCS.INPUT.reversalFlag = ""
+	BANCS.INPUT.reversalTxnSeq = "0"
+	CALLSCRIPTIFEXIST("transferFund.scr")	
+
+	IF(INTF.DATA.orgCode == "000")THEN
+	#{	
+		MEOB.CUSTOM.count = CINT(MEOB.CUSTOM.count) - sv_j 
+		MEOB.CUSTOM.succOrFail ="S"
+	#}
+	ELSE
+	#{
+		MEOB.CUSTOM.errMsg = INTF.DATA.orgCode+"-"+INTF.DATA.ErrorDesc
+		MEOB.CUSTOM.succOrFail = "F"
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+
+
+#}
+DO
+
+
+#Debit Accounts api call
+sv_i = 0
+sv_j = 1
+
+MEOB.CUSTOM.count = MEOB.CUSTOM.totalCredits
+PRINT(MEOB.CUSTOM.count)
+WHILE(MEOB.CUSTOM.count > 0)
+#{
+	#Inquire transfer status call for Debit
+        sv_t = func_getslTranSeq(BYREF sv_a)
+        PRINT(sv_t)
+        PRINT(sv_a)
+        IF(sv_t != 0)THEN
+        #{
+                MEOB.CUSTOM.errMsg = "Generation of Transaction Sequence Failed."
+                MEOB.CUSTOM.succOrFail = "F"
+                EXITSCRIPT
+        #}
+        ENDIF
+
+        #In case of Success
+        BANCS.INPUT.tellerId = BANCS.STDIN.userId
+        BANCS.INPUT.txnSeq = sv_a
+        PRINT(BANCS.INPUT.txnSeq)
+        #BANCS.INPUT.chkTxnDate = BANCS.STDIN.BODDate
+        sv_s = "boddt|SELECT TO_CHAR(TO_DATE(?SVAR,'DD-MM-YYYY HH24:MI:SS'),'YYYY-MM-DD') FROM DUAL"
+        PRINT(sv_s)
+        BANCS.INPARAM.BINDVARS = BANCS.STDIN.BODDate
+        PRINT(BANCS.INPARAM.BINDVARS)
+        sv_d = urhk_dbSelectWithBind(sv_s)
+        PRINT(sv_d)
+
+        IF (sv_d != 0) THEN
+        #{
+                PRINT("DB Error")
+                EXITSCRIPT
+        #}
+        ENDIF
+        sub_copyOutparamFieldB("boddt","MEOB","CUSTOM","boddt","")
+        BANCS.INPUT.chkTxnDate = MEOB.CUSTOM.boddt
+        PRINT(BANCS.INPUT.chkTxnDate)
+
+        sv_t = func_getslTranSeq(BYREF sv_a)
+        PRINT(sv_t)
+        PRINT(sv_a)
+        IF(sv_t != 0)THEN
+        #{
+                MEOB.CUSTOM.errMsg = "Generation of Transaction Sequence Failed."
+                MEOB.CUSTOM.succOrFail = "F"
+                EXITSCRIPT
+        #}
+        ENDIF
+        BANCS.INPUT.chkTxnSeq = sv_a
+        PRINT(BANCS.INPUT.chkTxnSeq)
+        MEOB.CUSTOM.txnSeq = BANCS.INPUT.chkTxnSeq
+        CALLSCRIPTIFEXIST("InqTransferStatus.scr")
+        PRINT(INTF.DATA.orgCode)
+	IF(INTF.DATA.orgCode == "000")THEN
+        #{
+                #Checking For Error Description
+                MEOB.CUSTOM.errDesc = func_getNthFieldFromStringB(INTF.DATA.outputString,"!",5)
+                PRINT(MEOB.CUSTOM.errDesc)
+                IF(MEOB.CUSTOM.errDesc != "")THEN
+                #{
+                        # Call API for Fund Transfer
+                        BANCS.INPUT.txnSeq = MEOB.CUSTOM.txnSeq
+                        PRINT(BANCS.INPUT.txnSeq)
+                #}
+                ELSE
+                #{
+                        PRINT("API Transfer fund Not Required.")
+                        MEOB.CUSTOM.succOrFail = "S"
+                        MEOB.CUSTOM.errMsg = ""
+                        EXITSCRIPT
+                #}
+                ENDIF
+
+        #}
+        ELSE
+        #{
+                #Error
+                MEOB.CUSTOM.errMsg = INTF.DATA.orgCode +"-"+INTF.DATA.ErrorDesc
+                MEOB.CUSTOM.succOrFail = "F"
+                EXITSCRIPT
+        #}
+        ENDIF
+	sv_j = 1
+	WHILE(sv_i < 5)
+	#{
+		IF(FIELDEXISTS(("MEOB").("CUSTOM").("crAcctId_"+FORMAT$(sv_i,"%d"))))THEN
+		#{
+			("BANCS").("INPUT").("accNum"+FORMAT$(sv_j,"%d")) = ("MEOB").("CUSTOM").("crAcctId_"+FORMAT$(sv_i,"%d"))
+			PRINT(("BANCS").("INPUT").("accNum"+FORMAT$(sv_j,"%d")))
+			("BANCS").("INPUT").("txnAmount"+FORMAT$(sv_j,"%d")) = ("MEOB").("CUSTOM").("crtranAmt_"+FORMAT$(sv_i,"%d"))
+			sv_j =sv_j +1
+		#}
+		ELSE
+		#{
+			("BANCS").("INPUT").("accNum"+FORMAT$(sv_j,"%d")) = ""
+			("BANCS").("INPUT").("txnAmount"+FORMAT$(sv_j,"%d")) = 0
+			sv_j =sv_j +1
+		#}
+		ENDIF
+		sv_i = sv_i +1
+	#}
+	DO
+	#D - From GL Account (Incase funds are getting CREDITED to customers SL A/c ID)
+	BANCS.INPUT.direction = "D"
+	BANCS.INPUT.reversalFlag = ""
+	BANCS.INPUT.reversalTxnSeq = "0"
+	CALLSCRIPTIFEXIST("transferFund.scr")
+	IF(INTF.DATA.orgCode == "000")THEN
+	#{	
+		MEOB.CUSTOM.count = CINT(MEOB.CUSTOM.count) - sv_j 
+		MEOB.CUSTOM.succOrFail ="S"
+	#}
+	ELSE
+	#{
+		MEOB.CUSTOM.errMsg = INTF.DATA.orgCode+"-"+INTF.DATA.ErrorDesc
+		MEOB.CUSTOM.succOrFail = "F"
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+
+#}
+DO
+
+ENDOFSCRIPT:
+EXITSCRIPT
+
+END-->

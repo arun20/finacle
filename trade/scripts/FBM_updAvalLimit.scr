@@ -1,0 +1,111 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: FBM_updAvalLimit.scr
+# Type: NA|default
+# Description: FBM_updAvalLimit.scr
+# Author: 
+# Date: 7/20/18 11:19 AM
+# Modification Log:
+#============================================================
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+IMPORT common_business_XMLFunctions
+IMPORT updAvailLimitInput
+<--START
+	# Script body goes here
+	TRACE ON
+
+	sub_createRepClassB("CUST","DATA")
+
+	### THIS SCRIPT IS CALLED DURING PREPROCESS OF VERIFY IN MEOB ###
+	### 1.GET MENU ID ###
+	sv_a = func_getCallingMenuOptionB("CMMSG00004",BYREF CUST.DATA.menuId)
+	PRINT(CUST.DATA.menuId)
+	IF(CUST.DATA.menuId != "MEOB")THEN
+	#{
+		EXITSCRIPT
+	#}
+	ENDIF
+	
+	### 2.GET KEY FIELD VALUES FROM SRV - MENU SPECIFIC ###
+	CUST.DATA.srvFieldNames = "billCritDtls.funcCode|billCritDtls.billId|billCritDtls.billB2kId|fbmChargeDtl.entityId.entityType"
+	CUST.DATA.srvFieldNames = CUST.DATA.srvFieldNames + "|" + "fbmChargeDtl.eventSrlNum|fbmChargeDtl.eventAmt|billCritDtls.billCrncy.crncyCode"
+	CUST.DATA.srvFieldValues = "funcCode|b2kRefNo|entityB2kId|b2kIdType|eventSrlNum|b2kEventAmt|b2kCcy"
+	sub_getFieldValuesfromSRVStructB("7","CUST","DATA",CUST.DATA.srvFieldNames,CUST.DATA.srvFieldValues)
+	PRINT(CUST.DATA.funcCode)
+	PRINT(CUST.DATA.b2kRefNo)
+	PRINT(CUST.DATA.entityB2kId)
+	PRINT(CUST.DATA.b2kIdType)
+	PRINT(CUST.DATA.eventSrlNum)
+	CUST.DATA.b2kEventAmt = CDOUBLE(CUST.DATA.b2kEventAmt)
+	PRINT(CUST.DATA.b2kEventAmt)
+	PRINT(CUST.DATA.b2kCcy)
+	
+	### 3.FETCH PREVIOUS OPERATION VALUES ON THIS ENTITY ###
+	BANCS.INPARAM.BINDVARS = CUST.DATA.entityB2kId + "|" + CUST.DATA.b2kIdType + "|" + BANCS.STDIN.contextBankId
+	BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|" + CUST.DATA.entityB2kId + "|" + CUST.DATA.b2kIdType + "|" + BANCS.STDIN.contextBankId
+	PRINT(BANCS.INPARAM.BINDVARS)
+	sv_a = "slLmtId,prevEntityAmt,prevEntityCcy,prevEarMark|SELECT SL_LIMIT_ID,ENTITY_AMOUNT,ENTITY_CCY,TOTAL_EARMARK"
+	sv_a = sv_a + " FROM CUSTOM.C_TFCT_TBL WHERE B2K_ID = TRIM(?SVAR) AND B2KID_TYPE = ?SVAR AND BANK_ID = ?SVAR AND SRL_NUM = "
+	sv_a = sv_a + " (SELECT MAX(SRL_NUM) FROM CUSTOM.C_TFCT_TBL WHERE B2K_ID = TRIM(?SVAR) AND B2KID_TYPE = ?SVAR AND BANK_ID = ?SVAR) AND ROWNUM=1"
+	PRINT(sv_a)
+	sv_a = urhk_dbSelectWithBind(sv_a)
+	PRINT(sv_a)
+	sub_copyOutparamFieldB("slLmtId","CUST","DATA","slLmtId","")
+	sub_copyOutparamFieldB("prevEntityAmt","CUST","DATA","prevEntityAmt","0")
+	sub_copyOutparamFieldB("prevEntityCcy","CUST","DATA","prevEntityCcy","")
+	sub_copyOutparamFieldB("prevEarMark","CUST","DATA","prevEarMark","0")
+	IF(sv_a != 0)THEN
+	#{
+		sub_getFieldValuesfromONSB("1","CUST","DATA","FRWK_MPTDISBDET_FIELD_7","slLmtId","")
+		CUST.DATA.slLmtId	= TOUPPER(CUST.DATA.slLmtId)
+		CUST.DATA.isNewEntity = "Y"
+	#}
+	ENDIF
+	PRINT(CUST.DATA.slLmtId)
+	PRINT(CUST.DATA.prevEntityAmt)
+	PRINT(CUST.DATA.prevEntityCcy)
+	PRINT(CUST.DATA.prevEarMark)
+	
+	### 4.CALL UPDATE AVAIL LIMIT API ###
+	BANCS.INPUT.holdAmount 	= FORMAT$(CDOUBLE(CUST.DATA.prevEarMark),"%2.2f")
+	BANCS.INPUT.refType 	= "T"
+	BANCS.INPUT.txnAmount  	= FORMAT$(CDOUBLE(CUST.DATA.prevEarMark),"%2.2f")
+	BANCS.INPUT.refNum	   	= CUST.DATA.b2kRefNo
+	BANCS.INPUT.acfNum	   	= CUST.DATA.slLmtId
+	BANCS.INPUT.balance    	= FORMAT$(CDOUBLE(CUST.DATA.prevEntityAmt),"%2.2f") + "|" +  CUST.DATA.b2kCcy
+	BANCS.INPUT.currency   	= CUST.DATA.b2kCcy
+	IF(CDOUBLE(CUST.DATA.prevEarMark) == 0)THEN
+	#{
+		BANCS.INPUT.updTypeFlag	= "UO"
+		CUST.DATA.prevEntityAmt = -1 * CDOUBLE(CUST.DATA.prevEntityAmt)
+		BANCS.INPUT.balance = FORMAT$(CDOUBLE(CUST.DATA.prevEntityAmt),"%2.2f") + "|" +  CUST.DATA.b2kCcy
+	#}
+	ELSE
+	#{
+		BANCS.INPUT.updTypeFlag	= "RU"
+	#}
+	ENDIF
+	IF(CUST.DATA.slLmtId != "") THEN
+	#{
+		CALL("updAvalLimit.scr")
+		IF(FIELDEXISTS(INTF.DATA.orgCode))THEN
+		#{
+			IF(INTF.DATA.orgCode != "000")THEN
+			#{
+				sv_a = urhk_SRV_SetErr(INTF.DATA.orgCode + " - " + INTF.DATA.ErrorDesc)
+				sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+				BANCS.OUTPUT.successOrFailure = "F"
+				EXITSCRIPT
+			#}
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ENDIF
+
+	TRACE OFF
+	EXITSCRIPT
+END-->

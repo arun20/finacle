@@ -1,0 +1,60 @@
+#=======================================================================================#
+#   Source Name             : batch_acctBalMonitorReport.scr
+#   Author                  : Noopur
+#   Date                    : 29-May-18
+#   Description             : This script generates Customer Level Account Balance report.
+#							: User Story No/Requirement Id - 7970360/Liabilities_020
+#   Input                   : None.
+#   Output                  : None.
+#   Calling script          : Batch Job - CABMR.
+#   Called  Script          : None.
+#   Design Document         : DesignDocument_CustomerAccountBalanceMonitoring.xlsm
+#   Modification History    :
+#   <Serial No.>        <Date>                  <Author Name>			<Description>
+#=======================================================================================#
+#   001					30-May-18               Noopur					Original version
+#=======================================================================================#
+IMPORT LibAcctBalMonitor
+IMPORT LibDateB001
+<--START
+	TRACE ON
+	LIBNAME CUSTOMSO
+
+	#============================================
+	#   CREATION OF REPOSITORY AND CLASS
+	#============================================
+	sub_createRepClassB("CUST", "DATA")
+	sv_s = func_getSysDateTimeWithFormatB("YYYYMMDDHH24MISS")
+	print(sv_s)
+
+	CUST.DATA.fileName		= "Balancereport"+sv_s+".txt"
+	CUST.DATA.jasperName	= "acctBalMonitorReport.jasper"
+	CUST.DATA.reportName	= "ACCOUNT_BALANCE_MONITOR_REPORT"
+	CUST.DATA.reportDesc	= "ACCOUNT BALANCE MONITOR REPORT"
+	CUST.DATA.bodDate       = MID$(BANCS.STDIN.BODDate,0,10)
+	CUST.DATA.reportPath	= ""
+
+	#============================================
+	# Check CPARAM Setup
+	#============================================
+	sv_s = func_getCPARAMValueB("REPORT_PATH", "CASA" , BANCS.STDIN.contextBankId , BYREF CUST.DATA.reportPath)
+	print(CUST.DATA.reportPath)
+
+	lv_a = "exebatch spbx4001 CUSTOM.FIN_ACCTBAL_MONITOR_PACK.FIN_ACCTBAL_MONITOR_PROC >" + CUST.DATA.fileName
+	PRINT(lv_a)
+	lv_b = SYSTEM(lv_a)
+	PRINT(lv_b)
+	IF(lv_b == 0) THEN
+	#{
+		sub_genReportAndPushToHPRB(CUST.DATA.jasperName,CUST.DATA.fileName,CUST.DATA.reportName,CUST.DATA.reportDesc,"TXT")
+		print(CUST.DATA.reportName)
+		CUST.DATA.report = CUST.DATA.reportName + ".TXT"
+		print(CUST.DATA.report)
+		sv_s = SYSTEM("cp " + CUST.DATA.report + " " + CUST.DATA.reportPath)
+		print(sv_s)
+	#}
+	ENDIF
+
+	ENDOFSCRIPT:
+		EXITSCRIPT
+END-->

@@ -1,0 +1,19 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: SRV_AddInwardBGDtls_post_process_data.scr
+# Type: NA|default
+# Description: SRV_AddInwardBGDtls_post_process_data.scr
+# Author: Saisomasekhar_N
+# Date: 6/20/18 3:55 PM
+# Modification Log:
+#============================================================
+
+<--START
+	# Script body goes here
+	TRACE ON
+	
+	### CUSTOM SCRIPT TO STORE SL ACCOUNT DETAILS OF CHARGES TAB OF OGM,ODCM,IGM,IDCM ###
+	CALL("OGM_SLAcctChrgDtls.scr")
+END-->

@@ -1,0 +1,146 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: sqlQueryMapping.scr
+# Type: NA|default
+# Description: sqlQueryMapping.scr
+# Author:
+# Date:
+# Modification Log:
+#============================================================
+
+<--START
+	# Script body goes here
+	TRACE ON
+	
+	PRINT(BANCS.INPUT.sqlQuery)
+	IF(CUST.DATA.queryId == "HTM001")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT CASE WHEN SCHM_TYPE IN ('PCA','ODA') THEN 'O' ELSE ACCT_OWNERSHIP END AS ACCT_OWNERSHIP FROM TBAADM.GAM "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + " WHERE FORACID = ?SVAR AND BANK_ID = '" + BANCS.STDIN.contextBankId + "'"
+	#}
+	ENDIF
+	
+	IF(CUST.DATA.queryId == "HTM002")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT COUNT(1) FROM TBAADM.LRCT "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + " WHERE REF_REC_TYPE = ?SVAR AND REF_CODE = ?SVAR "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + " AND DEL_FLG = 'N' AND BANK_ID = '" + BANCS.STDIN.contextBankId + "' "
+	#}
+	ENDIF
+	
+	IF(CUST.DATA.queryId == "HTM003")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT PARAMETER_VALUE FROM TBAADM.C_CPVALUE "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + " WHERE PARAMETER_ID = ?SVAR AND DEL_FLG = 'N' "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "  AND BANK_ID = '" + BANCS.STDIN.contextBankId + "' "
+	#}
+	ENDIF
+	IF(CUST.DATA.queryId == "HTM004")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT PURPOSE_CODE FROM TBAADM.C_DTD_P_EXT "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + " WHERE TRIM(TRAN_ID) = ?SVAR AND TRAN_DATE = TO_DATE(?SVAR,'DD-MM-YYYY') "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + " AND TRIM(PART_TRAN_SRL_NUM) = ?SVAR AND PART_TRAN_TYPE = ?SVAR "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "  AND BANK_ID = '" + BANCS.STDIN.contextBankId + "' "
+	#}
+	ENDIF
+	IF(CUST.DATA.queryId == "HTM005")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT substr(SL_REMARKS,0,99),substr(SL_REMARKS,100)  FROM TBAADM.C_DTD_P_EXT "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + " WHERE TRIM(TRAN_ID) = ?SVAR AND TRAN_DATE = TO_DATE(?SVAR,'DD-MM-YYYY') "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + " AND TRIM(PART_TRAN_SRL_NUM) = ?SVAR AND PART_TRAN_TYPE = ?SVAR "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "  AND BANK_ID = '" + BANCS.STDIN.contextBankId + "' "
+	#}
+	ENDIF
+	IF(CUST.DATA.queryId == "CCIFCR001")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT COUNT(1) FROM TBAADM.CMG WHERE CIF_ID = ?SVAR AND BANK_ID = '" + BANCS.STDIN.contextBankId + "'"
+	#}
+	ENDIF
+	IF(CUST.DATA.queryId == "AOCODE001")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT R.LOGIN_ID,R.SALUTATION,R.FIRST_NAME,R.MIDDLE_NAME,R.LAST_NAME,R.GENDER,C.SSOOFF,C.SSCNTR "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "FROM TBAADM.RMG R,TBAADM.UPR U,CUSTOM.CAOCT C WHERE R.LOGIN_ID = U.USER_ID(+) AND "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "U.USER_EMP_ID = C.SSOIDN(+) AND R.BANK_ID = C.BANK_ID(+) AND R.BANK_ID = U.HOME_BANK_ID(+) "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND R.BANK_ID = '" + BANCS.STDIN.contextBankId + "' ORDER BY R.LOGIN_ID "
+	#}
+	ENDIF
+	IF(CUST.DATA.queryId == "AOCODE002")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT R.LOGIN_ID,R.SALUTATION,R.FIRST_NAME,R.MIDDLE_NAME,R.LAST_NAME,R.GENDER,C.SSOOFF,C.SSCNTR "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "FROM TBAADM.RMG R,TBAADM.UPR U,CUSTOM.CAOCT C WHERE R.LOGIN_ID = U.USER_ID(+) AND "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "U.USER_EMP_ID = C.SSOIDN(+) AND R.BANK_ID = C.BANK_ID(+) AND R.BANK_ID = U.HOME_BANK_ID(+) "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND R.BANK_ID = '" + BANCS.STDIN.contextBankId + "' "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND R.LOGIN_ID LIKE ?SVAR ORDER BY R.LOGIN_ID "
+	#}
+	ENDIF
+	IF(CUST.DATA.queryId == "AOCODE003")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT C.SSOOFF,C.SSCNTR FROM TBAADM.GAM G,TBAADM.UPR U,CUSTOM.CAOCT C "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "WHERE G.ACCT_MGR_USER_ID = U.USER_ID "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND U.USER_EMP_ID = C.SSOIDN AND G.BANK_ID = C.BANK_ID "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND G.BANK_ID = '" + BANCS.STDIN.contextBankId + "' "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND G.FORACID = ?SVAR "
+	#}
+	ENDIF
+	IF(CUST.DATA.queryId == "AOCODE004")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT AO_CODE,COST_CENTER FROM TBAADM.C_DTD_P_EXT "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + " WHERE TRIM(TRAN_ID) = ?SVAR AND TRAN_DATE = TO_DATE(?SVAR,'DD-MM-YYYY') "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + " AND TRIM(PART_TRAN_SRL_NUM) = ?SVAR AND PART_TRAN_TYPE = ?SVAR "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "  AND BANK_ID = '" + BANCS.STDIN.contextBankId + "' "
+	#}
+	ENDIF
+	
+	IF(CUST.DATA.queryId == "OGM001")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT COUNT(1) FROM CUSTOM.C_CPMASTER CPARAM,CUSTOM.C_CPVALUE CPVALUE "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "WHERE CPVALUE.PARAMETER_ID = ?SVAR AND CPARAM.PARAMETER_ID = CPVALUE.PARAMETER_ID "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND CPVALUE.DEL_FLG != 'Y' AND CPVALUE.ENTITY_CRE_FLG = 'Y' AND CPARAM.DEL_FLG != 'Y' "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND CPARAM.ENTITY_CRE_FLG = 'Y' AND CPARAM.MODULE_NAME = 'CMP' "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND CPVALUE.BANK_ID = '" + BANCS.STDIN.contextBankId + "' "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND CPARAM.BANK_ID = '" + BANCS.STDIN.contextBankId + "' "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND (CPVALUE.PARAMETER_VALUE LIKE ?SVAR OR PARAMETER_VALUE LIKE ?SVAR "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "OR PARAMETER_VALUE LIKE ?SVAR OR PARAMETER_VALUE = ?SVAR)"
+	#}
+	ENDIF
+	IF(CUST.DATA.queryId == "OGM002")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT GL_SUB_HEAD_CODE FROM TBAADM.GAM WHERE FORACID = ?SVAR AND BANK_ID = '" + BANCS.STDIN.contextBankId + "' "
+	#}
+	ENDIF
+	
+	IF(CUST.DATA.queryId == "SLA001")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT CP.PARAMETER_VALUE FROM  tbaadm.c_cpvalue cp , tbaadm.c_cpmaster cm  "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "where cp.parameter_id = ?SVAR AND cp.parameter_id = cm.parameter_id "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND cp.entity_cre_flg = 'Y' AND cp.del_flg = 'N' "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND cp.bank_id = '" + BANCS.STDIN.contextBankId + "' "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND cm.parameter_level = 'BNKL' AND cm.module_name = 'CMP' "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND cp.bank_id = cm.bank_id AND cp.entity_cre_flg = cm.entity_cre_flg AND cp.del_flg = cm.del_flg "
+	#}
+	ENDIF
+	
+	IF(CUST.DATA.queryId == "SLA002")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT 'Y' FROM TBAADM.GAM WHERE FORACID = ?SVAR "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND BANK_ID = '" + BANCS.STDIN.contextBankId + "' "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "AND GL_SUB_HEAD_CODE IN "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "(SELECT REGEXP_SUBSTR(?SVAR,'[^,]+', 1, level) "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "FROM DUAL CONNECT BY REGEXP_SUBSTR(?SVAR, '[^,]+', 1, level) IS NOT NULL )"
+	#}
+	ENDIF
+	
+	IF(CUST.DATA.queryId == "SLA003")THEN
+	#{
+		CUST.DATA.sqlQuery = "SELECT FREE_TEXT_1,FREE_TEXT_2,FREE_TEXT_3, substr(FREE_TEXT_4,5,70) , substr(FREE_TEXT_4,0,3)  FROM TBAADM.C_DTD_P_EXT "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + " WHERE TRIM(TRAN_ID) = ?SVAR AND TRAN_DATE = TO_DATE(?SVAR,'DD-MM-YYYY') "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + " AND TRIM(PART_TRAN_SRL_NUM) = ?SVAR AND PART_TRAN_TYPE = ?SVAR "
+		CUST.DATA.sqlQuery = CUST.DATA.sqlQuery + "  AND BANK_ID = '" + BANCS.STDIN.contextBankId + "' "
+	#}
+	ENDIF
+	
+	EXITSCRIPT
+	
+END-->

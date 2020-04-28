@@ -1,0 +1,31 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Domain: Finacle Core
+# Library Name: inqAcctDetailInput.scl
+# Description:
+#============================================================
+
+FUNCTION xmlBodyDetails()
+#{
+	IF (FIELDEXISTS(("BANCS").("INPUT").("accNum")) == 1) THEN
+	#{
+		BANCS.INPUT.accNum = BANCS.INPUT.accNum
+		#}
+	ELSE
+		#{
+		BANCS.INPUT.accNum  = ""
+	#}
+	ENDIF
+	PRINT(BANCS.INPUT.accNum)
+	
+	sv_v = ""
+	sv_v = sv_v + "<accParam>"
+	sv_v = sv_v + "<accNum>"+BANCS.INPUT.accNum+"</accNum>"
+	sv_v = sv_v + "</accParam>"
+	PRINT(sv_v)
+	RETURN sv_v
+#}
+ENDFUNCTION
+
+<--START
+END-->

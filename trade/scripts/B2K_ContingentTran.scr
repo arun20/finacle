@@ -1,0 +1,635 @@
+# -----------------------------------------------------------------------------
+#  SCRIPT FOR CONTINGENT ACCOUNTING - 
+#  1. Foreign Bills / Inward remittances 	(FBILL)
+#  2. Inland bills 							(IBILL)
+#  3. Documentary Credits					(DOCCR)
+#  4. Forward contracts						(FWC)
+#
+# Srl No  Modified Date  Author             Modification
+# ------  -------------  -------------      --------------
+#   1     12/09/2008     Ashwini Kumar      Added MTT.TranDetails.TranIdOnline
+#                                           to generate Manual TranId
+# -----------------------------------------------------------------------------
+#  Note - ACPARTB2kType can not be passed as NULL or BILLS or ASSET
+#         (valid values are given above for each entity like FBILL,FWC etc.)
+#         ACPARTB2kId shall always be populated with entity b2k id
+#         (like bill_b2k_id , dc_b2kid, fwc_b2kid etc.)
+# -----------------------------------------------------------------------------
+# The data that gets dumped for this script and the repository varibales are
+# as given below:
+# Tran mode                in      MTT.ContingentDetails.CnTranMode
+# Bill function code       in      MTT.ContingentDetails.CnEntityOperation
+# Bill B2K Id              in      MTT.ContingentDetails.CnEntityB2kId
+# Bill B2K Type            in      MTT.ContingentDetails.CnEntityB2kType
+# Bill ID                  in      MTT.ContingentDetails.CnEntityNumber
+# Sol ID                   in      MTT.ContingentDetails.CnEntitySolId
+# Bill Currency            in      MTT.ContingentDetails.CnEntityCurrency
+# Party Code               in      MTT.ContingentDetails.CnPartyCode
+# Contingent Liab DB Accnt in      MTT.ContingentDetails.CnLiabDebitAcct
+# Contingent Liab CR Accnt in      MTT.ContingentDetails.CnLiabCreditAcct
+# Bill Amount              in      MTT.ContingentDetails.CnAmount
+# Contingent Currency      in      MTT.ContingentDetails.CnCurrency
+# Contingent Rate Code     in      MTT.ContingentDetails.CnRateCode
+# Contingent Rate          in      MTT.ContingentDetails.CnRate
+# Actual Liability Amt     in      MTT.ContingentDetails.CnActualLiabAmount
+# Event Amount             in      MTT.ContingentDetails.CnEventAmount
+# Event rate Code          in      MTT.ContingentDetails.CnEventRateCode
+# Event rate               in      MTT.ContingentDetails.CnEventRate
+# Event currency code      in      MTT.ContingentDetails.CnEventCurrency
+# -----------------------------------------------------------------------------
+# The repository variables that get populated on creation of the transaction
+# Tran Id          in              MTT.ContingentDetails.CnTranId
+# Tran Particulars in              MTT.ContingentDetails.CnTranParticulars
+# Tran remarks     in              MTT.ContingentDetails.CnTranRemarks
+# -----------------------------------------------------------------------------
+<--start
+#trace on
+sv_a = urhk_MTTS_PopulateInputDetails("")
+MTT.TranDetails.TranDate="0"
+MTT.TranDetails.TranType="T"
+MTT.TranDetails.TranSubType="BI"
+MTT.TranDetails.Remarks="CONTINGENT ACCOUNTING"
+MTT.TranDetails.IgnoreExcp="I"
+MTT.TranDetails.Consolidate="N"
+MTT.TranDetails.PrintAdviceInd="Y"
+MTT.TranDetails.ReversalFlg=""
+MTT.TranDetails.ReversalDate=""
+MTT.TranDetails.sysTranCode="TFINAA021"
+
+#To Generate Manual TranId for non BJSTM Call
+if((BANCS.INPUT.callingProgramId !="BJSTM") AND (BANCS.INPUT.sysManualTranFlg=="M"))THEN
+    MTT.TranDetails.TranIdOnline="Y"
+ENDIF
+
+# ----------------------------------------------------------
+# DON'T DELETE the code enclosed between "<START>" to "<END>"
+# ----------------------------------------------------------
+# <START>
+if(MTT.TranDetails.PrintAdviceInd == "Y")THEN
+	MTT.TranDetails.PrintAdviceInd="B"
+ENDIF
+# <END>
+sv_b = urhk_MTTS_DefineTransaction("ContingentTrans")
+if (sv_b == 1) then
+	exitscript
+ENDIF
+		sv_c = CDOUBLE(MTT.ContingentDetails.CnAmount)
+# The following calculations need to be done only when
+# contingent transactions are created for foreign bill only
+# The calcualtions are done so that the transaction is created
+# appropriate amounts
+
+# For LODGE the difference between the bill amount and the
+# event amount should be used for transaction purpose
+
+# For PURCHASE the transaction should be creted for the
+# event amount
+
+# The case for RECOVERY is not handled in the script and is
+# left to the user according to his/her requirements. If the user
+# wants to populate the event amount as the transcation amount then
+# the same is available in MTT.ContingentDetails.CnEventAmount
+# (in turn populated into sv_p) and that should be populated into
+# sv_c variable.
+
+# For REALISATION the difference between the event amount
+# and the purchase liability amount constitutes the
+# transaction amount
+
+# For accetance always the contingent liability amount is reversed back
+
+	if(MTT.ContingentDetails.CnEntityB2kType == "FBILL")then
+			if (fieldexists(MTT.ContingentDetails.adv_pay_amt)) then
+				sv_c = sv_c - CDOUBLE(MTT.ContingentDetails.adv_pay_amt)
+			endif
+			sv_p = CDOUBLE(MTT.ContingentDetails.CnEventAmount)
+			sv_q = CDOUBLE(MTT.ContingentDetails.CnActualLiabAmount)
+            
+		#	if( MTT.ContingentDetails.CnEntityOperation == "G")THEN
+        #       sv_c = sv_c - sv_p
+        #   endif
+
+        #   if(MTT.ContingentDetails.CnEntityOperation == "P")THEN
+        #       sv_c = sv_p
+        #   endif
+		
+		#Changes done as part of ticket 342432, which was a recon of 
+		#ticket 290576. The piece of code can  be commented in case 
+		#this functionality is not required.
+			if(MTT.ContingentDetails.CnEntityOperation == "A")THEN 
+				sv_z = MTT.ContingentDetails.CnEntityB2kId
+				sv_v = "acctLiabFlg | select accep_liab_not_reqd from FBPT,FBM "
+				sv_v = sv_v + " where FBM.bill_b2k_id = ?SVAR " 
+				sv_v = sv_v + " and FBPT.bill_param_type = FBM.bill_param_type"
+				sv_u = sv_v + " and FBPT.bank_id = FBM.bank_id"
+				BANCS.INPARAM.BINDVARS=sv_z
+				sv_t = urhk_dbSelectWithBind(sv_u)
+				if (fieldexists(BANCS.OUTPARAM.acctLiabFlg)) then
+					sv_v=BANCS.OUTPARAM.acctLiabFlg
+					if (sv_v == "Y") then
+						sv_c = 0 
+					endif
+				endif
+			endif
+		#end of changes done for ticket 342432
+
+            if(MTT.ContingentDetails.CnEntityOperation == "O")THEN
+			  sv_c=sv_p
+            endif
+
+            if(MTT.ContingentDetails.CnEntityOperation == "R") THEN
+                if ( sv_q > 0) then
+                    if ( sv_p > sv_q ) then
+                        sv_c = sv_p - sv_q
+                    else
+                        sv_c = 0
+                    endif
+                endif
+            endif
+
+        endif 
+		
+###################################################################
+### FOR REMITTANCE
+
+        if(MTT.ContingentDetails.CnEntityB2kType == "REMIT")then
+            sv_p = CDOUBLE(MTT.ContingentDetails.CnEventAmount)
+            sv_q = CDOUBLE(MTT.ContingentDetails.CnActualLiabAmount)
+
+        #    if( MTT.ContingentDetails.CnEntityOperation == "G")THEN
+        #        sv_c = sv_c - sv_p
+        #   endif
+
+        #    if(MTT.ContingentDetails.CnEntityOperation == "P")THEN
+        #        sv_c = sv_p
+        #    endif
+
+
+            if(MTT.ContingentDetails.CnEntityOperation == "O")THEN
+#Left for user to handle
+            endif
+
+        #    if(MTT.ContingentDetails.CnEntityOperation == "R") THEN
+       	#		 sv_c = sv_p 
+		#        if ( sv_q > 0) then
+        #            if ( sv_p > sv_q ) then
+        #                sv_c = sv_p - sv_q
+        #            else
+        #                sv_c = 0
+        #            endif
+        #        endif
+        #   endif
+
+        endif 
+
+#------------------------------------------------------------------------
+# Incase LC reversal contingent transactions are not required while
+# Lodging a bill against the LC, comment the following condition.
+# CnEventAmount contains the LC reference amount against the Bill.
+#------------------------------------------------------------------------
+        if(MTT.ContingentDetails.CnEntityB2kType == "DOCCR") then
+           if(MTT.ContingentDetails.CnEntityOperation == "G") then
+        #       sv_c = CDOUBLE(MTT.ContingentDetails.CnEventAmount)
+           ENDIF
+       ENDIF
+#------------------------------------------------------------------------
+# End for the changes to create LC reversal transaction during Bill Lodge
+#------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------
+# Incase of forward contracts, if the contingent transaction should be
+# created at the contract booking rate, populate MTT.ContingentDetails.CnRate
+# with MTT.ContingentDetails.ContractRate and calculate the Contingent amount
+# with this rate.
+#-------------------------------------------------------------------------
+#       if((MTT.ContingentDetails.CnEntityB2kType == "FWC") ) then
+#-------------------------------------------------------------------------
+# End for the changes to create FWC Contingent transaction at booking rate.
+#-------------------------------------------------------------------------
+		if (sv_c <= 0) then
+		sv_x = format$(sv_c, "%17.02f")               
+		MTT.ContingentDetails.CnAmount = LTRIM(RTRIM(MID$(sv_x,1, 17)))     
+		sv_f = urhk_MTTS_EndDefinition("")     
+		exitscript
+		ENDIF
+
+		MTT.PartTranDetails.Account=MTT.ContingentDetails.CnLiabDebitAcct
+		MTT.PartTranDetails.RefCurrency=MTT.ContingentDetails.CnCurrency
+		MTT.PartTranDetails.RateCode=MTT.ContingentDetails.CnRateCode
+		MTT.PartTranDetails.Rate=MTT.ContingentDetails.CnRate
+		MTT.PartTranDetails.ValueDate=MTT.ContingentDetails.CnEventValueDate
+		MTT.PartTranDetails.Remarks=MTT.ContingentDetails.CnTranRemarks
+		MTT.PartTranDetails.Particulars=MTT.ContingentDetails.CnTranParticulars
+		MTT.PartTranDetails.EntryUserId = "SYSTEM"
+		MTT.PartTranDetails.EntryTime=BANCS.STDIN.BODDate
+		
+		# Call to common script to modify tran particulars if script is present
+		MTT.PartTranDetails.ScriptEventType = "CONTI"
+		sv_m = urhk_getFileLocation("SCRIPT|getMTTTranPart.scr")
+		if (sv_m == 0) then
+			call("getMTTTranPart.scr")
+		endif
+	 	
+		if (MTT.ContingentDetails.CnTranMode == "C") then
+			MTT.PartTranDetails.RefAmount=-sv_c
+            MTT.PartTranDetails.sysPartTranCode ="PTRN01290"
+		else
+			MTT.PartTranDetails.RefAmount=sv_c
+            MTT.PartTranDetails.sysPartTranCode ="PTRN01291"
+		endif
+		MTT.PartTranDetails.Consolidate="N"
+		MTT.PartTranDetails.TranIdentifier="ContingentTrans"
+		MTT.PartTranDetails.ACPARTB2kId=MTT.ContingentDetails.CnEntityB2kId
+		MTT.PartTranDetails.ACPARTB2kType=MTT.ContingentDetails.CnEntityB2kType
+		MTT.PartTranDetails.PTranBusinessType="ACPRT"
+		MTT.PartTranDetails.Refnum=MTT.ContingentDetails.CnEntityNumber
+
+		sv_r = urhk_MTTS_DefinePartTran("CONTACCT")
+		if (sv_r == 1) then
+			exitscript
+		ENDIF
+
+		MTT.PartTranDetails.Account=MTT.ContingentDetails.CnLiabCreditAcct
+		MTT.PartTranDetails.RefCurrency=MTT.ContingentDetails.CnCurrency
+		MTT.PartTranDetails.RateCode=MTT.ContingentDetails.CnRateCode
+		MTT.PartTranDetails.Rate=MTT.ContingentDetails.CnRate
+		MTT.PartTranDetails.ValueDate=MTT.ContingentDetails.CnEventValueDate
+		MTT.PartTranDetails.Remarks=MTT.ContingentDetails.CnTranRemarks
+		MTT.PartTranDetails.Particulars=MTT.ContingentDetails.CnTranParticulars
+		MTT.PartTranDetails.EntryUserId = "SYSTEM"
+		MTT.PartTranDetails.EntryTime=BANCS.STDIN.BODDate
+		# Call to common script to modify tran particulars if script is present
+		MTT.PartTranDetails.ScriptEventType = "CONTI"
+		sv_m = urhk_getFileLocation("SCRIPT|getMTTTranPart.scr")
+		if (sv_m == 0) then
+			call("getMTTTranPart.scr")
+		endif
+	 	
+		if (MTT.ContingentDetails.CnTranMode == "C") then
+			MTT.PartTranDetails.RefAmount=sv_c
+            MTT.PartTranDetails.sysPartTranCode ="PTRN01292"
+		else
+			MTT.PartTranDetails.RefAmount=-sv_c
+            MTT.PartTranDetails.sysPartTranCode ="PTRN01293"
+		endif
+		MTT.PartTranDetails.Consolidate="N"
+		MTT.PartTranDetails.TranIdentifier="ContingentTrans"
+		MTT.PartTranDetails.ACPARTB2kId=MTT.ContingentDetails.CnEntityB2kId
+		MTT.PartTranDetails.ACPARTB2kType=MTT.ContingentDetails.CnEntityB2kType
+		MTT.PartTranDetails.PTranBusinessType="ACPRT"
+		MTT.PartTranDetails.Refnum=MTT.ContingentDetails.CnEntityNumber
+
+		sv_r = urhk_MTTS_DefinePartTran("CONTACCT")
+		if (sv_r == 1) then
+			exitscript
+		ENDIF
+       
+		#Reversal of Amend Transaction for Documantary Credit entity.
+	if(MTT.ContingentDetails.CnEntityB2kType == "DOCCR") then
+		if(fieldexists(MTT.ContingentDetails.CnAmendRevFlg) == 1) then
+			if(MTT.ContingentDetails.CnAmendRevFlg == "Y") then
+				sv_s = CDOUBLE(MTT.ContingentDetails.CnAmendRevAmount)
+				MTT.PartTranDetails.Account=MTT.ContingentDetails.CnAmendCreditAcct
+				MTT.PartTranDetails.RefCurrency=MTT.ContingentDetails.CnAmendRevCrncy
+				MTT.PartTranDetails.RateCode=MTT.ContingentDetails.CnRateCode
+				MTT.PartTranDetails.Rate=MTT.ContingentDetails.CnRate
+				MTT.PartTranDetails.ValueDate=MTT.ContingentDetails.CnEventValueDate
+				MTT.PartTranDetails.Remarks=MTT.ContingentDetails.CnTranRemarks
+				MTT.PartTranDetails.Particulars=MTT.ContingentDetails.CnTranParticulars
+				MTT.PartTranDetails.EntryUserId = "SYSTEM"
+				MTT.PartTranDetails.EntryTime=BANCS.STDIN.BODDate
+				# Call to common script to modify tran particulars if script is present
+				MTT.PartTranDetails.ScriptEventType = "CONTI"
+				sv_m = urhk_getFileLocation("SCRIPT|getMTTTranPart.scr")
+				if (sv_m == 0) then
+					call("getMTTTranPart.scr")
+				endif
+				if(MTT.ContingentDetails.CnTranMode == "C") then
+					MTT.PartTranDetails.RefAmount=-sv_s
+				else
+					MTT.PartTranDetails.RefAmount=sv_s
+				endif
+				MTT.PartTranDetails.Consolidate="N"
+				MTT.PartTranDetails.TranIdentifier="ContingentTrans"
+				MTT.PartTranDetails.ACPARTB2kId=MTT.ContingentDetails.CnEntityB2kId
+				MTT.PartTranDetails.ACPARTB2kType=MTT.ContingentDetails.CnEntityB2kType
+				MTT.PartTranDetails.PTranBusinessType="ACPRT"
+				MTT.PartTranDetails.Refnum=MTT.ContingentDetails.CnEntityNumber
+				
+				sv_r = urhk_MTTS_DefinePartTran("CONTACCT")
+				if (sv_r == 1) then
+					exitscript
+				ENDIF
+				
+				MTT.PartTranDetails.Account=MTT.ContingentDetails.CnAmendDebitAcct
+				MTT.PartTranDetails.RefCurrency=MTT.ContingentDetails.CnAmendRevCrncy
+				MTT.PartTranDetails.RateCode=MTT.ContingentDetails.CnRateCode
+				MTT.PartTranDetails.Rate=MTT.ContingentDetails.CnRate
+				MTT.PartTranDetails.ValueDate=MTT.ContingentDetails.CnEventValueDate
+				MTT.PartTranDetails.Remarks=MTT.ContingentDetails.CnTranRemarks
+				MTT.PartTranDetails.Particulars=MTT.ContingentDetails.CnTranParticulars
+				MTT.PartTranDetails.EntryUserId="SYSTEM"
+				MTT.PartTranDetails.EntryTime=BANCS.STDIN.BODDate
+
+				# Call to common script to modify tran particulars if script is present
+				MTT.PartTranDetails.ScriptEventType = "CONTI"
+				sv_m = urhk_getFileLocation("SCRIPT|getMTTTranPart.scr")
+				if (sv_m == 0) then
+					call("getMTTTranPart.scr")
+				endif
+
+				if (MTT.ContingentDetails.CnTranMode == "C") then
+					MTT.PartTranDetails.RefAmount=sv_s
+				else
+					MTT.PartTranDetails.RefAmount=-sv_s
+				endif
+
+				MTT.PartTranDetails.Consolidate="N"
+				MTT.PartTranDetails.TranIdentifier="ContingentTrans"
+				MTT.PartTranDetails.ACPARTB2kId=MTT.ContingentDetails.CnEntityB2kId
+				MTT.PartTranDetails.ACPARTB2kType=MTT.ContingentDetails.CnEntityB2kType
+				MTT.PartTranDetails.PTranBusinessType="ACPRT"
+				MTT.PartTranDetails.Refnum=MTT.ContingentDetails.CnEntityNumber
+
+				sv_r = urhk_MTTS_DefinePartTran("CONTACCT")
+				if (sv_r == 1) then
+					exitscript
+				ENDIF
+			endif
+		endif
+	endif
+		#End of Reversal of Amend Transaction for Documantary Credit entity.
+
+		if((MTT.ContingentDetails.CnEntityB2kType == "FWC") ) then
+		sv_x = format$(sv_c, "%17.02f")
+        MTT.ContingentDetails.CnAmount = LTRIM(RTRIM(MID$(sv_x,1, 17)))
+        if((MTT.ContingentDetails.CnLiabDebitAcct2 != "") and (MTT.ContingentDetails.CnLiabCreditAcct2 != "" )) then
+#{
+        sv_g = CDOUBLE(MTT.ContingentDetails.CnAmount2)
+		if((MTT.ContingentDetails.CnEntityOperation == "E") OR (MTT.ContingentDetails.CnEntityOperation == "D")) then
+		#{
+			sv_k = "ReversalCnAmount2|SELECT CONT_LIAB_AMT2 FROM FCM WHERE FWC_B2KID = ?SVAR " 
+			BANCS.INPARAM.BINDVARS=MTT.ContingentDetails.CnEntityB2kId
+			sv_k = urhk_dbSelectWithBind(sv_k)
+			if(sv_k == 0) then
+			#{
+				sv_g = CDOUBLE(BANCS.OUTPARAM.ReversalCnAmount2)
+			#}
+			endif
+		#}		
+		endif
+        MTT.PartTranDetails.Account=MTT.ContingentDetails.CnLiabDebitAcct2
+        MTT.PartTranDetails.RefCurrency=MTT.ContingentDetails.CnCurrency2
+        MTT.PartTranDetails.RateCode=MTT.ContingentDetails.CnRateCode2
+        MTT.PartTranDetails.Rate=MTT.ContingentDetails.CnRate2
+        MTT.PartTranDetails.ValueDate=MTT.ContingentDetails.CnEventValueDate
+        MTT.PartTranDetails.Remarks=MTT.ContingentDetails.CnTranRemarks
+        MTT.PartTranDetails.Particulars=MTT.ContingentDetails.CnTranParticulars
+
+        # Call to common script to modify tran particulars if script is present
+        MTT.PartTranDetails.ScriptEventType = "CONTI"
+        sv_m = urhk_getFileLocation("SCRIPT|getMTTTranPart.scr")
+        if (sv_m == 0) then
+            call("getMTTTranPart.scr")
+        endif
+
+        if (MTT.ContingentDetails.CnTranMode == "C") then
+            MTT.PartTranDetails.RefAmount=-sv_g
+	    MTT.PartTranDetails.sysPartTranCode ="PTRN03671"
+        else
+            MTT.PartTranDetails.RefAmount=sv_g
+	    MTT.PartTranDetails.sysPartTranCode ="PTRN03672"
+        endif
+        MTT.PartTranDetails.Consolidate=""
+        MTT.PartTranDetails.TranIdentifier="ContingentTrans"
+        MTT.PartTranDetails.ACPARTB2kId=MTT.ContingentDetails.CnEntityB2kId
+        MTT.PartTranDetails.ACPARTB2kType=MTT.ContingentDetails.CnEntityB2kType
+        MTT.PartTranDetails.PTranBusinessType="ACPRT"
+        MTT.PartTranDetails.Refnum=MTT.ContingentDetails.CnEntityNumber
+
+        sv_r = urhk_MTTS_DefinePartTran("CONTACCT")
+        if (sv_r == 1) then
+            exitscript
+        ENDIF
+
+        MTT.PartTranDetails.Account=MTT.ContingentDetails.CnLiabCreditAcct2
+        MTT.PartTranDetails.RefCurrency=MTT.ContingentDetails.CnCurrency2
+        MTT.PartTranDetails.RateCode=MTT.ContingentDetails.CnRateCode2
+        MTT.PartTranDetails.Rate=MTT.ContingentDetails.CnRate2
+		MTT.PartTranDetails.ValueDate=MTT.ContingentDetails.CnEventValueDate
+        MTT.PartTranDetails.Remarks=MTT.ContingentDetails.CnTranRemarks
+        MTT.PartTranDetails.Particulars=MTT.ContingentDetails.CnTranParticulars
+
+        # Call to common script to modify tran particulars if script is present
+        MTT.PartTranDetails.ScriptEventType = "CONTI"
+        sv_m = urhk_getFileLocation("SCRIPT|getMTTTranPart.scr")
+        if (sv_m == 0) then
+            call("getMTTTranPart.scr")
+        endif
+
+        if (MTT.ContingentDetails.CnTranMode == "C") then
+            MTT.PartTranDetails.RefAmount=sv_g
+	    MTT.PartTranDetails.sysPartTranCode ="PTRN03674"
+        else
+            MTT.PartTranDetails.RefAmount=-sv_g
+	    MTT.PartTranDetails.sysPartTranCode ="PTRN03673"
+        endif
+
+        MTT.PartTranDetails.Consolidate=""
+        MTT.PartTranDetails.TranIdentifier="ContingentTrans"
+        MTT.PartTranDetails.ACPARTB2kId=MTT.ContingentDetails.CnEntityB2kId
+        MTT.PartTranDetails.ACPARTB2kType=MTT.ContingentDetails.CnEntityB2kType
+        MTT.PartTranDetails.PTranBusinessType="ACPRT"
+        MTT.PartTranDetails.Refnum=MTT.ContingentDetails.CnEntityNumber
+
+        sv_r = urhk_MTTS_DefinePartTran("CONTACCT")
+        if (sv_r == 1) then
+            exitscript
+        ENDIF
+
+		if (MTT.ContingentDetails.CnEntityOperation != "E") then
+			sv_x = format$(sv_g, "%17.02f")
+			MTT.ContingentDetails.CnAmount2 = LTRIM(RTRIM(MID$(sv_x,1,17)))
+		ENDIF
+#}
+    	endif	
+#------------------------------------------------------------------------------#
+# During extension event of a Forward Contract, the user can specify a new     #
+# exchange rate and the same will have an effect on contingent entries. During #
+# extension event, the system will always call this script in REVERSE mode.    #
+# So that the contingent transaction created during Booking or during previous #
+# Extension event will be reversed. And the system has to create contingent    #
+# transaction with the new exchange rate specified in the current extension    #
+# event. The following lines are added to achieve the same.                    #
+#------------------------------------------------------------------------------#
+	ENDIF
+        if(MTT.ContingentDetails.CnEntityB2kType == "FWC") then
+           if(MTT.ContingentDetails.CnEntityOperation == "E") then
+				BANCS.INPARAM.InputAmount=MTT.ContingentDetails.CnEventAmount
+				BANCS.INPARAM.FromCurrency=MTT.ContingentDetails.CnEventCurrency
+				BANCS.INPARAM.ToCurrency=MTT.ContingentDetails.CnCurrency
+				BANCS.INPARAM.RateCode=MTT.ContingentDetails.CnEventRateCode
+				BANCS.INPARAM.Rate=MTT.ContingentDetails.CnEventRate
+
+				sv_b = urhk_B2k_ConvertAmount("")
+
+				sv_c = CDOUBLE(BANCS.OUTPARAM.OutputAmount)
+				sv_d = BANCS.OUTPARAM.Rate
+
+				MTT.PartTranDetails.Account=MTT.ContingentDetails.CnLiabDebitAcct
+				MTT.PartTranDetails.RefCurrency=MTT.ContingentDetails.CnCurrency
+				MTT.PartTranDetails.RateCode=MTT.ContingentDetails.CnEventRateCode
+#				MTT.PartTranDetails.Rate=MTT.ContingentDetails.CnEventRate
+				MTT.PartTranDetails.Rate=sv_d
+				MTT.PartTranDetails.ValueDate=MTT.ContingentDetails.CnEventValueDate
+				MTT.PartTranDetails.Remarks="Creation of Liability Transactions"
+				MTT.PartTranDetails.Particulars="Creation of Contingent Accounting"
+				MTT.PartTranDetails.EntryUserId = "SYSTEM"
+				MTT.PartTranDetails.EntryTime=BANCS.STDIN.BODDate
+				
+				# Call to common script to modify tran particulars if script is present
+				MTT.PartTranDetails.ScriptEventType = "CONTI"
+				sv_m = urhk_getFileLocation("SCRIPT|getMTTTranPart.scr")
+				if (sv_m == 0) then
+					call("getMTTTranPart.scr")
+				endif
+				
+				if (MTT.ContingentDetails.CnTranMode == "C") then
+					MTT.PartTranDetails.RefAmount=sv_c
+                    MTT.PartTranDetails.sysPartTranCode ="PTRN01294"
+				else
+					MTT.PartTranDetails.RefAmount=-sv_c
+                    MTT.PartTranDetails.sysPartTranCode ="PTRN01295"
+				endif
+				MTT.PartTranDetails.Consolidate="N"
+				MTT.PartTranDetails.TranIdentifier="ContingentTrans"
+				MTT.PartTranDetails.ACPARTB2kId=MTT.ContingentDetails.CnEntityB2kId
+				MTT.PartTranDetails.ACPARTB2kType=MTT.ContingentDetails.CnEntityB2kType
+				MTT.PartTranDetails.PTranBusinessType="ACPRT"
+				MTT.PartTranDetails.Refnum=MTT.ContingentDetails.CnEntityNumber
+
+				sv_r = urhk_MTTS_DefinePartTran("CONTACCT")
+				if (sv_r == 1) then
+					exitscript
+				ENDIF
+
+				MTT.PartTranDetails.Account=MTT.ContingentDetails.CnLiabCreditAcct
+				MTT.PartTranDetails.RefCurrency=MTT.ContingentDetails.CnCurrency
+				MTT.PartTranDetails.RateCode=MTT.ContingentDetails.CnRateCode
+				MTT.PartTranDetails.Rate=MTT.ContingentDetails.CnRate
+				MTT.PartTranDetails.ValueDate=MTT.ContingentDetails.CnEventValueDate
+				MTT.PartTranDetails.Remarks="Creation of Liability Transactions"
+				MTT.PartTranDetails.Particulars="Creation of Contingent Accounting"
+				MTT.PartTranDetails.EntryUserId = "SYSTEM"
+				MTT.PartTranDetails.EntryTime=BANCS.STDIN.BODDate
+
+				# Call to common script to modify tran particulars if script is present
+				MTT.PartTranDetails.ScriptEventType = "CONTI"
+				sv_m = urhk_getFileLocation("SCRIPT|getMTTTranPart.scr")
+				if (sv_m == 0) then
+					call("getMTTTranPart.scr")
+				endif
+				
+				if (MTT.ContingentDetails.CnTranMode == "C") then
+					MTT.PartTranDetails.RefAmount=-sv_c
+                    MTT.PartTranDetails.sysPartTranCode ="PTRN01296"
+				else
+					MTT.PartTranDetails.RefAmount=sv_c
+                    MTT.PartTranDetails.sysPartTranCode ="PTRN01297"
+				endif
+				MTT.PartTranDetails.Consolidate="N"
+				MTT.PartTranDetails.TranIdentifier="ContingentTrans"
+				MTT.PartTranDetails.ACPARTB2kId=MTT.ContingentDetails.CnEntityB2kId
+				MTT.PartTranDetails.ACPARTB2kType=MTT.ContingentDetails.CnEntityB2kType
+				MTT.PartTranDetails.PTranBusinessType="ACPRT"
+				MTT.PartTranDetails.Refnum=MTT.ContingentDetails.CnEntityNumber
+
+				sv_r = urhk_MTTS_DefinePartTran("CONTACCT")
+				if (sv_r == 1) then
+					exitscript
+				ENDIF
+
+				
+				
+				if((MTT.ContingentDetails.CnLiabDebitAcct2 !="") and (MTT.ContingentDetails.CnLiabCreditAcct2!="" )) then
+				sv_g = CDOUBLE(MTT.ContingentDetails.CnAmount2) 
+				MTT.PartTranDetails.Account=MTT.ContingentDetails.CnLiabDebitAcct2
+                MTT.PartTranDetails.RefCurrency=MTT.ContingentDetails.CnCurrency2
+                MTT.PartTranDetails.RateCode=MTT.ContingentDetails.CnRateCode2
+                MTT.PartTranDetails.Rate=MTT.ContingentDetails.CnRate2
+                MTT.PartTranDetails.ValueDate=MTT.ContingentDetails.CnEventValueDate
+                MTT.PartTranDetails.Remarks="Creation of Liability Transactions"
+                MTT.PartTranDetails.Particulars="Creation of Contingent Accounting"
+                MTT.PartTranDetails.EntryUserId = "SYSTEM"
+                MTT.PartTranDetails.EntryTime=BANCS.STDIN.BODDate
+				 
+				MTT.PartTranDetails.ScriptEventType = "CONTI"
+                sv_m = urhk_getFileLocation("SCRIPT|getMTTTranPart.scr")
+                if (sv_m == 0) then
+                    call("getMTTTranPart.scr")
+                endif
+
+                if (MTT.ContingentDetails.CnTranMode == "C") then
+                    MTT.PartTranDetails.RefAmount=sv_g
+		    MTT.PartTranDetails.sysPartTranCode ="PTRN03676"
+                else
+                    MTT.PartTranDetails.RefAmount=-sv_g
+		    MTT.PartTranDetails.sysPartTranCode ="PTRN03675"
+                endif
+                MTT.PartTranDetails.Consolidate="N"
+                MTT.PartTranDetails.TranIdentifier="ContingentTrans"
+                MTT.PartTranDetails.ACPARTB2kId=MTT.ContingentDetails.CnEntityB2kId
+                MTT.PartTranDetails.ACPARTB2kType=MTT.ContingentDetails.CnEntityB2kType
+                MTT.PartTranDetails.PTranBusinessType="ACPRT"
+                MTT.PartTranDetails.Refnum=MTT.ContingentDetails.CnEntityNumber
+				
+				sv_r = urhk_MTTS_DefinePartTran("CONTACCT")
+                if (sv_r == 1) then
+                    exitscript
+                ENDIF
+
+                MTT.PartTranDetails.Account=MTT.ContingentDetails.CnLiabCreditAcct2
+                MTT.PartTranDetails.RefCurrency=MTT.ContingentDetails.CnCurrency2
+                MTT.PartTranDetails.RateCode=MTT.ContingentDetails.CnRateCode2
+                MTT.PartTranDetails.Rate=MTT.ContingentDetails.CnRate2
+                MTT.PartTranDetails.ValueDate=MTT.ContingentDetails.CnEventValueDate
+                MTT.PartTranDetails.Remarks="Creation of Liability Transactions"
+                MTT.PartTranDetails.Particulars="Creation of Contingent Accounting"
+                MTT.PartTranDetails.EntryUserId = "SYSTEM"
+                MTT.PartTranDetails.EntryTime=BANCS.STDIN.BODDate
+				
+				MTT.PartTranDetails.ScriptEventType = "CONTI"
+                sv_m = urhk_getFileLocation("SCRIPT|getMTTTranPart.scr")
+                if (sv_m == 0) then
+                    call("getMTTTranPart.scr")
+                endif
+
+                if (MTT.ContingentDetails.CnTranMode == "C") then
+                    MTT.PartTranDetails.RefAmount=-sv_g
+		    MTT.PartTranDetails.sysPartTranCode ="PTRN03677"
+                else
+                    MTT.PartTranDetails.RefAmount=sv_g
+		    MTT.PartTranDetails.sysPartTranCode ="PTRN03678"
+                endif
+                MTT.PartTranDetails.Consolidate="N"
+                MTT.PartTranDetails.TranIdentifier="ContingentTrans"
+                MTT.PartTranDetails.ACPARTB2kId=MTT.ContingentDetails.CnEntityB2kId
+                MTT.PartTranDetails.ACPARTB2kType=MTT.ContingentDetails.CnEntityB2kType
+                MTT.PartTranDetails.PTranBusinessType="ACPRT"
+                MTT.PartTranDetails.Refnum=MTT.ContingentDetails.CnEntityNumber
+
+                sv_r = urhk_MTTS_DefinePartTran("CONTACCT")
+                if (sv_r == 1) then
+                    exitscript
+                ENDIF
+				sv_x = format$(sv_g, "%17.02f")
+    			MTT.ContingentDetails.CnAmount2 = LTRIM(RTRIM(MID$(sv_x,1, 17)))
+		endif
+			endif
+				endif
+	sv_x = format$(sv_c, "%17.06f")
+    MTT.ContingentDetails.CnAmount = LTRIM(RTRIM(MID$(sv_x,1, 17)))
+	sv_f = urhk_MTTS_EndDefinition("")
+#trace off
+end-->
+

@@ -1,0 +1,234 @@
+IMPORT LibCommonB001
+<--START
+	TRACE ON
+	
+	sub_createRepClassB("CUST","DATA")
+
+	sv_a = urhk_b2k_printRepos("BANCS")
+	CUST.DATA.toDate = ""
+	CUST.DATA.fromDate = ""
+	CUST.DATA.schmType = ""
+	CUST.DATA.acid = ""
+	CUST.DATA.dateFormat = ""
+	CUST.DATA.dateFormatTemp = ""
+	CUST.DATA.reportName = ""
+	CUST.DATA.seq = ""
+	CUST.DATA.filepath = ""
+	CUST.DATA.cdcifilepath = ""
+	CUST.DATA.cifId = ""
+	CUST.DATA.corpId= ""
+	CUST.DATA.password = ""
+	### INPUT VARIABLES FROM MRT ###
+	sub_copyOptionalFieldB("acctNum","CUST","DATA","acctNum","")
+	sub_copyOptionalFieldB("acctDateRange","CUST","DATA","acctDateRange","")
+	print(CUST.DATA.acctNum)
+	print(CUST.DATA.acctDateRange)
+	CUST.DATA.toDate = mid$(CUST.DATA.acctDateRange, 0 ,10)
+	CUST.DATA.fromDate = mid$(CUST.DATA.acctDateRange, 14 ,10)
+	print(CUST.DATA.toDate)
+	print(CUST.DATA.fromDate)
+	print(BANCS.STDIN.BODDate)
+	print("In Script")
+	
+	sv_q = "schmType,acid,cifId|select SCHM_TYPE,acid,CIF_ID from tbaadm.gam "
+	sv_q = sv_q + " where foracid = '"+ CUST.DATA.acctNum +"' "
+	PRINT(sv_q)
+	sv_r = urhk_dbSelectWithBind(sv_q)
+	PRINT(sv_r)
+	IF (sv_r == 0) THEN
+	#{
+		CUST.DATA.schmType = BANCS.OUTPARAM.schmType
+		CUST.DATA.acid = BANCS.OUTPARAM.acid
+		CUST.DATA.cifId = BANCS.OUTPARAM.cifId
+	#}
+	ENDIF
+	
+	sv_q = "corpId|select CORP_ID from crmuser.accounts "
+	sv_q = sv_q + " where ORGKEY = '"+ CUST.DATA.cifId +"' "
+	PRINT(sv_q)
+	sv_r = urhk_dbSelectWithBind(sv_q)
+	PRINT(sv_r)	
+	IF (sv_r == 0) THEN
+	#{
+		CUST.DATA.corpId = BANCS.OUTPARAM.corpId
+	#}
+	ENDIF
+	IF (CUST.DATA.corpId == "") THEN
+	#{
+		sv_q = "password|select to_char(CUST_DOB,'ddmmyyyy') from crmuser.accounts "
+		sv_q = sv_q + " where ORGKEY = '"+ CUST.DATA.cifId +"' "
+		PRINT(sv_q)
+		sv_r = urhk_dbSelectWithBind(sv_q)
+		PRINT(sv_r)	
+		IF (sv_r == 0) THEN
+		#{
+			CUST.DATA.password = BANCS.OUTPARAM.password
+		#}
+		ENDIF
+	#}
+	ELSE
+	#{
+		sv_q = "password|select TAXID from CRMUSER.CORPORATE "
+		sv_q = sv_q + " where CORP_ID = '"+ CUST.DATA.corpId +"' "
+		PRINT(sv_q)
+		sv_r = urhk_dbSelectWithBind(sv_q)
+		PRINT(sv_r)	
+		IF (sv_r == 0) THEN
+		#{
+			CUST.DATA.password = BANCS.OUTPARAM.password
+		#}
+		ENDIF
+	#}
+	ENDIF
+	
+	sv_q = "dateFormat|select to_char(sysdate,'dd-mm-yyyy hh24:mi:ss') from dual"
+	PRINT(sv_q)
+	sv_r = urhk_dbSelectWithBind(sv_q)
+	PRINT(sv_r)
+	IF (sv_r == 0) THEN
+	#{
+		CUST.DATA.dateFormatTemp = BANCS.OUTPARAM.dateFormat
+	#}
+	ENDIF
+	sv_q = "dateFormat|select to_char(sysdate,'ddmmyyyyhh24miss') from dual"
+	PRINT(sv_q)
+	sv_r = urhk_dbSelectWithBind(sv_q)
+	PRINT(sv_r)
+	IF (sv_r == 0) THEN
+	#{
+		CUST.DATA.dateFormat = BANCS.OUTPARAM.dateFormat
+	#}
+	ENDIF
+	sv_q = "seq|SELECT CUSTOM.C_ESTATEMENT_BATCH_SEQ.NEXTVAL FROM DUAL"
+	PRINT(sv_q)
+	sv_r = urhk_dbSelectWithBind(sv_q)
+	PRINT(sv_r)
+	IF (sv_r == 0) THEN
+	#{
+		CUST.DATA.seq = BANCS.OUTPARAM.seq
+	#}
+	ENDIF
+	print(CUST.DATA.seq)
+	#CUST.DATA.dateFormat = mid$(BANCS.STDIN.BODDate,3,2) + mid$(BANCS.STDIN.BODDate,8,2) + mid$(CUST.DATA.dateFormatTemp,17,2) 
+	#print(CUST.DATA.dateFormat)
+	print(CUST.DATA.schmType)
+	print(CUST.DATA.acid)
+	
+	lv_u = "filepath|SELECT PARAMETER_VALUE "
+	lv_u = lv_u + " FROM CUSTOM.C_CPMASTER CPARAM, CUSTOM.C_CPVALUE CPVALUE"
+	lv_u = lv_u + " WHERE CPVALUE.PARAMETER_ID = 'ESFCD_HPSP_PATH' AND CPARAM.PARAMETER_ID = CPVALUE.PARAMETER_ID"
+	lv_u = lv_u + " AND CPVALUE.DEL_FLG != 'Y' AND CPVALUE.ENTITY_CRE_FLG = 'Y' AND "
+	lv_u = lv_u + " CPARAM.DEL_FLG != 'Y' AND CPARAM.ENTITY_CRE_FLG = 'Y' AND CPARAM.MODULE_NAME = 'CASA' "
+	lv_u = lv_u + " AND CPVALUE.BANK_ID = ?SVAR  AND CPARAM.BANK_ID = ?SVAR"
+
+	BANCS.INPARAM.BINDVARS =  BANCS.STDIN.contextBankId +  "|" + BANCS.STDIN.contextBankId
+	lv_z = urhk_dbSelectWithBind(lv_u)
+	IF (lv_z == 0) THEN
+	#{
+		CUST.DATA.filepath = BANCS.OUTPARAM.filepath
+	#}
+	ENDIF
+	print(CUST.DATA.filepath)
+	lv_u = "cdcifilepath|SELECT PARAMETER_VALUE "
+	lv_u = lv_u + " FROM CUSTOM.C_CPMASTER CPARAM, CUSTOM.C_CPVALUE CPVALUE"
+	lv_u = lv_u + " WHERE CPVALUE.PARAMETER_ID = 'REPORT_PATH' AND CPARAM.PARAMETER_ID = CPVALUE.PARAMETER_ID"
+	lv_u = lv_u + " AND CPVALUE.DEL_FLG != 'Y' AND CPVALUE.ENTITY_CRE_FLG = 'Y' AND "
+	lv_u = lv_u + " CPARAM.DEL_FLG != 'Y' AND CPARAM.ENTITY_CRE_FLG = 'Y' AND CPARAM.MODULE_NAME = 'CASA' "
+	lv_u = lv_u + " AND CPVALUE.BANK_ID = ?SVAR  AND CPARAM.BANK_ID = ?SVAR"
+
+	BANCS.INPARAM.BINDVARS =  BANCS.STDIN.contextBankId +  "|" + BANCS.STDIN.contextBankId
+	lv_z = urhk_dbSelectWithBind(lv_u)
+	IF (lv_z == 0) THEN
+	#{
+		CUST.DATA.cdcifilepath = BANCS.OUTPARAM.cdcifilepath
+	#}
+	ENDIF
+	print(CUST.DATA.cdcifilepath)
+	
+	IF (CUST.DATA.schmType == "SBA") THEN
+	#{
+		sv_c = CUST.DATA.toDate + "!" + CUST.DATA.fromDate + "!" + CUST.DATA.acctNum + "!" + CUST.DATA.acid
+		print(sv_c)
+		sv_p = "exebatch spbx4001 CUSTOM.FIN_ESTATEMENT_PACK.FIN_ESTATEMENT_PROC " + sv_c  + " > eStatement_" + CUST.DATA.acctNum  + ".lst"
+		print(sv_p)
+		sv_a = system(sv_p)
+		print(sv_a)
+		IF(sv_a == 0) THEN
+		#{
+			sv_i = "eStatement_SBA.jasper|eStatement_" + CUST.DATA.acctNum  + ".lst|"+ CUST.DATA.dateFormat +"||"
+			sv_o = urhk_B2k_GenRpt4004(sv_i)
+			PRINT(sv_o)
+			#sv_o = 0
+			IF(sv_o == 0)THEN
+			#{
+				#CUST.DATA.reportName = CUST.DATA.acctNum + CUST.DATA.dateFormat + ".PDF"
+				#sv_a =  "eStatementFCD.PDF|E STATEMENT Report|MANAGER|1"
+				#sv_x =  urhk_B2k_Insert_PQT(sv_a)
+				#PRINT(sv_x)
+				#IF(sv_x != 0)THEN
+				##{
+				#	PRINT("Pushing The Report to Background Menu Failed !")
+				##}
+				#ENDIF
+				#sv_a = func_pushReportToHPRB(CUST.DATA.reportName,"E_STATEMENT_Report")
+				#PRINT(sv_a)
+				sv_k = "mv " + CUST.DATA.cdcifilepath + "/" + BANCS.STDIN.userId + "/" + CUST.DATA.dateFormat + ".PDF " + CUST.DATA.filepath
+				print(sv_k)
+				sv_a = system(sv_k)
+				print(sv_a)
+				sv_a = "INSERT INTO tbaadm.TBA_PRINT_QUEUE_TBL (print_file_name,bank_id,prntr_id,user_id,prntr_status,num_of_copies,"
+				sv_a = sv_a + "report_to,report_name,num_of_pages,report_date,del_file_on_prnt_flg,created_on_node_id,report_id) VALUES ("
+				sv_a = sv_a + "'"+ CUST.DATA.filepath + CUST.DATA.dateFormat + ".PDF','" + BANCS.STDIN.contextBankId + "','SYSTE','" + BANCS.STDIN.userId + "','','0','" + BANCS.STDIN.userId + "',"
+				sv_a = sv_a + "'E_STATEMENT_Report','1',to_date('" + CUST.DATA.dateFormatTemp + "','dd-mm-yyyy hh24:mi:ss'),'Y','0','E_STATEMENT_Report')"
+				PRINT(sv_a)
+				sv_a = urhk_dbSQLWithBind(sv_a)
+				PRINT(sv_a)
+				sv_d = urhk_dbSqlWithBind("COMMIT")
+				PRINT(sv_d)
+			#}
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ENDIF
+	
+	IF (CUST.DATA.schmType == "TDA") THEN
+	#{
+		sv_c = CUST.DATA.toDate + "!" + CUST.DATA.fromDate + "!" + CUST.DATA.acctNum + "!" + CUST.DATA.acid
+		print(sv_c)
+		sv_p = "exebatch spbx4001 CUSTOM.FIN_ESTATEMENT_PACK_PSP_TDA.FIN_ESTATEMENT_PROC_PSP_TDA " + sv_c  + " > eStatement_" + CUST.DATA.acctNum  + ".lst"
+		print(sv_p)
+		sv_a = system(sv_p)
+		print(sv_a)
+		IF(sv_a == 0) THEN
+		#{
+			sv_i = "eStatement_TDA.jasper|eStatement_" + CUST.DATA.acctNum  + ".lst|" + CUST.DATA.dateFormat + "||"
+			sv_o = urhk_B2k_GenRpt4004(sv_i)
+			PRINT(sv_o)
+			#sv_o = 0
+			IF(sv_o == 0)THEN
+			#{
+				sv_k = "mv " + CUST.DATA.cdcifilepath + "/" + BANCS.STDIN.userId + "/" + CUST.DATA.dateFormat + ".PDF " + CUST.DATA.filepath
+				print(sv_k)
+				sv_a = system(sv_k)
+				print(sv_a)
+				sv_a = "INSERT INTO tbaadm.TBA_PRINT_QUEUE_TBL (print_file_name,bank_id,prntr_id,user_id,prntr_status,num_of_copies,"
+				sv_a = sv_a + "report_to,report_name,num_of_pages,report_date,del_file_on_prnt_flg,created_on_node_id,report_id) VALUES ("
+				sv_a = sv_a + "'"+ CUST.DATA.filepath + CUST.DATA.dateFormat + ".PDF','" + BANCS.STDIN.contextBankId + "','SYSTE','" + BANCS.STDIN.userId + "','','0','" + BANCS.STDIN.userId + "',"
+				sv_a = sv_a + "'E_STATEMENT_Report','1',to_date('" + CUST.DATA.dateFormatTemp + "','dd-mm-yyyy hh24:mi:ss'),'Y','0','E_STATEMENT_Report')"
+				PRINT(sv_a)
+				sv_a = urhk_dbSQLWithBind(sv_a)
+				PRINT(sv_a)
+				sv_d = urhk_dbSqlWithBind("COMMIT")
+				PRINT(sv_d)
+			#}
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ENDIF
+	ENDOFSCRIPT:	
+	exitscript
+
+TRACE OFF
+END-->

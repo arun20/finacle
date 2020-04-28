@@ -1,0 +1,20 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: SRV_AmendOutwardBGDtls_post_process_data.scr
+# Type: NA|default
+# Description: SRV_AmendOutwardBGDtls_post_process_data.scr
+# Author: Saisomasekhar_N
+# Date: 6/13/18 6:50 PM
+# Modification Log:
+#============================================================
+<--START
+	# Script body goes here
+	TRACE ON
+	
+	#CALLSCRIPTIFEXIST("tfc_charge_details_insMRHData.scr")
+	
+	### CUSTOM SCRIPT TO STORE SL ACCOUNT DETAILS OF CHARGES TAB OF OGM,ODCM,IGM,IDCM ###
+	CALL("OGM_SLAcctChrgDtls.scr")
+END-->

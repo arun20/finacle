@@ -1,0 +1,17 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Product: Finacle Core
+# Category: User Defined
+# Script: SRV_tfcCancelLaterChrgDtls_post_process_data.scr
+# Type: NA|default
+# Description: SRV_tfcCancelLaterChrgDtls_post_process_data.scr
+# Author: Saisomasekhar_N
+# Date: 7/4/18 1:11 PM
+# Modification Log:
+#============================================================
+
+<--START
+	# Script body goes here
+	TRACE ON
+	CALL("APCHCOLL_SLAcctChrgDtls.scr")
+END-->

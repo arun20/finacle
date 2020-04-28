@@ -1,0 +1,222 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Domain: Finacle Core
+# Library Name: common_business_XMLFunctions.scl
+# Description: common business XMLFunction details
+#============================================================
+IMPORT LibCommonB002
+IMPORT LibCommonB001
+SUB getFieldsFromRespXml(fv_noOfFields,fv_resxml,fv_TagFields,fv_defaultValue)
+#{
+	PRINT(fv_TagFields)
+	PRINT(fv_noOfFields)
+	PRINT(fv_resxml)
+	PRINT(fv_defaultValue)
+	
+	fv_counter = 1
+	fv_repos = "BANCS"
+	fv_repClass = "OUTPUT"
+	
+	WHILE(fv_counter <= fv_noOfFields)
+	#{
+		fv_TagName = func_getNthFieldFromStringB(fv_TagFields,"|",fv_counter)
+		PRINT(fv_TagName)
+		
+		fv_startTag = "<"+fv_TagName+">"
+		PRINT(fv_startTag)
+		
+		fv_endTag = "</"+fv_TagName+">"
+		PRINT(fv_endTag)
+		
+		fv_outputField = fv_TagName
+		PRINT(fv_outputField)
+		
+		fv_u = GETPOSITION(fv_resxml,fv_startTag) + STRLEN(fv_startTag) - 1
+		PRINT(fv_u)
+		IF(fv_u != 0) THEN
+		#{
+			fv_v  = GETPOSITION(fv_resxml,fv_endTag) - 1
+			PRINT(fv_v)
+			fv_e = MID$(fv_resxml,fv_u,(fv_v-fv_u))
+			PRINT(fv_e)
+			(fv_repos).(fv_repClass).(fv_outputField) = fv_e
+			PRINT((fv_repos).(fv_repClass).(fv_outputField))
+			fv_counter = fv_counter + 1
+		#}
+		ENDIF
+	#}
+	DO
+#}
+ENDSUB
+
+FUNCTION xmlParseFunc(fv_resXml,fv_startTag,fv_endTag,BYREF fv_tagValue)
+#{
+	PRINT(fv_startTag)
+	PRINT(fv_endTag)
+	fv_u = GETPOSITION(fv_resXml,fv_startTag) + STRLEN(fv_startTag) - 1
+	PRINT(fv_u)
+	IF(fv_u != 0) THEN
+	#{
+		fv_v  = GETPOSITION(fv_resXml,fv_endTag) - 1
+		PRINT(fv_v)
+		fv_tagValue = MID$(fv_resXml,fv_u,(fv_v-fv_u))
+		PRINT(fv_tagValue)
+		RETURN fv_tagValue
+	#}
+	ENDIF
+#}
+ENDFUNCTION
+
+FUNCTION ConnectToFIAndSendMsg(fv_rep,fv_class,fv_reqMsg, BYREF fv_resMsg, BYREF fv_errMsg, BYREF fv_sucFailMsg)
+#{
+	PRINT(fv_reqMsg)
+	fv_a = urhk_ConnectToFIAndSendMsg(fv_reqMsg)
+	PRINT(fv_a)
+	IF(fv_a != 0) THEN
+	#{
+		IF(FIELDEXISTS(BANCS.OUTPARAM.ErrMsg) == 1) THEN
+		#{
+			PRINT(BANCS.OUTPARAM.ErrMsg)
+			fv_errMsg = BANCS.OUTPARAM.ErrMsg
+			fv_resMsg = ""
+			fv_sucFailMsg = "Failure"
+			RETURN 1
+		#}
+		ENDIF
+		#}
+	ELSE
+		#{
+		IF (FIELDEXISTS(BANCS.OUTPARAM.RespMesg) == 1) THEN
+		#{
+			PRINT(BANCS.OUTPARAM.RespMesg)
+			fv_resMsg = BANCS.OUTPARAM.RespMesg
+			fv_errMsg = ""
+			fv_sucFailMsg = "Success"
+			RETURN 0
+		#}
+		ENDIF
+	#}
+	ENDIF
+#}
+ENDFUNCTION
+
+FUNCTION xmlFooterDetails()
+#{
+	sv_v = ""
+	sv_v = sv_v + "</rqBody>"
+	sv_v = sv_v + "</esb:"+BANCS.INPARAM.srvReqId+">"
+	sv_v = sv_v + "</soapenv:Body>"
+	sv_v = sv_v + "</soapenv:Envelope>"
+	sv_v = sv_v + "</MSG>"
+	sv_v = sv_v + "</Body>"
+	sv_v = sv_v + "</FIXML>"
+	RETURN sv_v
+#}
+ENDFUNCTION
+
+FUNCTION xmlHeaderDetails()
+#{
+	BANCS.INPARAM.rqIPAddr = ""
+	BANCS.INPARAM.rqTerminalId =""
+	
+	############# Getting CPARAM Values for Rq IPADDR ############
+	
+	BANCS.INPARAM.bindVars = "RQ_IPADDR"+"|"+"Y"+"|"+"N"+"|"+BANCS.STDIN.contextBankId
+	sv_f = func_selectFromCustTableB("rqIPAddr","PARAMETER_VALUE","CUSTOM.C_CPVALUE","PARAMETER_ID|ENTITY_CRE_FLG|DEL_FLG|BANK_ID",BANCS.INPARAM.bindVars)
+	PRINT(sv_f)
+	sub_copyOutparamFieldB("rqIPAddr","BANCS","INPARAM","rqIPAddr","")
+	PRINT(BANCS.INPARAM.rqIPAddr)
+	
+	############# Getting CPARAM Values for Rq TERMINAL ID ############
+	BANCS.INPARAM.bindVars = "RQ_TERMINALID"+"|"+"Y"+"|"+"N"+"|"+BANCS.STDIN.contextBankId
+	sv_f = func_selectFromCustTableB("rqTerminalId","PARAMETER_VALUE","CUSTOM.C_CPVALUE","PARAMETER_ID|ENTITY_CRE_FLG|DEL_FLG|BANK_ID",BANCS.INPARAM.bindVars)
+	PRINT(sv_f)
+	sub_copyOutparamFieldB("rqTerminalId","BANCS","INPARAM","rqTerminalId","")
+	PRINT(BANCS.INPARAM.rqTerminalId)
+	
+	sv_a = "requestuuid,messagedatatime,rqUID|SELECT to_char(systimestamp,'YYDDMMHHMISSFF'),to_char(systimestamp,'yyyy-mm-ddhh:mi:ssxff'),to_char(systimestamp,'yyyymmddhh24miff') from dual"
+	sv_b = urhk_dbSelectWithBind(sv_a)
+	PRINT(sv_b)
+	IF(sv_b ==0)THEN
+	#{
+		BANCS.INPARAM.requestuuid = BANCS.OUTPARAM.requestuuid
+		BANCS.INPARAM.messagedatatime = BANCS.OUTPARAM.messagedatatime
+		BANCS.INPARAM.messagedatatime = MID$(BANCS.INPARAM.messagedatatime,0,10)+"T"+MID$(BANCS.INPARAM.messagedatatime,10,12)
+		BANCS.INPARAM.rqUID = BANCS.OUTPARAM.rqUID + "1"
+		PRINT(BANCS.INPARAM.rqUID)
+		#}
+	ELSE
+		#{
+		BANCS.INPARAM.error = "Could not generate requestuuid,message time"
+		sv_x = BANCS.INPARAM.error
+		EXITSCRIPT
+	#}
+	ENDIF
+	
+	PRINT(BANCS.INPARAM.srvReqId)
+	
+	BANCS.INPARAM.xsdName = BANCS.INPARAM.srvReqId + ".xsd"
+	PRINT(BANCS.INPARAM.xsdName)
+	
+	sv_b="<?xml version='1.0' encoding='UTF-8'?>"
+	sv_b=sv_b+"<FIXML xsi:schemaLocation='http://www.finacle.com/fixml "+BANCS.INPARAM.xsdName+"' xmlns='http://www.finacle.com/fixml' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><Header>"
+	sv_b=sv_b+"<RequestHeader>"
+	sv_b=sv_b+"<MessageKey>"
+	sv_b=sv_b+"<RequestUUID>Req_"+BANCS.INPARAM.requestuuid+"</RequestUUID>"
+	sv_b=sv_b+"<ServiceRequestId>"+BANCS.INPARAM.srvReqId+"</ServiceRequestId>"
+	sv_b=sv_b+"<ServiceRequestVersion>10.2</ServiceRequestVersion>"
+	sv_b=sv_b+"<ChannelId>COR</ChannelId>"
+	sv_b=sv_b+"<LanguageId></LanguageId>"
+	sv_b=sv_b+"</MessageKey>"
+	sv_b=sv_b+"<RequestMessageInfo>"
+	sv_b=sv_b+"<BankId>"+BANCS.STDIN.contextBankId+"</BankId>"
+	sv_b=sv_b+"<TimeZone></TimeZone>"
+	sv_b=sv_b+"<EntityId></EntityId>"
+	sv_b=sv_b+"<EntityType></EntityType>"
+	sv_b=sv_b+"<ArmCorrelationId></ArmCorrelationId>"
+	sv_b=sv_b+"<MessageDateTime>"+BANCS.INPARAM.messagedatatime+"</MessageDateTime>"
+	sv_b=sv_b+"</RequestMessageInfo>"
+	sv_b=sv_b+"<Security>"
+	sv_b=sv_b+"<Token>"
+	sv_b=sv_b+"<PasswordToken>"
+	sv_b=sv_b+"<UserId></UserId>"
+	sv_b=sv_b+"<Password></Password>"
+	sv_b=sv_b+"</PasswordToken>"
+	sv_b=sv_b+"</Token>"
+	sv_b=sv_b+"<FICertToken></FICertToken>"
+	sv_b=sv_b+"<RealUserLoginSessionId></RealUserLoginSessionId>"
+	sv_b=sv_b+"<RealUser></RealUser>"
+	sv_b=sv_b+"<RealUserPwd></RealUserPwd>"
+	sv_b=sv_b+"<SSOTransferToken></SSOTransferToken>"
+	sv_b=sv_b+"</Security>"
+	sv_b=sv_b+"</RequestHeader>"
+	sv_b=sv_b+"</Header>"
+	sv_b=sv_b+"<Body>"
+	sv_b=sv_b+"<MSG>"
+	sv_b=sv_b+"<soapenv:Envelope xmlns:soapenv='http://schemas.xmlsoap.org/soap/envelope/' xmlns:esb='http://esb.lhb.co.th' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>"
+	sv_b=sv_b+"<soapenv:Header>"
+	sv_b=sv_b+"<esb:rqHeader>"
+	sv_b=sv_b+"<rqAppId>"+BANCS.INPARAM.rqAppId+"</rqAppId>"
+	sv_b=sv_b+"<rqUserId>"+BANCS.INPARAM.rqUserId+"</rqUserId>"
+	sv_b=sv_b+"<rqToken>"+BANCS.INPARAM.rqToken+"</rqToken>"
+	sv_b=sv_b+"<rqDateTime>"+ BANCS.INPARAM.messagedatatime+"</rqDateTime>"
+	#sv_b=sv_b+"<rqDateTime>"+"2018-09-17T00:00:00.000"+"</rqDateTime>"
+	sv_b=sv_b+"<rqIPAddr>"+BANCS.INPARAM.rqIPAddr+"</rqIPAddr>"
+	sv_b=sv_b+"</esb:rqHeader>"
+	sv_b=sv_b+"</soapenv:Header>"
+	sv_b=sv_b+"<soapenv:Body>"
+	sv_b=sv_b+"<esb:"+BANCS.INPARAM.srvReqId+">"
+	sv_b=sv_b+"<rqHeader>"
+	sv_b=sv_b+"<rqUID>"+BANCS.INPARAM.rqUID+"</rqUID>"
+	sv_b=sv_b+"<rqTxnCode>"+BANCS.INPARAM.rqTxnCode+"</rqTxnCode>"
+	sv_b=sv_b+"<rqTerminalId>"+BANCS.INPARAM.rqTerminalId+"</rqTerminalId>"
+	sv_b=sv_b+"<rqTerminalTypeCode>"+BANCS.INPARAM.rqTerminalTypeCode+"</rqTerminalTypeCode>"
+	sv_b=sv_b+"<rqLangPref>"+BANCS.INPARAM.rqLangPref+"</rqLangPref>"
+	sv_b=sv_b+"</rqHeader>"
+	sv_b=sv_b+"<rqBody>"
+	PRINT(sv_b)
+	RETURN sv_b
+#}
+ENDFUNCTION
+<--START
+END-->

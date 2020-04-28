@@ -1,0 +1,27 @@
+IMPORT LibCommonB001
+<--START
+TRACE ON
+sub_createRepClassB("MEOB","CUSTOM")
+		MEOB.CUSTOM.succOrFail = "S"
+		MEOB.CUSTOM.errMsg = ""
+		
+
+        CALL("FBM_SLAcctChrgDtls.scr")
+		
+		IF(MEOB.CUSTOM.succOrFail == "F")THEN
+		#{
+			sv_u = urhk_SRV_SetErr(MEOB.CUSTOM.errMsg)
+			sv_u = urhk_setOrbOut("SuccessOrFailure|N")
+			BANCS.OUTPUT.successOrFailure = "F"
+			EXITSCRIPT
+		#}
+		ENDIF
+		CALLSCRIPTIFEXIST("meobLimitCustFld.scr")	
+		MEOB.CUSTOM.funcCode = "E"
+		CALLSCRIPTIFEXIST("billOfExchange.scr")
+
+	
+ENDSCRIPT:
+sub_deleteRepClassB("MEOB","CUSTOM")
+END-->
+

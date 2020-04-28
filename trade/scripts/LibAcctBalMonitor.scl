@@ -1,0 +1,163 @@
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+
+FUNCTION isAcctEligible(fv_foracid, fv_acid, BYREF fv_isAcctEligible, BYREF fv_cifId)
+#{
+	fv_isAcctEligible = "N"
+	fv_bankId	= BANCS.STDIN.contextBankId
+	fv_cifId	= ""
+	fv_custId	= ""
+
+	fv_s = "foracid,custId,cifId|SELECT FORACID, CUST_ID, CIF_ID "
+	fv_s = fv_s + " FROM TBAADM.GAM WHERE FORACID = ?SVAR "
+	fv_s = fv_s + " AND BANK_ID = ?SVAR AND SCHM_TYPE IN ('SBA','CAA') "
+	fv_s = fv_s + " AND ACCT_CLS_FLG != 'Y' AND DEL_FLG = 'N' "
+	fv_s = fv_s + " AND ENTITY_CRE_FLG = 'Y' AND CIF_ID IS NOT NULL "
+	BANCS.INPARAM.BINDVARS = fv_foracid + "|" + fv_bankId
+	fv_d = urhk_dbSelectWithBind(fv_s)
+	IF (fv_d != 0) THEN
+	#{
+		fv_isAcctEligible = "N"
+	#}
+	ELSE
+	#{
+		fv_custId	= BANCS.OUTPARAM.custId
+		fv_cifId	= BANCS.OUTPARAM.cifId
+
+		fv_s = "count | SELECT COUNT(1) "
+		fv_s = fv_s + " FROM TBAADM.AAS WHERE CUST_ID = ?SVAR AND BANK_ID = ?SVAR "
+		fv_s = fv_s + " AND DEL_FLG = 'N' AND (ACID,CUST_ID) IN (SELECT ACID,CUST_ID FROM TBAADM.AAS WHERE "
+		fv_s = fv_s + " ACCT_POA_AS_REC_TYPE = 'J' AND BANK_ID = ?SVAR AND DEL_FLG = 'N') "
+		BANCS.INPARAM.BINDVARS = fv_custId + "|" + fv_bankId + "|" + fv_bankId
+		fv_d = urhk_dbSelectWithBind(fv_s)
+		IF (BANCS.OUTPARAM.count > 0) THEN
+		#{
+			fv_isAcctEligible = "N"
+		#}
+		ELSE
+		#{
+			fv_isAcctEligible = "Y"
+		#}
+		ENDIF
+	#}
+	ENDIF
+
+	RETURN 0
+#}
+ENDFUNCTION
+
+FUNCTION getTotalClearBal(fv_foracid, fv_custId, BYREF fv_totalClearBal)
+#{
+	fv_totalClearBal = 0
+	IF ((fv_foracid == "") OR (fv_custId == "")) THEN
+	#{
+		RETURN 0
+	#}
+	ENDIF
+	
+	fv_bankId = BANCS.STDIN.contextBankId
+
+	print(fv_foracid)
+	print(fv_custId)
+
+	# Fetch all non joint holders details for given Primary CIF Id
+	fv_s = "clrBalAmt,acctCcy| SELECT GAM.CLR_BAL_AMT,GAM.ACCT_CRNCY_CODE "
+	fv_s = fv_s + " FROM TBAADM.AAS, TBAADM.GAM "
+	fv_s = fv_s + " WHERE AAS.CUST_ID = GAM.CUST_ID AND AAS.CUST_ID = ?SVAR "
+	fv_s = fv_s + " AND AAS.BANK_ID = GAM.BANK_ID AND AAS.BANK_ID = ?SVAR "
+	fv_s = fv_s + " AND AAS.ACID = GAM.ACID AND AAS.ACID NOT IN (SELECT ACID FROM TBAADM.AAS WHERE "
+	fv_s = fv_s + " ACCT_POA_AS_REC_TYPE = 'J' AND BANK_ID = ?SVAR) "
+	fv_s = fv_s + " AND AAS.DEL_FLG = GAM.DEL_FLG AND AAS.DEL_FLG = 'N' "
+	BANCS.INPARAM.BINDVARS = fv_custId + "|" + fv_bankId + "|" + fv_bankId
+	PRINT(BANCS.INPARAM.BINDVARS)
+	fv_d = urhk_dbCursorOpenWithBind(fv_s)
+	print(fv_d)
+	IF (fv_d != 0) THEN
+	#{
+		RETURN 0
+	#}
+	ENDIF
+
+	fv_n = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+	fv_c = urhk_dbCursorFetch(fv_n)
+	PRINT(fv_c)
+	IF (fv_c != 0) THEN
+	#{
+		fv_c = urhk_dbCursorClose(fv_n)
+		RETURN 0
+	#}
+	ENDIF
+	
+	WHILE(fv_c == 0)
+	#{
+		fv_clrBalAmt = BANCS.OUTPARAM.clrBalAmt
+		fv_acctCcy = BANCS.OUTPARAM.acctCcy
+
+		IF (fv_acctCcy != "USD") THEN
+		#{
+			fv_f = func_getRevalRateCode(fv_acctCcy, "USD", BYREF sv_f)
+			print(sv_f)
+			# Amount conversion as per HCYCM setup.
+			BANCS.INPARAM.InputAmount  =  CDOUBLE(fv_clrBalAmt)
+			BANCS.INPARAM.FromCurrency =  fv_acctCcy
+			BANCS.INPARAM.ToCurrency   =  "USD"
+			BANCS.INPARAM.Rate         =  ""
+			BANCS.INPARAM.RateCode     =  sv_f
+			sv_u = urhk_B2k_ConvertAmount("")
+			IF (sv_u == 0 ) THEN
+			#{
+				lv_t = CDOUBLE(BANCS.OUTPARAM.OutputAmount)
+				print(lv_t)
+			#}
+			ENDIF
+		#}
+		ELSE
+		#{
+			IF(FIELDEXISTS(BANCS.INPUT.TranAmt)) THEN
+			#{
+				lv_t = CDOUBLE(BANCS.INPUT.TranAmt)
+			#}
+			ELSE
+			#{
+				lv_t = 0
+			#}
+			ENDIF
+		#}
+		ENDIF
+
+		fv_totalClearBal = CDOUBLE(fv_totalClearBal) + CDOUBLE(fv_clrBalAmt)
+		
+		fv_c = urhk_dbCursorFetch(fv_n)
+	#}
+	DO
+	fv_c = urhk_dbCursorClose(fv_n)
+
+	RETURN 0
+#}
+ENDFUNCTION
+
+FUNCTION getRevalRateCode(fv_fromCcy, fv_toCcy, BYREF fv_revalRateCode)
+#{
+	fv_revalRateCode = ""
+	IF ((fv_fromCcy == "") OR (fv_toCcy == "")) THEN
+	#{
+		RETURN 0
+	#}
+	ENDIF
+
+	fv_whereFields = "TRAD_CRNCY_CODE_1|TRAD_CRNCY_CODE_2|BANK_ID"
+	fv_whereValues = fv_fromCcy + "|" + fv_toCcy + "|" + BANCS.STDIN.contextBankId
+
+	fv_s = func_selectFromCustTableB("revalRateCode","REVAL_RATE_CODE","TBAADM.CYC",fv_whereFields,fv_whereValues)
+	IF (fv_s == 0) THEN
+	#{
+		fv_revalRateCode = BANCS.OUTPARAM.revalRateCode
+	#}
+	ENDIF
+	RETURN 0
+#}
+ENDFUNCTION
+
+<--START
+CHECKSUM="cb2aaffc7ea805f5b081abf7f173bc719e9ce048e3c19d1f5297e9c54c418077"
+END-->

@@ -1,0 +1,36 @@
+<--start
+trace on
+IF(REPEXISTS("CUST")==0) THEN
+#{
+	CREATEREP("CUST")
+#}
+ENDIF
+IF(CLASSEXISTS("CUST","LHB")==0) THEN
+#{
+	CREATECLASS("CUST","LHB",5)
+#}
+ENDIF
+CUST.LHB.asOfDate = MID$(BANCS.STDIN.BODDate,0,10)
+CUST.LHB.list = "MnthlyInterestInvoice.lst"
+sv_u = urhk_B2k_PID("")
+CUST.LHB.pidNumber = BANCS.OUTPARAM.PID
+
+sv_s = "exebatch spbx4001 CUSTOM.FIN_MNTHLY_INT_PACK.FIN_MNTHLY_INT_PACK_PROC "
+sv_s =  sv_s + CUST.LHB.asOfDate + " > " + CUST.LHB.list
+print(sv_s)
+sv_d= SYSTEM(sv_s)
+print(sv_d)
+
+sv_i = "MnthlyInterestInvoice.jasper|" + CUST.LHB.list + "|MnthlyInterestInvoice_" + CUST.LHB.pidNumber + "||"
+sv_o = urhk_B2k_GenRpt4004(sv_i)
+PRINT(sv_o)
+sv_a = "MnthlyInterestInvoice_" + CUST.LHB.pidNumber + ".XLS|" + "Monthly Interest Invoice" + "|MANAGER|1"
+sv_x =  urhk_B2k_Insert_PQT(sv_a)
+PRINT(sv_x)
+IF(sv_x != 0)THEN
+#{
+	PRINT("Pushing The Report to Background Menu Failed !")
+#}
+ENDIF
+TRACE OFF
+END-->

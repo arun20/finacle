@@ -1,0 +1,677 @@
+#============================================================
+# IMPORTANT: Auto Generated Header. DO NOT CHANGE MANUALLY.
+# Domain: Finacle Core
+# Library Name: corpCustModAPI.scl
+# Description: corpCustModAPI.scl
+#============================================================
+######################################################################################################
+# FUNCTION TO ADD TAGS IN XML IF VALUE PRESENT
+######################################################################################################
+SUB addTagIfNotNull(fv_tagname,fv_repos,fv_class,fv_fieldName,fv_dateFlg,BYREF fv_entireTag)
+#{
+	fv_a = ""
+	fv_inpTagname = fv_tagname
+	fv_inpRepos = fv_repos
+	fv_inpClass = fv_class
+	fv_inpfieldName = fv_fieldName
+	PRINT(fv_inpRepos)
+	PRINT(fv_inpClass)
+	PRINT(fv_inpfieldName)
+	#IF ((fv_inpRepos).(fv_inpClass).(fv_inpfieldName) != "" ) THEN
+	IF ( TRIM((fv_inpRepos).(fv_inpClass).(fv_inpfieldName))  != "" ) THEN
+	#{
+		fv_a = "<" + fv_inpTagname + ">" + (fv_inpRepos).(fv_inpClass).(fv_inpfieldName) + "</" + fv_inpTagname + ">"
+		PRINT(fv_a)
+	#}
+	ENDIF
+	fv_entireTag = fv_entireTag + fv_a
+#}
+ENDSUB addTagIfNotNull
+
+
+######################################################################################################
+# FUNCTION FOR XML HEADER
+######################################################################################################
+FUNCTION xmlHeaderDetailsFICORE()
+#{
+	#=====================================================================
+	# Getting the sysdate and time
+	#=====================================================================
+	sv_q = "timeStamp,sysdate, systimestamp|Select to_char(systimestamp,'ddmmyyyyhh24mmssff'), "
+	sv_q = sv_q + "to_char(systimestamp,'YYYY-MM-DD'), to_char(systimestamp,'HH24:MI:SS.ddd') from dual"
+	PRINT(sv_q)
+	
+	sv_x = urhk_dbselectWithBind(sv_q)
+	PRINT(sv_x)
+	
+	IF(sv_x == 0) THEN
+	#{
+		
+		CUST.DATA.timeStamp = BANCS.OUTPARAM.timeStamp
+		PRINT(CUST.DATA.timeStamp)
+		
+		CUST.DATA.sysdate = BANCS.OUTPARAM.sysdate
+		PRINT(CUST.DATA.sysdate)
+		
+		CUST.DATA.systimestamp = BANCS.OUTPARAM.systimestamp
+		PRINT(CUST.DATA.systimestamp)
+		
+		CUST.DATA.messageDateTime = CUST.DATA.sysdate + "T" + CUST.DATA.systimestamp
+		PRINT(CUST.DATA.messageDateTime)
+		
+	#}
+	ENDIF
+	
+	CUST.DATA.RequestUUID = "Req_" + CUST.DATA.timeStamp
+	
+	#------------------------------------------------------------------------------#
+	#Getting the UserInfo details
+	#------------------------------------------------------------------------------#
+	
+	BANCS.INPARAM.UserApplId    	= "FCORE"
+	BANCS.INPARAM.UserChannelId 	= "FI"
+	BANCS.INPARAM.CHANNELID    		= "CRM"
+	CUST.DATA.srvReqId 				= "updateCorpCustomer"
+	CUST.DATA.channelId 			= "CRM"
+	CUST.DATA.reqver    			= "10.2"
+	
+	
+	PRINT(CUST.DATA.RequestUUID)
+	PRINT(CUST.DATA.srvReqId)
+	PRINT(CUST.DATA.reqver)
+	PRINT(CUST.DATA.channelId)
+	PRINT(BANCS.STDIN.contextBankId)
+	PRINT(CUST.DATA.messageDateTime)
+	
+	CUST.DATA.xsdName = CUST.DATA.srvReqId + ".xsd"
+	
+	#===================================================================================================
+	###########					     MESSAGE FORMATION   ###################
+	#===================================================================================================
+	lv_h = "<?xml version='1.0' encoding='UTF-8'?>"
+	#lv_h = lv_h + "<FIXML xmlns:ns0='http://www.finacle.com/fixml'>"
+	lv_h = lv_h +"<FIXML xsi:schemaLocation='http://www.finacle.com/fixml "+CUST.DATA.xsdName+"' xmlns='http://www.finacle.com/fixml' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><Header>"
+	lv_h = lv_h + "<RequestHeader>"
+	lv_h = lv_h + "<MessageKey>"
+	lv_h = lv_h + "<RequestUUID>" + CUST.DATA.RequestUUID + "</RequestUUID>"
+	lv_h = lv_h + "<ServiceRequestId>" + CUST.DATA.srvReqId + "</ServiceRequestId>"
+	lv_h = lv_h + "<ServiceRequestVersion>" + CUST.DATA.reqver + "</ServiceRequestVersion>"
+	lv_h = lv_h + "<ChannelId>" + CUST.DATA.channelId + "</ChannelId>"
+	lv_h = lv_h + "<LanguageId></LanguageId>"
+	lv_h = lv_h + "</MessageKey>"
+	lv_h = lv_h + "<RequestMessageInfo>"
+	lv_h = lv_h + "<BankId>" + BANCS.STDIN.contextBankId + "</BankId>"
+	lv_h = lv_h + "<TimeZone></TimeZone>"
+	lv_h = lv_h + "<EntityId></EntityId>"
+	lv_h = lv_h + "<EntityType></EntityType>"
+	lv_h = lv_h + "<ArmCorrelationId></ArmCorrelationId>"
+	lv_h = lv_h + "<MessageDateTime>" + CUST.DATA.messageDateTime + "</MessageDateTime>"
+	lv_h = lv_h + "</RequestMessageInfo>"
+	lv_h = lv_h + "<Security>"
+	lv_h = lv_h + "<Token>"
+	lv_h = lv_h + "<PasswordToken>"
+	lv_h = lv_h + "<UserId></UserId>"
+	lv_h = lv_h + "<Password></Password>"
+	lv_h = lv_h + "</PasswordToken>"
+	lv_h = lv_h + "</Token>"
+	lv_h = lv_h + "<FICertToken></FICertToken>"
+	lv_h = lv_h + "<RealUserLoginSessionId></RealUserLoginSessionId>"
+	lv_h = lv_h + "<RealUser></RealUser>"
+	lv_h = lv_h + "<RealUserPwd></RealUserPwd>"
+	lv_h = lv_h + "<SSOTransferToken></SSOTransferToken>"
+	lv_h = lv_h + "</Security>"
+	lv_h = lv_h + "</RequestHeader>"
+	lv_h = lv_h + "</Header>"
+	
+	PRINT(lv_h)
+	
+	RETURN lv_h
+#}
+ENDFUNCTION
+
+######################################################################################################
+# MODIFY  UPLOADED RETAIL CIF DETAILS VIA FI
+######################################################################################################
+FUNCTION modifyUplCIFCorp(fv_repos,fv_class)
+#{
+	PRINT("IN Corporate MODIFY CIF ")
+	
+	sub_createRepClassB("CUST","DATA")
+	
+	PRINT(fv_repos)
+	PRINT(fv_class)
+	fv_errorCode = " "
+	fv_errorMsg = " "
+	
+	fv_r = fv_repos
+	fv_c = fv_class
+	
+	
+	(fv_r).(fv_c).("errorFlg")  = "N"
+	(fv_r).(fv_c).("errorMsg") = ""
+	(fv_r).(fv_c).("errorCode") = ""
+	
+	
+	
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	#	Differentiating Address Types
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
+	#AddressType:
+	#		1 = registered(home)
+	#		2 = mailling
+	#		3 = work
+	#		4 = communication
+	
+	(fv_r).(fv_c).("errFlg") = ""
+	(fv_r).(fv_c).("FiError") = "N"
+	(fv_r).(fv_c).("FiErrorMesg") = ""
+	(fv_r).(fv_c).("titleNativ") = "INFENG"
+	
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	#Getting the Header and Footer Details
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	PRINT("CALLING XML HEADER DETAILS ")
+	sv_c = func_xmlHeaderDetailsFICORE()
+	BANCS.OUTPARAM.XMLHeader = sv_c
+	PRINT(BANCS.OUTPARAM.XMLHeader)
+	lv_h = BANCS.OUTPARAM.XMLHeader
+	
+	
+	(fv_r).(fv_c).("xmlString") = BANCS.OUTPARAM.XMLHeader
+	
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~XML BODY STARTS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
+	##SAMPLE BODY WITH ONLY CIF ID
+	#	sv_c = func_xmlBodyDetailsFICORE()
+	#	BANCS.OUTPARAM.XMLBody = sv_c
+	#	PRINT(BANCS.OUTPARAM.XMLBody)
+	
+	(fv_r).(fv_c).("xmlString") = "<Body>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<updateCorpCustomerRequest>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<CorpCustomerModData>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<mainData>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<corpCustomerModCorporateData>"
+	
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<corp_key>" + (fv_r).(fv_c).("cust_id") + "</corp_key>"
+	(fv_r).(fv_c).("shortName") = MID$((fv_r).(fv_c).("shortName"),0,10)
+	print((fv_r).(fv_c).("shortName"))
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<short_name>" + (fv_r).(fv_c).("shortName") + "</short_name>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<entity_type>Customer</entity_type>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<legalentity_type>" + (fv_r).(fv_c).("classCode") + "</legalentity_type>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<corporate_name>" + (fv_r).(fv_c).("corpName") + "</corporate_name>"
+	#(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<customer_rating>" + (fv_r).(fv_c).("custRating") + "</customer_rating>"
+	
+	##business_type: not yet exposed to FI API for updateCorpCustomer
+	#(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<Business_Type>" + (fv_r).(fv_c).("businessType") + "</Business_Type>"
+	
+	sub_addTagIfNotNull("date_of_incorporation",fv_r,fv_c,"incorpDate","Y",BYREF (fv_r).(fv_c).("xmlString"))
+	
+	#(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<date_of_incorporation>" + (fv_r).(fv_c).("incorpDate") + "</date_of_incorporation>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<countryOfIncorporation>" + (fv_r).(fv_c).("incorpCntry") + "</countryOfIncorporation>"
+	
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<primaryRMID>" + (fv_r).(fv_c).("priRlnMgrId") + "</primaryRMID>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<relationship_createdby>" + (fv_r).(fv_c).("rlnshpCIF") + "</relationship_createdby>"
+	
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<sector>" + (fv_r).(fv_c).("sector") + "</sector>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<subsector>" + (fv_r).(fv_c).("subSector") + "</subsector>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<taxID>" + (fv_r).(fv_c).("taxId") + "</taxID>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<nativeLangCode>" + (fv_r).(fv_c).("titleNativ") + "</nativeLangCode>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<tradeServicesAvailed>" + (fv_r).(fv_c).("TFflg") + "</tradeServicesAvailed>"
+	
+	#------------------------- Address Details Starts   ---------------------------------
+	#AddressType:
+	#		1 = registered(home)
+	#		2 = mailling
+	#		3 = work
+	#		4 = communication
+	lv_n = 1
+	PRINT((fv_r).(fv_c).("modAddrCount"))
+	#=====================================================
+	# CORP CIF MULTIREC ADDRESS REQUEST
+	#=====================================================
+	WHILE(lv_n <= CINT((fv_r).(fv_c).("modAddrCount")))
+	#{
+
+                IF(("CUST").("DATA").("addrType"+FORMAT$(lv_n,"%d")) =="1") THEN
+                #{
+                        (fv_r).(fv_c).("AddrCategory") ="Registered"
+                #}
+                ENDIF
+                IF(("CUST").("DATA").("addrType"+FORMAT$(lv_n,"%d")) =="2") THEN
+                #{
+                        (fv_r).(fv_c).("AddrCategory") ="Mailing"
+                #}
+                ENDIF
+                IF(("CUST").("DATA").("addrType"+FORMAT$(lv_n,"%d")) =="3") THEN
+                #{
+                        (fv_r).(fv_c).("AddrCategory") ="Work"
+                #}
+                ENDIF
+                IF(("CUST").("DATA").("addrType"+FORMAT$(lv_n,"%d")) =="4") THEN
+                #{
+                        (fv_r).(fv_c).("AddrCategory") ="COMUNICATION"
+                #}
+                ENDIF
+
+		sv_r = func_selectFromCustTableB("ADDRESSID","ADDRESSID","crmuser.address","ADDRESSCATEGORY|orgkey|end_date",(fv_r).(fv_c).("AddrCategory") + "|" + (fv_r).(fv_c).("cust_id") + "|" + "DT31-12-2099")
+		
+		sub_copyOutparamFieldB("ADDRESSID",fv_r,fv_c,"ADDRESSID","NOTFOUND")
+		PRINT((fv_r).(fv_c).("ADDRESSID"))
+		
+		(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<corpAddressModData>"
+		
+		IF ((fv_r).(fv_c).("ADDRESSID") != "NOTFOUND" ) THEN
+		#{
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<addressID>" + (fv_r).(fv_c).("ADDRESSID") + "</addressID>"
+		#}
+		ENDIF
+		
+		IF(TRIM((fv_r).(fv_c).("addr"+FORMAT$(lv_n,"%d"))) != "")THEN
+		#{
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<addressCategory>"+(fv_r).(fv_c).("AddrCategory")+"</addressCategory>"
+		        CUST.DATA.AddrLine1 = MID$((fv_r).(fv_c).("addr"+FORMAT$(lv_n,"%d")),0,40)
+                        CUST.DATA.AddrLine2 = MID$((fv_r).(fv_c).("addr"+FORMAT$(lv_n,"%d")),40,40)
+                        CUST.DATA.AddrLine3 = MID$((fv_r).(fv_c).("addr"+FORMAT$(lv_n,"%d")),80,40)
+                        (fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<address_line1>"+CUST.DATA.AddrLine1+"</address_line1>"
+                        (fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<address_line2>"+CUST.DATA.AddrLine2+"</address_line2>"
+                        (fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<address_line3>"+CUST.DATA.AddrLine3+"</address_line3>"			
+		#}
+		ENDIF
+		
+		IF(TRIM((fv_r).(fv_c).("state"+FORMAT$(lv_n,"%d"))) != "")THEN
+		#{
+			#sv_s = "FinState|"
+                        #sv_s = sv_s + "SELECT value"
+                        #sv_s = sv_s + " FROM crmuser.categories WHERE "
+                        #sv_s = sv_s + " categoryid in "
+                        #sv_s = sv_s + " (select categoryid from crmuser.category_lang where localetext=?SVAR"
+                        #sv_s = sv_s + " ) and categorytype = 'STATE'"
+
+                        #BANCS.INPARAM.BINDVARS = (fv_r).(fv_c).("state"+FORMAT$(lv_n,"%d"))
+                        #print(sv_s)
+                        #print(BANCS.INPARAM.BINDVARS)
+                        #sv_h = urhk_dbSelectWithBind(sv_s)
+                        #print(sv_h)
+
+                        #IF(sv_h == 0)THEN
+                        #{
+                                #(fv_r).(fv_c).("state"+FORMAT$(lv_n,"%d")) = BANCS.OUTPARAM.FinState
+                                #print((fv_r).(fv_c).("state"+FORMAT$(lv_n,"%d")))
+                        #}
+                        #ELSE
+                        #{
+                                #(fv_r).(fv_c).("state"+FORMAT$(lv_n,"%d")) = "010"
+                                #print((fv_r).(fv_c).("state"+FORMAT$(lv_n,"%d")))
+                        #}
+                        #ENDIF
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<city>"+(fv_r).(fv_c).("state"+FORMAT$(lv_n,"%d"))+"</city>"
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<state>"+(fv_r).(fv_c).("state"+FORMAT$(lv_n,"%d"))+"</state>"
+		#}
+		ENDIF
+		
+		IF(TRIM((fv_r).(fv_c).("cntry"+FORMAT$(lv_n,"%d"))) != "")THEN
+		#{
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<country>"+(fv_r).(fv_c).("cntry"+FORMAT$(lv_n,"%d"))+"</country>"
+		#}
+		ENDIF
+		
+		IF(TRIM((fv_r).(fv_c).("zipCode"+FORMAT$(lv_n,"%d"))) != "")THEN
+		#{
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<zip>"+(fv_r).(fv_c).("zipCode"+FORMAT$(lv_n,"%d"))+"</zip>"
+		#}
+		ENDIF
+		
+		#since not given specifically in uplaodFile , dont want  to give this tag to cause an issue on exisitng data.
+		#(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") +  "<PrefAddr>"+(fv_r).(fv_c).("PrefAddr")+"</PrefAddr>"
+
+		IF((fv_r).(fv_c).("incorpDate") != "") THEN
+		#{
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<start_date>" + (fv_r).(fv_c).("incorpDate") + "</start_date>"
+		#}
+		ELSE
+		#{	
+			sv_r = func_selectFromCustTableB("DATE_OF_INCORPORATION","DATE_OF_INCORPORATION","crmuser.corporate","CORP_KEY",(fv_r).(fv_c).("cust_id"))
+			sub_copyOutparamFieldB("DATE_OF_INCORPORATION",fv_r,fv_c,"DATE_OF_INCORPORATION","NOTFOUND")
+			PRINT((fv_r).(fv_c).("DATE_OF_INCORPORATION"))
+		
+			IF ((fv_r).(fv_c).("DATE_OF_INCORPORATION") != "NOTFOUND" ) THEN
+			#{
+				sv_q = "incorp|SELECT TO_CHAR(TO_DATE(?SVAR,'DD-MM-YYYY'),'YYYY-MM-DD') FROM DUAL"
+				BANCS.INPARAM.BINDVARS = (fv_r).(fv_c).("DATE_OF_INCORPORATION")
+				sv_d=urhk_dbSelectWithBind(sv_q)
+				PRINT(BANCS.OUTPARAM.incorp)
+				(fv_r).(fv_c).("DATE_OF_INCORPORATION") = BANCS.OUTPARAM.incorp+"T00:00:00.000"
+				(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<start_date>" + (fv_r).(fv_c).("DATE_OF_INCORPORATION") + "</start_date>"
+			#}
+			ELSE
+			#{
+				(fv_class).(fv_repos).("bodDate") = MID$(BANCS.STDIN.BODDate,0,10)
+				 CUST.DATA.day = MID$(BANCS.STDIN.BODDate,0,2) - 1
+				(fv_class).(fv_repos).("bodDate") = MID$(BANCS.STDIN.BODDate,6,4)+"-"+MID$(BANCS.STDIN.BODDate,3,2)+"-"+CUST.DATA.day+"T00:00:00.000"
+				(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<start_date>" + (fv_class).(fv_repos).("bodDate") + "</start_date>"
+			#}
+			ENDIF
+	
+		#}
+		ENDIF
+
+		(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<holdmailFlag>N</holdmailFlag>"
+		(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<preferredFormat>FREE_TEXT_FORMAT</preferredFormat>"
+		(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<FreeTextLabel>FREETEXTLABEL1</FreeTextLabel>"
+		(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</corpAddressModData>"
+		lv_n = lv_n + 1
+	#}
+	DO
+	#------------------------- Address Details Ends   ---------------------------------
+	
+	
+	
+	#==========================================================================================================
+	# Corporate CIF multirec phone/email request-coding as per the logic for CORPORATE ADDITION
+	#==========================================================================================================
+	IF(TRIM((fv_r).(fv_c).("homePhn")) != "")THEN
+	#{
+		(fv_r).(fv_c).("phoneEmailType1") = "HOME"
+	#}
+	ENDIF
+	
+	IF(TRIM((fv_r).(fv_c).("officePhn")) != "")THEN
+	#{
+		(fv_r).(fv_c).("phoneEmailType2") = "OFFICE"
+	#}
+	ENDIF
+	
+	IF(TRIM((fv_r).(fv_c).("othrPhn")) != "")THEN
+	#{
+		(fv_r).(fv_c).("phoneEmailType3") = "OTHER"
+	#}
+	ENDIF
+	
+	lv_m = 1
+	PRINT((fv_r).(fv_c).("phoneCount"))
+	#Fix for pref phone issue
+
+        sv_s = "PREFPHEMAILTYPE|"
+        sv_s = sv_s + "SELECT PHONEEMAILTYPE"
+        sv_s = sv_s + " FROM crmuser.phoneemail WHERE "
+        sv_s = sv_s + " ORGKEY = ?SVAR AND "
+	sv_s = sv_s + " PHONEOREMAIL = 'PHONE' AND "
+        sv_s = sv_s + " PREFERREDFLAG = 'Y'"
+
+        BANCS.INPARAM.BINDVARS = (fv_r).(fv_c).("cust_id")
+
+        print(BANCS.INPARAM.BINDVARS)
+        print(sv_s)
+
+        sv_h = urhk_dbSelectWithBind(sv_s)
+        print(sv_h)
+
+        IF(sv_h == 0)THEN
+        #{
+        	(fv_r).(fv_c).("PREFPHEMAILTYPE") = BANCS.OUTPARAM.PREFPHEMAILTYPE
+        #}
+        ELSE
+        #{
+                (fv_r).(fv_c).("PREFPHEMAILTYPE") = "NOTFOUND"
+        #}
+        ENDIF
+	CUST.DATA.PREFEMAILTYPESET = "N"
+
+	WHILE(lv_m <= CINT((fv_r).(fv_c).("phoneCount")))
+	#{
+		IF((((fv_r).(fv_c).("phoneEmailType"+FORMAT$(lv_m,"%d"))) != "") AND ((fv_r).(fv_c).("phoneNumber"+FORMAT$(lv_m,"%d")) != "") AND ((fv_r).(fv_c).("telCntryCode") != "")) THEN	
+		#{
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString")+ "<PhoneEmail>"
+			PRINT((fv_r).(fv_c).("phoneEmailType"+FORMAT$(lv_m,"%d")))
+		
+			sv_r = func_selectFromCustTableB("PHONEEMAILID,PREFERREDFLAG","PHONEEMAILID,PREFERREDFLAG","crmuser.phoneemail","phoneemailtype|orgkey",(fv_r).(fv_c).("phoneEmailType"+FORMAT$(lv_m,"%d")) + "|" + (fv_r).(fv_c).("cust_id"))
+			sub_copyOutparamFieldB("PHONEEMAILID",fv_r,fv_c,"PHONEEMAILID","NOTFOUND")
+			PRINT((fv_r).(fv_c).("PHONEEMAILID"))
+			sub_copyOutparamFieldB("PREFERREDFLAG",fv_r,fv_c,"PREFERREDFLAG","NOTFOUND")
+			PRINT((fv_r).(fv_c).("PREFERREDFLAG"))
+		
+			IF (((fv_r).(fv_c).("PHONEEMAILID")) != "NOTFOUND" ) THEN
+			#{
+				(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<PhoneEmailID>" + (fv_r).(fv_c).("PHONEEMAILID") + "</PhoneEmailID>"
+			#}
+			ENDIF
+
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<phoneemailtype>"+(fv_r).(fv_c).("phoneEmailType"+FORMAT$(lv_m,"%d"))+"</phoneemailtype>"
+			#(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<phonenolocalcode>"+(fv_r).(fv_c).("phoneNumber"+FORMAT$(lv_m,"%d"))+"</phonenolocalcode>"
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<phonenolocalcode>"+LTRIM((fv_r).(fv_c).("phoneNumber"+FORMAT$(lv_m,"%d")),'0')+"</phonenolocalcode>"
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<phonenocountrycode>"+(fv_r).(fv_c).("telCntryCode")+"</phonenocountrycode>"
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<phoneoremail>PHONE</phoneoremail>"
+			IF((fv_r).(fv_c).("PREFPHEMAILTYPE")!="NOTFOUND")THEN
+			#{
+				IF((fv_r).(fv_c).("phoneEmailType"+FORMAT$(lv_m,"%d")) == (fv_r).(fv_c).("PREFPHEMAILTYPE"))THEN
+				#{
+					CUST.DATA.PrefPhoneFlag = "Y"	
+					CUST.DATA.PREFEMAILTYPESET = "Y"
+				#}
+				ELSE
+				#{
+					CUST.DATA.PrefPhoneFlag = "N"
+					CUST.DATA.PREFEMAILTYPESET = "Y"
+				#}
+				ENDIF
+			#}
+			ELSE
+			#{
+				IF(CUST.DATA.PREFEMAILTYPESET == "N")THEN
+				#{
+					CUST.DATA.PrefPhoneFlag = "Y"
+					CUST.DATA.PREFEMAILTYPESET = "Y"
+				#}
+				ENDIF
+			#}
+			ENDIF
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<preferredflag>"+CUST.DATA.PrefPhoneFlag+"</preferredflag>"
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</PhoneEmail>"
+
+			#lv_m = lv_m + 1
+		#}
+		ENDIF
+		lv_m = lv_m + 1
+	#}
+	DO
+	IF(TRIM((fv_r).(fv_c).("email")) != "") THEN
+	#{
+		#Change this as per ONSITE DB
+		(fv_r).(fv_c).("emailType") = "WORK"
+		
+		(fv_r).(fv_c).("xmlString")= (fv_r).(fv_c).("xmlString") + "<PhoneEmail>"
+
+		sv_r = func_selectFromCustTableB("PHONEEMAILID","PHONEEMAILID","crmuser.phoneemail","phoneemailtype|orgkey",(fv_r).(fv_c).("emailType") + "|" + (fv_r).(fv_c).("cust_id"))
+		sub_copyOutparamFieldB("PHONEEMAILID",fv_r,fv_c,"PHONEEMAILID","NOTFOUND")
+		PRINT((fv_r).(fv_c).("PHONEEMAILID"))
+
+		IF (((fv_r).(fv_c).("PHONEEMAILID")) != "NOTFOUND" ) THEN
+		#{
+			(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<PhoneEmailID>" + (fv_r).(fv_c).("PHONEEMAILID") + "</PhoneEmailID>"
+		#}
+		ENDIF
+		(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<phoneemailtype>"+(fv_r).(fv_c).("emailType")+"</phoneemailtype>"
+		(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<email>"+(fv_r).(fv_c).("email")+"</email>"
+		(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<phoneoremail>EMAIL</phoneoremail>"
+		(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<preferredflag>Y</preferredflag>"
+		(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</PhoneEmail>"
+	#}
+	ENDIF
+	
+	
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</corpCustomerModCorporateData>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</mainData>"
+	
+	
+	#------------------------RELATED DATA AS PER UPDATE CORP CUST API---------------------------------------------------#
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<relatedData>"
+	
+	
+	lv_e = 1
+	PRINT((fv_r).(fv_c).("entityDocCount"))
+	WHILE(lv_e <= CINT((fv_r).(fv_c).("entityDocCount")))
+	#{
+		(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<corpentitydocumentModData>"
+		
+		
+		sv_r = func_selectFromCustTableB("entityDocumentId,preferredUniqueId","entityDocumentId,preferredUniqueId","crmuser.entitydocument","doccode|orgkey",(fv_r).(fv_c).("idTypeCode") + "|" + (fv_r).(fv_c).("cust_id"))
+		sub_copyOutparamFieldB("entityDocumentId",fv_r,fv_c,"entityDocumentId","NOTFOUND")
+		
+		IF (((fv_r).(fv_c).("entityDocumentId")) != "NOTFOUND") THEN
+		#{
+			sub_addTagIfNotNull("EntityDocumentID",fv_r,fv_c,"entityDocumentId","N",BYREF (fv_r).(fv_c).("xmlString"))
+			
+		#}
+		ENDIF
+		
+		
+		sub_addTagIfNotNull("docremarks",fv_r,fv_c,"idDesc","N",BYREF (fv_r).(fv_c).("xmlString"))
+		
+		sub_addTagIfNotNull("docissuedate",fv_r,fv_c,"issueDate","Y",BYREF (fv_r).(fv_c).("xmlString"))
+		
+		sub_addTagIfNotNull("countryofissue",fv_r,fv_c,"idIssueCntryCode","N",BYREF (fv_r).(fv_c).("xmlString"))
+
+		(fv_r).(fv_c).("placeOfIssue") = "010"
+		
+		sub_addTagIfNotNull("placeOfIssue",fv_r,fv_c,"placeOfIssue","Y",BYREF (fv_r).(fv_c).("xmlString"))
+
+		print((fv_r).(fv_c).("idTypeCode"))
+		IF((fv_r).(fv_c).("idTypeCode") == "TI")THEN		
+		#{
+			sub_addTagIfNotNull("docexpirydate",fv_r,fv_c,"expDate","Y",BYREF (fv_r).(fv_c).("xmlString"))
+		#}
+		ENDIF
+
+		sub_addTagIfNotNull("referencenumber",fv_r,fv_c,"idNum","N",BYREF (fv_r).(fv_c).("xmlString"))
+
+		CUST.DATA.docTypeCode = "CORPORATE"	
+		sub_addTagIfNotNull("docTypeCode",fv_r,fv_c,"docTypeCode","N",BYREF (fv_r).(fv_c).("xmlString"))
+		sub_addTagIfNotNull("doccode",fv_r,fv_c,"idTypeCode","N",BYREF (fv_r).(fv_c).("xmlString"))
+		
+		(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</corpentitydocumentModData>"
+		lv_e = lv_e + 1
+	#}
+	DO
+	
+	
+	#AS PER EXCEL  THESE SEEMS TO BE ONLY FOR RETAIL ,TAGS GIVEN TO AVOID CONFUSION W.R.T FIELDS  In BATACH UPLOAD
+	#(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<corporaterepModData>"
+	
+	#sub_addTagIfNotNull("dob",fv_r,fv_c,"birthDate","Y",BYREF (fv_r).(fv_c).("xmlString"))
+	
+	#sub_addTagIfNotNull("first_name",fv_r,fv_c,"FirstName","N",BYREF (fv_r).(fv_c).("xmlString"))
+	
+	#sub_addTagIfNotNull("last_name",fv_r,fv_c,"LastName","N",BYREF (fv_r).(fv_c).("xmlString"))
+	
+	#sub_addTagIfNotNull("gender",fv_r,fv_c,"gender","N",BYREF (fv_r).(fv_c).("xmlString"))
+	
+	#sub_addTagIfNotNull("first_Name_Native",fv_r,fv_c,"firstNameNativ","N",BYREF (fv_r).(fv_c).("xmlString"))
+	
+	#sub_addTagIfNotNull("last_Name_Native",fv_r,fv_c,"lastNameNativ","N",BYREF (fv_r).(fv_c).("xmlString"))
+	
+	#sub_addTagIfNotNull("short_name_native",fv_r,fv_c,"corpShortNatv","N",BYREF (fv_r).(fv_c).("xmlString"))
+	
+	#(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</corporaterepModData>"
+	
+	
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<preferencesModData>"
+	sub_addTagIfNotNull("holdmail_flag",fv_r,fv_c,"holdMailInd","N",BYREF (fv_r).(fv_c).("xmlString"))
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</preferencesModData>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<coreInterfaceModData>"
+	sub_addTagIfNotNull("TreasuryCounterparty",fv_r,fv_c,"TSflg","N",BYREF (fv_r).(fv_c).("xmlString"))	
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</coreInterfaceModData>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</relatedData>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</CorpCustomerModData>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "<updateCorpCustomer_CustomData>"
+	sub_addTagIfNotNull("FreeCode1Desc",fv_r,fv_c,"ultimateRiskCntry","N",BYREF (fv_r).(fv_c).("xmlString"))
+	sub_addTagIfNotNull("FreeCode2Desc",fv_r,fv_c,"custRating","N",BYREF (fv_r).(fv_c).("xmlString"))
+	sub_addTagIfNotNull("FreeCode3Desc",fv_r,fv_c,"rlnshpCIF","N",BYREF (fv_r).(fv_c).("xmlString"))
+	sub_addTagIfNotNull("FreeCode4Desc",fv_r,fv_c,"rlnshpType","N",BYREF (fv_r).(fv_c).("xmlString"))
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</updateCorpCustomer_CustomData>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</updateCorpCustomerRequest>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</Body>"
+	(fv_r).(fv_c).("xmlString") = (fv_r).(fv_c).("xmlString") + "</FIXML>"
+	
+	BANCS.OUTPARAM.XMLBody = (fv_r).(fv_c).("xmlString")
+	
+	PRINT(BANCS.OUTPARAM.XMLBody)
+	PRINT(lv_h)
+	BANCS.OUTPARAM.XMLHeader = lv_h
+	#------------------------------------------------
+	#Appending the Header, Body and Footer tags
+	#------------------------------------------------
+	sv_s = BANCS.OUTPARAM.XMLHeader + BANCS.OUTPARAM.XMLBody
+	PRINT(sv_s)
+	
+	BANCS.INPARAM.SERVICE_NAME = "FIJCA"
+	BANCS.INPARAM.SEND_RECV_FLG = "R"
+	
+	(fv_r).(fv_c).("fiOutFlg") = urhk_ConnectToFIAndSendMsg(sv_s)
+	PRINT((fv_r).(fv_c).("fiOutFlg"))
+	PRINT(BANCS.OUTPARAM.RespMesg)
+	PRINT(BANCS.OUTPARAM.ErrMsg)
+	
+	(fv_r).(fv_c).("responseXml") = BANCS.OUTPARAM.RespMesg
+	
+	#xmlParseFunc1 defined above
+	sv_e = func_xmlParseFunc1((fv_r).(fv_c).("responseXml"),"<Status>","</Status>",BYREF (fv_r).(fv_c).("FIStatus"))
+	PRINT((fv_r).(fv_c).("FIStatus"))
+	
+	IF(((fv_r).(fv_c).("FIStatus")) != "SUCCESS") THEN
+	#{
+		sv_e = func_xmlParseFunc1((fv_r).(fv_c).("responseXml"),"<ErrorDesc>","</ErrorDesc>",BYREF (fv_r).(fv_c).("errorMsg"))
+		PRINT( (fv_r).(fv_c).("errorMsg"))
+		
+		(fv_r).(fv_c).("errorFlg")  = "Y"
+		RETURN 1
+	#}
+	ENDIF
+	
+	#CODE TAKEN FROM ccifcr_submit.scr(Liabialites-jyothi)
+	#====================================================================
+	# If tradeFinCustFlag = "N", Then CIF creation should be verified
+	#====================================================================
+	#IF(((fv_r).(fv_c).("TFflg")) == "N") THEN
+	#{
+		INTF.DATA.srvReqId = "verifyCustomerDetails"
+		INTF.DATA.crmCifId = (fv_r).(fv_c).("cust_id")
+		INTF.DATA.custType = "CORPORATE"
+		PRINT(INTF.DATA.crmCifId)
+		
+		#This is defined in CIFCommonFunctions.scl
+		sub_createCIFVerify("INTF","DATA")
+		
+		IF(FIELDEXISTS(BANCS.OUTPARAM.RespMesg))THEN
+		#{
+			PRINT(BANCS.OUTPARAM.RespMesg)
+			(fv_r).(fv_c).("responseXml") = BANCS.OUTPARAM.RespMesg
+		#}
+		ENDIF
+		PRINT((fv_r).(fv_c).("responseXml"))
+		
+		sv_e = func_xmlParseFunc1(CUST.DATA.responseXml,"<Status>","</Status>",BYREF CUST.DATA.FIStatus)
+		PRINT(CUST.DATA.FIStatus)
+		
+		IF((TOUPPER((fv_r).(fv_c).("FIStatus"))) != "SUCCESS") THEN
+		#{
+			sv_e = func_xmlParseFunc1((fv_r).(fv_c).("responseXml"),"<ErrorDesc>","</ErrorDesc>",BYREF (fv_r).(fv_c).("errorMsg"))
+			PRINT( (fv_r).(fv_c).("errorMsg"))
+			(fv_r).(fv_c).("errorMsg") = "Verification Failed: " + (fv_r).(fv_c).("errorMsg")
+			PRINT((fv_r).(fv_c).("errorMsg"))
+			(fv_r).(fv_c).("errorFlg")  = "Y"
+			RETURN 1
+		#}
+		ENDIF
+		
+	#}
+	#ENDIF
+	
+	
+	RETURN 0
+	
+#}
+ENDFUNCTION
+
+<--START
+END-->

@@ -1,0 +1,10 @@
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+<--START
+TRACE ON
+
+	CALL("fetchPartyKeyForAmlNameScreen.scr")
+
+TRACE OFF
+END-->
+

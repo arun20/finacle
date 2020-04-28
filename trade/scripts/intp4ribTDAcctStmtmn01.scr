@@ -1,0 +1,814 @@
+#######################################################################################################################################################
+#    Name                : intp4ribTDAcctStmtmn01.scr
+#    Date                : 29-Jun-2018
+#    Description         : Extract the list of FCD accounts of a given customer
+#    Input               : Account Number,fromDate,toDate,numOfTxns,sortin,lastTxAmountValue,lastTxCurrencyCode,
+#                          lastPstdDate,lastTxnDate,lastTxnId,lastTxnSrlNo
+#    Output              : Transactions on TD Account
+#    Author              : Divya
+#    Called Script       : None
+#    Calling Script      : None
+#    Reference           : None
+#    Modification History: v1.0
+#    version	Date		Author	        Description
+#	 1.0	    29-06-2018	Divya K		    Base Version
+#######################################################################################################################################################
+IMPORT LibCommonB002
+<--START
+TRACE ON
+
+	#====================================
+	# CREATING CUST REPOS AND DATA CLASS
+	#====================================
+	
+		IF (REPEXISTS("CUST") == 0) THEN
+		#{
+			CREATEREP("CUST")
+		#}
+		ENDIF
+		
+		IF (CLASSEXISTS("CUST", "DATA") == 0) THEN
+		#{
+			CREATECLASS("CUST", "DATA", 5)
+		#}
+		ENDIF
+	
+	#===============================
+	# Reading input variables
+	#===============================
+		sv_e = 0
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctStmt_Req.acid")) == 0) THEN
+		#{
+			sv_e = 1
+			CUST.DATA.ERRORCODE = "INTF006"
+			CUST.DATA.SuccessOrFailure = "F"
+			CUST.DATA.ERRORMSG= "Account Number not populated"
+			print(CUST.DATA.ERRORMSG)
+			GOTO ENDOFSCRIPT
+		#}
+		ELSE
+		#{
+			CUST.DATA.acid =  TRIM(("BANCS").("INPUT").("TDAcctStmt_Req.acid"))
+			print(CUST.DATA.acid)
+		#}
+		ENDIF
+
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctStmt_Req.fromDate")) == 0) THEN
+		#{
+			sv_e = 1
+			CUST.DATA.ERRORCODE = "INTF010"
+			CUST.DATA.SuccessOrFailure = "F"
+			CUST.DATA.ERRORMSG= "From Date not populated"
+			print(CUST.DATA.ERRORMSG)
+			GOTO ENDOFSCRIPT
+		#}
+		ELSE
+		#{
+			CUST.DATA.fromDate =  TRIM(("BANCS").("INPUT").("TDAcctStmt_Req.fromDate"))
+			print(CUST.DATA.fromDate)
+			CUST.DATA.fromDateOnly = MID$(CUST.DATA.fromDate,0,10)
+			print(CUST.DATA.fromDateOnly)
+			CUST.DATA.fromTimeStamp = MID$(CUST.DATA.fromDate,11,12)
+			print(CUST.DATA.fromTimeStamp)
+		#}
+		ENDIF
+		
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctStmt_Req.toDate")) == 0) THEN
+		#{
+			sv_e = 1
+			CUST.DATA.ERRORCODE = "INTF011"
+			CUST.DATA.SuccessOrFailure = "F"
+			CUST.DATA.ERRORMSG= "To Date not populated"
+			print(CUST.DATA.ERRORMSG)
+			GOTO ENDOFSCRIPT
+		#}
+		ELSE
+		#{
+			CUST.DATA.toDate =  TRIM(("BANCS").("INPUT").("TDAcctStmt_Req.toDate"))
+			print(CUST.DATA.toDate)
+			CUST.DATA.toDateOnly = MID$(CUST.DATA.toDate,0,10)
+			print(CUST.DATA.toDateOnly)
+			CUST.DATA.toTimeStamp = MID$(CUST.DATA.toDate,11,12)	
+			print(CUST.DATA.toTimeStamp)
+		#}
+		ENDIF
+		
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctStmt_Req.numOfTxns")) == 0) THEN
+		#{
+			sv_e = 1
+			CUST.DATA.ERRORCODE = "INTF020"
+			CUST.DATA.SuccessOrFailure = "F"
+			CUST.DATA.ERRORMSG= "Num of Transactions not populated"
+			print(CUST.DATA.ERRORMSG)
+			GOTO ENDOFSCRIPT
+		#}
+		ELSE
+		#{
+			CUST.DATA.numOfTxns =  TRIM(("BANCS").("INPUT").("TDAcctStmt_Req.numOfTxns"))
+			print(CUST.DATA.numOfTxns)
+		#}
+		ENDIF
+		
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctStmt_Req.sortin")) == 0) THEN
+		#{
+			CUST.DATA.sortin = "A"
+		#}
+		ELSE
+		#{
+			CUST.DATA.sortin =  TRIM(("BANCS").("INPUT").("TDAcctStmt_Req.sortin"))
+			print(CUST.DATA.sortin)
+		#}
+		ENDIF
+		IF(CUST.DATA.sortin == "D")THEN
+		#{
+			CUST.DATA.sortin = "DESC"
+		#}
+		ELSE
+		#{
+			CUST.DATA.sortin = "ASC"
+		#}
+		ENDIF
+		
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctStmt_Req.lastTxAmountValue")) == 0) THEN
+		#{
+			CUST.DATA.lastTxAmountValue = ""
+		#}
+		ELSE
+		#{
+			CUST.DATA.lastTxAmountValue =  TRIM(("BANCS").("INPUT").("TDAcctStmt_Req.lastTxAmountValue"))
+			print(CUST.DATA.lastTxAmountValue)
+		#}
+		ENDIF
+		
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctStmt_Req.lastTxCurrencyCode")) == 0) THEN
+		#{
+			CUST.DATA.lastTxCurrencyCode = ""
+		#}
+		ELSE
+		#{
+			CUST.DATA.lastTxCurrencyCode =  TRIM(("BANCS").("INPUT").("TDAcctStmt_Req.lastTxCurrencyCode"))
+			print(CUST.DATA.lastTxCurrencyCode)
+		#}
+		ENDIF
+		
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctStmt_Req.lastTxCurrencyCode")) == 0) THEN
+		#{
+			CUST.DATA.lastTxCurrencyCode = ""
+		#}
+		ELSE
+		#{
+			CUST.DATA.lastTxCurrencyCode =  TRIM(("BANCS").("INPUT").("TDAcctStmt_Req.lastTxCurrencyCode"))
+			print(CUST.DATA.lastTxCurrencyCode)
+		#}
+		ENDIF
+		
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctStmt_Req.lastPstdDate")) == 0) THEN
+		#{
+			CUST.DATA.lastPstdDate = ""
+		#}
+		ELSE
+		#{
+			CUST.DATA.lastPstdDate =  TRIM(("BANCS").("INPUT").("TDAcctStmt_Req.lastPstdDate"))
+			print(CUST.DATA.lastPstdDate)
+		#}
+		ENDIF
+		
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctStmt_Req.lastTxnDate")) == 0) THEN
+		#{
+			CUST.DATA.lastTxnDate = ""
+		#}
+		ELSE
+		#{
+			CUST.DATA.lastTxnDate =  TRIM(("BANCS").("INPUT").("TDAcctStmt_Req.lastTxnDate"))
+			print(CUST.DATA.lastTxnDate)
+		#}
+		ENDIF
+		
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctStmt_Req.lastTxnId")) == 0) THEN
+		#{
+			CUST.DATA.lastTxnId = ""
+		#}
+		ELSE
+		#{
+			CUST.DATA.lastTxnId =  TRIM(("BANCS").("INPUT").("TDAcctStmt_Req.lastTxnId"))
+			print(CUST.DATA.lastTxnId)
+		#}
+		ENDIF
+		
+		IF (FIELDEXISTS(("BANCS").("INPUT").("TDAcctStmt_Req.lastTxnSrlNo")) == 0) THEN
+		#{
+			CUST.DATA.lastTxnSrlNo = ""
+		#}
+		ELSE
+		#{
+			CUST.DATA.lastTxnSrlNo =  TRIM(("BANCS").("INPUT").("TDAcctStmt_Req.lastTxnSrlNo"))
+			print(CUST.DATA.lastTxnSrlNo)
+		#}
+		ENDIF
+
+		PRINT(CUST.DATA.acid)
+		PRINT(CUST.DATA.fromDate)
+		PRINT(CUST.DATA.toDate)
+		PRINT(CUST.DATA.numOfTxns)
+		PRINT(CUST.DATA.sortin)
+		PRINT(CUST.DATA.lastTxAmountValue)
+		PRINT(CUST.DATA.lastTxCurrencyCode)
+		PRINT(CUST.DATA.lastPstdDate)
+		PRINT(CUST.DATA.lastTxnDate)
+		PRINT(CUST.DATA.lastTxnId)
+		PRINT(CUST.DATA.lastTxnSrlNo)
+		
+	#===============================
+	# Defining Output Variables
+	#===============================
+	
+		CUST.DATA.tranId = ""
+		CUST.DATA.partTranSrlNum = ""
+		CUST.DATA.pstdDate = ""
+		CUST.DATA.tranDate = ""
+		CUST.DATA.valueDate = ""
+		CUST.DATA.itemNumber = ""
+		CUST.DATA.interestRate = ""
+		CUST.DATA.tranType = ""
+		CUST.DATA.tranAmount = ""
+		CUST.DATA.tranCurrency = ""
+		CUST.DATA.tranBalance = "0"
+		CUST.DATA.asOnBalance = "0"
+		CUST.DATA.tranDesc = ""
+		CUST.DATA.channel = ""
+		CUST.DATA.branchId = ""
+		CUST.DATA.hasMoreData = "Y"
+		
+	#===========================================
+	# Validating Master Account Id
+	#===========================================
+	sv_s = "recCount|"
+	sv_s = sv_s + "SELECT count(*)"
+	sv_s = sv_s + " FROM TBAADM.MAM WHERE "
+	sv_s = sv_s + " MASTER_ACCT_NUM = ?SVAR AND "
+	sv_s = sv_s + " BANK_ID = ?SVAR"
+	
+	BANCS.INPARAM.BINDVARS = CUST.DATA.acid + "|" + BANCS.STDIN.contextBankId
+	
+	print(sv_s)
+	print(BANCS.INPARAM.BINDVARS)
+	sv_h = urhk_dbSelectWithBind(sv_s)		
+	print(sv_h)	
+	
+	IF(sv_h == 0)THEN
+	#{
+		CUST.DATA.recCount = BANCS.OUTPARAM.recCount
+		sv_m = CINT(CUST.DATA.recCount)
+		IF(sv_m == 0)THEN
+		#{
+			sv_e = 1
+			CUST.DATA.ERRORCODE = "INTF012"
+			CUST.DATA.SuccessOrFailure = "F"
+			CUST.DATA.ERRORMSG= "Invalid Master Account"
+			print(CUST.DATA.ERRORMSG)
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+	#}
+	ELSE
+	#{
+		#Checking the number of child accounts under the given master account
+
+		sv_s = "chiCount|"
+		sv_s = sv_s + "SELECT count(*)"
+		sv_s = sv_s + " FROM TBAADM.GAM, TBAADM.MAM WHERE "
+		sv_s = sv_s + " GAM.MASTER_B2K_ID = MAM.MASTER_B2K_ID AND "
+		sv_s = sv_s + " MAM.MASTER_ACCT_NUM = ?SVAR AND "
+		sv_s = sv_s + " BANK_ID = ?SVAR"
+
+		BANCS.INPARAM.BINDVARS = CUST.DATA.acid + "|" + BANCS.STDIN.contextBankId
+
+		print(sv_s)
+		print(BANCS.INPARAM.BINDVARS)
+		sv_h = urhk_dbSelectWithBind(sv_s)		
+		print(sv_h)
+		
+		IF(sv_h == 0)THEN
+		#{
+			CUST.DATA.chiCount = BANCS.OUTPARAM.chiCount
+			sv_m = CINT(CUST.DATA.chiCount)
+			IF(sv_m == 0)THEN
+			#{
+				sv_e = 1
+				CUST.DATA.ERRORCODE = "INTF013"
+				CUST.DATA.SuccessOrFailure = "F"
+				CUST.DATA.ERRORMSG= "No Child Account Exist for the given master account"
+				print(CUST.DATA.ERRORMSG)
+				GOTO ENDOFSCRIPT
+			#}
+			ENDIF
+		#}
+		ENDIF
+	#}
+	ENDIF
+	
+	# Fetching the Opening Balance As on Date
+	IF(TRIM(CUST.DATA.lastTxAmountValue) == "")THEN
+	#{
+		#=====================================
+		# Fetching the Child TD Accounts
+		#=====================================
+
+		sv_q = "childAcct|"
+		sv_q = sv_q + "SELECT g.foracid"
+		sv_q = sv_q + " FROM TBAADM.GAM g, TBAADM.MAM m WHERE"
+		sv_q = sv_q + " m.MASTER_B2K_ID = g.MASTER_B2K_ID AND"
+		sv_q = sv_q + " m.MASTER_ACCT_NUM = ?SVAR AND"
+		sv_q = sv_q + " m.BANK_ID = ?SVAR "
+
+		BANCS.INPARAM.BINDVARS = CUST.DATA.acid + "|" + BANCS.STDIN.contextBankId
+
+		print(sv_q)
+		print(BANCS.INPARAM.BINDVARS)
+
+		sv_i = urhk_dbCursorOpenWithBind(sv_q)
+		print(sv_i)
+
+		IF(sv_i == 0) THEN
+		#{
+			sv_t = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+			sv_n = urhk_dbCursorFetch(sv_t)
+
+			print(sv_n)
+			IF (sv_n !=0) THEN
+			#{
+				sv_e = 1
+				CUST.DATA.ERRORCODE = "INTF030"
+				CUST.DATA.SuccessOrFailure = "F"
+				CUST.DATA.ERRORMSG= "No Child Accounts Exist for the Master Account"
+				print(CUST.DATA.ERRORMSG)
+				GOTO ENDOFSCRIPT
+			#}
+			ENDIF
+
+			WHILE(sv_n == 0)
+			#{
+				CUST.DATA.childAcct	= BANCS.OUTPARAM.childAcct
+				
+				#Deriving Available Balance
+				BANCS.INPARAM.acctId = CUST.DATA.childAcct
+				BANCS.INPARAM.asOnDate = MID$(CUST.DATA.fromDate,8,2)+"-"+MID$(CUST.DATA.fromDate,5,2)+"-"+MID$(CUST.DATA.fromDate,0,4)
+				print(BANCS.INPARAM.acctId)
+				print(BANCS.INPARAM.asOnDate)
+				CUST.DATA.asOnDate = MID$(CUST.DATA.fromDate,8,2)+"-"+MID$(CUST.DATA.fromDate,5,2)+"-"+MID$(CUST.DATA.fromDate,0,4)
+								
+				sv_s = "urhkDate|"
+				sv_s = sv_s + "SELECT TO_CHAR(TO_DATE(?SVAR,'DD-MM-YYYY')-1,'DD-MM-YYYY') FROM DUAL"
+
+				BANCS.INPARAM.BINDVARS = CUST.DATA.asOnDate
+
+				print(sv_s)
+				print(BANCS.INPARAM.BINDVARS)
+				sv_h = urhk_dbSelectWithBind(sv_s)
+				print(sv_h)
+
+				IF(sv_h == 0)THEN
+				#{
+					CUST.DATA.urhkDate = BANCS.OUTPARAM.urhkDate
+					BANCS.INPARAM.asOnDate = CUST.DATA.urhkDate
+					print(CUST.DATA.urhkDate)
+					print(BANCS.INPARAM.asOnDate)
+				#}
+				ENDIF
+
+				sv_a = urhk_getAcctBalanceAsOnDate("")
+				print(sv_a)
+
+				IF(sv_a == 0)THEN
+				#{
+					print(BANCS.OUTPARAM.acctBal)
+					CUST.DATA.asOnBalance = CINT(CUST.DATA.asOnBalance) + CINT(BANCS.OUTPARAM.acctBal)
+					sv_w = CINT(CUST.DATA.asOnBalance)	
+					print(sv_w)
+					CUST.DATA.tranBalance = CUST.DATA.asOnBalance
+					print(CUST.DATA.tranBalance)
+				#}
+				ELSE
+				#{
+					sv_e = 1
+					CUST.DATA.ERRORCODE = "INTF014"
+					CUST.DATA.SuccessOrFailure = "F"
+					CUST.DATA.ERRORMSG= "Internal Finacle Error.User Hook execution failed"
+					print(CUST.DATA.ERRORMSG)
+					GOTO ENDOFSCRIPT
+				#}
+				ENDIF
+				sv_n = urhk_dbCursorFetch(sv_t)
+			#}
+			DO
+			sv_n = urhk_dbCursorClose(sv_t)
+		#}
+		ELSE
+		#{
+			sv_e = 1
+			CUST.DATA.ERRORCODE = "INTF002"
+			CUST.DATA.SuccessOrFailure = "F"
+			CUST.DATA.ERRORMSG= "Internal Finacle Error.Select Query Failed"
+			print(CUST.DATA.ERRORMSG)
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+	#}
+	ENDIF	
+
+	sv_r = CINT(CUST.DATA.numOfTxns)
+	print(CUST.DATA.numOfTxns)
+	print(sv_r)
+		
+	#Check the no.of transactions in DTD for the given from and to date. 
+	#If the count is less than the num of tx value set the hasMore flag as N and recRespCount as totCount
+	
+	sv_s = "totCount|"
+	sv_s = sv_s + "SELECT count(*)"
+	sv_s = sv_s + " FROM TBAADM.DCTD_ACLI d, TBAADM.GAM"
+	sv_s = sv_s + " WHERE d.PSTD_FLG = 'Y'"
+	sv_s = sv_s + " AND GAM.ACID = d.ACID"
+	sv_s = sv_s + " AND d.ACID IN (SELECT acid FROM TBAADM.GAM,TBAADM.MAM WHERE GAM.MASTER_B2K_ID = MAM.MASTER_B2K_ID AND MAM.MASTER_ACCT_NUM = ?SVAR)"
+	sv_s = sv_s + " AND d.BANK_ID = ?SVAR"
+	sv_s = sv_s + " AND d.TRAN_DATE >= TO_DATE(?SVAR,'YYYY-MM-DD')"
+	sv_s = sv_s + " AND d.TRAN_DATE <= TO_DATE(?SVAR,'YYYY-MM-DD')"
+
+	BANCS.INPARAM.BINDVARS = CUST.DATA.acid + "|" + BANCS.STDIN.contextBankId + "|" + CUST.DATA.fromDateOnly + "|" + CUST.DATA.toDateOnly 
+	
+	IF(CUST.DATA.lastPstdDate != "")THEN
+	#{
+		sv_s = sv_s + " AND (d.PSTD_DATE-TO_DATE(?SVAR,'YYYY-MM-DD HH24:MI:SS')) > 0"
+		#sv_s = sv_s + " AND TRIM(d.TRAN_ID) >= ?SVAR"
+		#sv_s = sv_s + " AND TRIM(d.PART_TRAN_SRL_NUM) >= ?SVAR"
+					
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|"  + MID$(CUST.DATA.lastPstdDate,0,10)+" "+MID$(CUST.DATA.lastPstdDate,11,8) 
+		#+"|" + CUST.DATA.lastTxnId + "|" + CUST.DATA.lastTxnSrlNo
+		
+		print("Pagination Req")
+	#}
+	ENDIF
+	
+	sv_s = sv_s + " ORDER BY TRAN_ID "+CUST.DATA.sortin+", PSTD_DATE "+CUST.DATA.sortin+", PART_TRAN_SRL_NUM "+CUST.DATA.sortin
+	print(sv_s)
+	print(BANCS.INPARAM.BINDVARS)
+	
+	sv_h = urhk_dbSelectWithBind(sv_s)		
+	print(sv_h)
+	
+	IF(sv_h == 0)THEN
+	#{
+		CUST.DATA.totCount = BANCS.OUTPARAM.totCount
+		print(CUST.DATA.totCount)
+		sv_f = CINT(CUST.DATA.totCount)
+	
+		IF(sv_f <= sv_r)THEN
+		#{
+			CUST.DATA.respRecCount = CUST.DATA.totCount
+			CUST.DATA.hasMoreData = "N"
+		#}
+		ELSE
+		#{
+			CUST.DATA.respRecCount = CUST.DATA.numOfTxns
+		#}
+		ENDIF
+	#}
+	ENDIF	
+	
+	#===============================================================================================================
+	# Fetching the list of transactions - Use Pagination Select Query when last* fields are available in the req XML
+	#===============================================================================================================
+	
+	sv_s = "tranId,partTranSrlNum,pstdDate,tranDate,valueDate,itemNumber,acid,tranType,tranAmount,tranCurrency,tranDesc,channel,branchId|"
+	sv_s = sv_s + "SELECT tran_id,part_tran_srl_num,TO_CHAR(pstd_date,'YYYY-MM-DD HH24:MI:SS'),TO_CHAR(tran_date,'YYYY-MM-DD HH24:MI:SS'),TO_CHAR(value_date,'YYYY-MM-DD HH24:MI:SS'),gam.foracid,gam.acid,"
+	sv_s = sv_s + " d.part_tran_type,d.tran_amt,d.tran_crncy_code,d.tran_particular,d.entry_user_id,d.sol_id"
+	sv_s = sv_s + " FROM TBAADM.DCTD_ACLI d, TBAADM.GAM"
+	sv_s = sv_s + " WHERE d.PSTD_FLG = 'Y'"
+	sv_s = sv_s + " AND d.ACID = GAM.ACID"
+	sv_s = sv_s + " AND d.ACID IN (SELECT acid FROM TBAADM.GAM,TBAADM.MAM WHERE GAM.MASTER_B2K_ID = MAM.MASTER_B2K_ID AND MAM.MASTER_ACCT_NUM = ?SVAR)"
+	sv_s = sv_s + " AND d.BANK_ID = ?SVAR"
+	sv_s = sv_s + " AND d.TRAN_DATE >= TO_DATE(?SVAR,'YYYY-MM-DD')"
+	sv_s = sv_s + " AND d.TRAN_DATE <= TO_DATE(?SVAR,'YYYY-MM-DD')"
+
+	BANCS.INPARAM.BINDVARS = CUST.DATA.acid + "|" + BANCS.STDIN.contextBankId + "|" + CUST.DATA.fromDateOnly + "|" + CUST.DATA.toDateOnly
+
+	IF((CUST.DATA.lastPstdDate != "") AND (CUST.DATA.lastTxnId != "") AND (CUST.DATA.lastTxnSrlNo != ""))THEN
+	#{
+		sv_s = sv_s + " AND (d.PSTD_DATE-TO_DATE(?SVAR,'YYYY-MM-DD HH24:MI:SS')) > 0"		
+		#sv_s = sv_s + " AND TRIM(d.TRAN_ID) >= ?SVAR"
+		#sv_s = sv_s + " AND TRIM(d.PART_TRAN_SRL_NUM) >= ?SVAR"
+					
+		BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS + "|"  + MID$(CUST.DATA.lastPstdDate,0,10)+" "+MID$(CUST.DATA.lastPstdDate,11,8) 
+		#+"|" + CUST.DATA.lastTxnId + "|" + CUST.DATA.lastTxnSrlNo
+
+		print("Pagination Req")
+	#}
+	ENDIF
+
+	PRINT(CUST.DATA.sortin)
+	#sv_s = sv_s + " ORDER BY TRAN_ID "+CUST.DATA.sortin+", PSTD_DATE "+CUST.DATA.sortin+", PART_TRAN_SRL_NUM "+CUST.DATA.sortin
+	sv_s = sv_s + " ORDER BY PSTD_DATE "+CUST.DATA.sortin+", TRAN_ID "+CUST.DATA.sortin+", PART_TRAN_SRL_NUM "+CUST.DATA.sortin
+
+	print(sv_s)
+	print(BANCS.INPARAM.BINDVARS)
+
+	sv_i = urhk_dbCursorOpenWithBind(sv_s)
+	print(sv_i)
+
+	IF(sv_i == 0) THEN
+	#{
+		sv_j = BANCS.OUTPARAM.DB_CURSOR_NUMBER
+		sv_n = urhk_dbCursorFetch(sv_j)
+		
+		print(sv_n)
+		IF (sv_n !=0) THEN
+		#{
+			sv_e = 1
+			CUST.DATA.ERRORCODE = "INTF002"
+			CUST.DATA.SuccessOrFailure = "F"
+			CUST.DATA.ERRORMSG= "Internal Finacle Error.Cursor Fetch failed"
+			print(CUST.DATA.ERRORMSG)
+			GOTO ENDOFSCRIPT
+		#}
+		ENDIF
+		
+		# Initializing number to zero. Will be used as seq for populating multirec output.
+		CUST.DATA.number = "0"
+		sv_b = 0
+		print(CUST.DATA.respRecCount)
+		
+		WHILE(sv_n == 0)
+		#{
+			CUST.DATA.tranId			= TRIM(BANCS.OUTPARAM.tranId)
+			CUST.DATA.partTranSrlNum	= TRIM(BANCS.OUTPARAM.partTranSrlNum)
+			CUST.DATA.pstdDate			= TRIM(BANCS.OUTPARAM.pstdDate)
+			CUST.DATA.tranDate			= TRIM(BANCS.OUTPARAM.tranDate)
+			CUST.DATA.valueDate			= TRIM(BANCS.OUTPARAM.valueDate)
+			CUST.DATA.itemNumber		= TRIM(BANCS.OUTPARAM.itemNumber)
+			CUST.DATA.acid				= TRIM(BANCS.OUTPARAM.acid)
+			CUST.DATA.tranType			= TRIM(BANCS.OUTPARAM.tranType)
+			CUST.DATA.tranAmount		= TRIM(BANCS.OUTPARAM.tranAmount)
+			CUST.DATA.tranCurrency		= TRIM(BANCS.OUTPARAM.tranCurrency)
+			CUST.DATA.tranDesc			= TRIM(BANCS.OUTPARAM.tranDesc)
+			CUST.DATA.channel			= TRIM(BANCS.OUTPARAM.channel)
+			CUST.DATA.branchId			= TRIM(BANCS.OUTPARAM.branchId)		
+			
+			print(CUST.DATA.tranId)
+			print(CUST.DATA.partTranSrlNum)
+			print(CUST.DATA.pstdDate)
+			print(CUST.DATA.tranDate)
+			print(CUST.DATA.valueDate)
+			print(CUST.DATA.itemNumber)
+			print(CUST.DATA.acid)
+			print(CUST.DATA.tranType)
+			print(CUST.DATA.tranAmount)
+			print(CUST.DATA.tranCurrency)
+			print(CUST.DATA.tranDesc)
+			print(CUST.DATA.channel)
+			print(CUST.DATA.branchId)			
+
+			#Deriving IntRate	
+			sv_s = "interestRate|"
+			sv_s = sv_s + "SELECT interest_rate"
+			sv_s = sv_s + " FROM TBAADM.EIT WHERE "
+			sv_s = sv_s + " ENTITY_ID = ?SVAR AND "
+			sv_s = sv_s + " BANK_ID = ?SVAR"
+
+       			BANCS.INPARAM.BINDVARS = CUST.DATA.acid + "|" + BANCS.STDIN.contextBankId
+
+			print(sv_s)
+			print(BANCS.INPARAM.BINDVARS)
+			sv_h = urhk_dbSelectWithBind(sv_s)
+			print(sv_h)
+
+			IF(sv_h == 0)THEN
+			#{
+				CUST.DATA.interestRate = BANCS.OUTPARAM.interestRate
+			#}
+			ELSE
+			#{
+				sv_e = 1
+				CUST.DATA.ERRORCODE = "INTF002"
+				CUST.DATA.SuccessOrFailure = "F"
+				CUST.DATA.ERRORMSG= "Internal Finacle Error.Select Query failed"
+				print(CUST.DATA.ERRORMSG)
+				GOTO ENDOFSCRIPT
+			#}
+			ENDIF
+			
+			#=====================================
+			#Sending the o/p to reponse xml
+			#=====================================
+	
+				IF(CUST.DATA.tranId == "")THEN
+				#{
+					CUST.DATA.tranId  = " "
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.tranId"+ "|" + CUST.DATA.tranId
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.partTranSrlNum == "")THEN
+				#{
+					CUST.DATA.partTranSrlNum  = " "
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.partTranSrlNum"+ "|" + CUST.DATA.partTranSrlNum
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.pstdDate == "")THEN
+				#{
+					CUST.DATA.pstdDate  = " "
+				#}
+				ELSE
+				#{
+					CUST.DATA.pstdDate = MID$(CUST.DATA.pstdDate,0,10)+"T"+MID$(CUST.DATA.pstdDate,11,12)+".000"
+					print(CUST.DATA.pstdDate)
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.pstdDate"+ "|" + CUST.DATA.pstdDate
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.tranDate == "")THEN
+				#{
+					CUST.DATA.tranDate  = " "
+				#}
+				ELSE
+				#{
+					CUST.DATA.tranDate = MID$(CUST.DATA.tranDate,0,10)+"T"+MID$(CUST.DATA.tranDate,11,12)+".000"	
+					print(CUST.DATA.tranDate)
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.tranDate"+ "|" + CUST.DATA.tranDate
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.valueDate == "")THEN
+				#{
+					CUST.DATA.valueDate  = " "
+				#}
+				ELSE
+				#{
+					CUST.DATA.valueDate = MID$(CUST.DATA.valueDate,0,10)+"T"+MID$(CUST.DATA.valueDate,11,12)+".000"
+					print(CUST.DATA.valueDate)
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.valueDate"+ "|" + CUST.DATA.valueDate
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.itemNumber == "")THEN
+				#{
+					CUST.DATA.itemNumber  = " "
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.itemNumber"+ "|" + CUST.DATA.itemNumber
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.interestRate == "")THEN
+				#{
+					CUST.DATA.interestRate  = " "
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.interestRate"+ "|" + CUST.DATA.interestRate
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.tranType == "")THEN
+				#{
+					CUST.DATA.tranType  = " "
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.tranType"+ "|" + CUST.DATA.tranType
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.tranAmount == "")THEN
+				#{
+					CUST.DATA.tranAmount  = " "
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.tranAmount"+ "|" + CUST.DATA.tranAmount
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.tranCurrency == "")THEN
+				#{
+					CUST.DATA.tranCurrency  = " "
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.tranCurrency"+ "|" + CUST.DATA.tranCurrency
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.tranType == "C")THEN
+				#{
+					CUST.DATA.tranBalance = CINT(CUST.DATA.tranBalance)+CINT(CUST.DATA.tranAmount)
+					print(CUST.DATA.tranBalance)
+				#}
+				ELSE
+				#{
+					CUST.DATA.tranBalance = CINT(CUST.DATA.tranBalance)-CINT(CUST.DATA.tranAmount)
+					print(CUST.DATA.tranBalance)
+				#}
+				ENDIF
+
+				CUST.DATA.tranBalance = FORMAT$(CDOUBLE(CUST.DATA.tranBalance),"%2.2f")
+				print(CUST.DATA.tranBalance)
+
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.tranBalance"+ "|" + CUST.DATA.tranBalance
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.tranDesc == "")THEN
+				#{
+					CUST.DATA.tranDesc  = "TR"
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.tranDesc"+ "|" + CUST.DATA.tranDesc
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.channel == "")THEN
+				#{
+					CUST.DATA.channel  = " "
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.channel"+ "|" + CUST.DATA.channel
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+				IF(CUST.DATA.branchId == "")THEN
+				#{
+					CUST.DATA.branchId  = " "
+				#}
+				ENDIF
+				sv_z ="TDAcctStmt_Res.transactionDetail.<rec_"+CUST.DATA.number+">.branchId"+ "|" + CUST.DATA.branchId
+				sv_a = urhk_SetOrbOut(sv_z)
+				
+			#Increasing the loop counter
+			
+			sv_b = sv_b+1
+			print(sv_b)
+			CUST.DATA.number = sv_b
+			print(CUST.DATA.number)
+			print(CUST.DATA.respRecCount)
+			IF(CUST.DATA.number == CUST.DATA.respRecCount)THEN
+			#{
+				GOTO ENDOFSCRIPT
+			#}
+			ENDIF
+
+			sv_n = urhk_dbCursorFetch(sv_j)
+		#}
+		DO
+	#}
+	ELSE
+	#{
+		sv_e = 1
+		CUST.DATA.ERRORCODE = "INTF003"
+		CUST.DATA.SuccessOrFailure = "F"
+		CUST.DATA.ERRORMSG= "Internal Finacle Error.Cursor Opening failed"
+		print(CUST.DATA.ERRORMSG)
+		GOTO ENDOFSCRIPT
+	#}
+	ENDIF
+	
+	ENDOFSCRIPT:
+	IF (sv_e == 1) THEN
+	#{
+		IF (CUST.DATA.ERRORMSG != "") THEN
+		#{
+			BANCS.OUTPUT.successOrFailure="F"
+			sv_a = "ERROR.FIBUSINESSEXCEPTION.ERRORDETAIL.ERRORCODE"+"|"+CUST.DATA.ERRORCODE
+			sv_u = urhk_SetOrbOut(sv_a)
+			sv_a = "ERROR.FIBUSINESSEXCEPTION.ERRORDETAIL.ERRORDESC"+"|"+CUST.DATA.ERRORMSG
+			sv_u = urhk_SetOrbOut(sv_a)
+			sv_a = "ERROR.FIBUSINESSEXCEPTION.ERRORDETAIL.ERROTYPE"+"|BE"
+			sv_u = urhk_SetOrbOut(sv_a)
+		#}
+		ENDIF
+		trace off
+		EXITSCRIPT
+	#}
+	ENDIF
+
+	#Setting Has More Flag
+	IF(CUST.DATA.hasMoreData == "")THEN
+        #{
+        	CUST.DATA.hasMoreData = " "
+        #}
+        ENDIF
+        sv_z ="TDAcctStmt_Res.hasMoreData"+ "|" + CUST.DATA.hasMoreData
+        sv_a = urhk_SetOrbOut(sv_z)
+
+        sv_n = urhk_dbCursorClose(sv_j)
+	
+	#==========================================
+	#Deleting repository and class
+	#==========================================
+	IF (CLASSEXISTS("CUST", "DATA") != 0) THEN
+	#{
+		DELETECLASS("CUST", "DATA")
+	#}
+	ENDIF
+
+	IF (REPEXISTS("CUST") != 0) THEN
+	#{
+		DELETEREP("CUST")
+	#}
+	ENDIF
+
+TRACE OFF
+END-->
+

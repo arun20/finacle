@@ -1,0 +1,102 @@
+IMPORT LibCommonB001
+IMPORT LibCommonB002
+
+<--START
+TRACE ON
+	CALLSCRIPTIFEXIST("mptrlovrdet.scr")
+	CALLSCRIPTIFEXIST("MTFT_SLAcctChrgDtls.scr")
+
+	############################################################
+	# CREATING LOCAL REPOSITORY AND CLASS
+	############################################################
+	PRINT(PRODMENU.CUSTFLDS.keyValues)
+	sub_createRepClassB("MTFT","DATA")
+
+	############################################################
+	# INITIALIZING THE VARIABLES
+	############################################################
+	MTFT.DATA.preShipAccId = func_getNthFieldFromStringB(PRODMENU.CUSTFLDS.keyValues,"|",2)
+	PRINT(MTFT.DATA.preShipAccId)
+
+	MTFT.DATA.funcCode = "R"
+	MTFT.DATA.count = "0"
+
+	############################################################
+	# DISB ID FETCH FOR UPDATION
+	############################################################
+	BANCS.INPARAM.BINDVARS = MTFT.DATA.preShipAccId
+	PRINT(BANCS.INPARAM.BINDVARS)
+
+	sv_a = ""
+	sv_a = "disbId|"
+	sv_a = sv_a + "SELECT MAX(DISB_ID) FROM CUSTOM.CUST_DISBH_EXT_MOD "
+	sv_a = sv_a + "WHERE RPC_ACCTID = ?SVAR AND DISB_FUNC IS NULL ORDER BY DISB_ID "
+	PRINT(sv_a)
+
+	sv_b = urhk_dbSelectWithBind(sv_a)
+	PRINT(sv_b)
+
+	IF(sv_b == 0)THEN
+	#{
+		MTFT.DATA.disbId = BANCS.OUTPARAM.disbId
+		PRINT(MTFT.DATA.disbId)
+
+		BANCS.INPARAM.BINDVARS = MTFT.DATA.preShipAccId + "|" + MTFT.DATA.disbId
+		PRINT(BANCS.INPARAM.BINDVARS)
+		
+		sv_e = ""
+		sv_e = "count|"
+		sv_e = sv_e + "SELECT MAX(SERIAL_NUM) FROM CUSTOM.CUST_DISBH_EXT "
+		sv_e = sv_e + "WHERE DISB_FUNC = 'R' AND RPC_ACCTID = ?SVAR AND DISB_ID = ?SVAR "
+		PRINT(sv_e)
+		
+		sv_g = urhk_dbSelectWithBind(sv_e)
+		PRINT(sv_g)
+
+		IF(sv_g == 0)THEN
+		#{
+			MTFT.DATA.count = CINT(BANCS.OUTPARAM.count) + 1
+			PRINT(MTFT.DATA.count)
+		#}
+		ENDIF
+
+		############################################################
+		# FORMING THE SERIAL NUM
+		############################################################
+		BANCS.INPARAM.BINDVARS = MTFT.DATA.count
+		PRINT(BANCS.INPARAM.BINDVARS)
+
+		sv_c = ""
+		sv_c = "serialNum|"
+		sv_c = sv_c + "SELECT LPAD(?SVAR,3,0) FROM DUAL "
+		PRINT(sv_c)
+
+		sv_d = urhk_dbSelectWithBind(sv_c)
+		PRINT(sv_d)
+
+		IF(sv_d == 0)THEN
+		#{
+			MTFT.DATA.serialNum = BANCS.OUTPARAM.serialNum
+			PRINT(MTFT.DATA.serialNum)
+		#}
+		ENDIF
+
+		############################################################
+		# UPDATING THE CUSTOM TABLE
+		############################################################
+		MTFT.DATA.keyFields1 = "DISB_ID|RPC_ACCTID"
+		MTFT.DATA.keyValues1 = MTFT.DATA.disbId + "|" + MTFT.DATA.preShipAccId
+
+		lv_b = func_updateCustTableB("CUSTOM.CUST_DISBH_EXT_MOD","DISB_FUNC|SERIAL_NUM",MTFT.DATA.funcCode + "|" + MTFT.DATA.serialNum,MTFT.DATA.keyFields1,MTFT.DATA.keyValues1)
+		PRINT(lv_b)
+
+		IF(lv_b == 0)THEN
+		#{
+			PRINT("SUCCESS")
+		#}
+		ENDIF
+	#}
+	ENDIF
+
+	EXITSCRIPT
+END-->

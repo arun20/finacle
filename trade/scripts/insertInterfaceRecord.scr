@@ -1,0 +1,34 @@
+<--START
+TRACE ON
+libname CUSTOMSO
+##sv_u = urhk_B2K_printRepos("BANCS")
+#print(sv_u)
+
+#----------------------------------------------
+#Create repository and class
+#----------------------------------------------
+sub_createRepClassB("CUST", "TBL")
+
+CUST.TBL.respXML = ""
+CUST.TBL.status = "F"
+
+#---------------------------------------------
+# Inserting Records into Table
+#---------------------------------------------
+
+BANCS.INPARAM.BINDVARS = CUST.TBL.apiName + "|" + CUST.TBL.menuName  + "|" + CUST.TBL.invDate
+BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS  + "|" + CUST.TBL.reqId + "|" + CUST.TBL.soapReqId + "|" + CUST.TBL.reqXML
+BANCS.INPARAM.BINDVARS = BANCS.INPARAM.BINDVARS  + "|" + CUST.TBL.userId + "|" + CUST.TBL.respXML + "|" + CUST.TBL.status 
+CUST.TBL.REQ = "INSERT INTO CUSTOM.C_ICIT ( "
+CUST.TBL.REQ = CUST.TBL.REQ +"API_NAME,MENU_NAME,INV_DATE,REQUEST_ID,SOAP_REQUEST_ID,REQUEST_XML,USER_ID,RESPONSE_XML,STATUS,RCRE_TIME) VALUES ( "
+CUST.TBL.REQ = CUST.TBL.REQ +"?SVAR, ?SVAR, ?SVAR, ?SVAR, ?SVAR, ?SVAR, ?SVAR, ?SVAR, ?SVAR, sysdate) "
+
+print(CUST.TBL.REQ)
+sv_d = urhk_dbSQLWithBind(CUST.TBL.REQ)
+
+#sv_d = urhk_dbSqlWithBind("COMMIT")
+
+#sub_deleteRepClassB("CUST", "TBL")
+EXITSCRIPT
+END-->
+
